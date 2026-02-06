@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-circuits"
+version = "0.1.0"
+description = "Mechanistic-interpretability research toolkit for LLM circuits"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.6",
+    "transformers>=4.51,<5",
+    "accelerate",
+    "safetensors",
+    "huggingface_hub",
+    "typer>=0.9",
+    "rich",
+    "pyyaml",
+    "circuit-tracer @ git+https://github.com/safety-research/circuit-tracer.git@v0.3.1",
+]
+
+[project.scripts]
+llm-circuits = "llm_circuits.cli:app"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "mypy",
+    "pre-commit",
+]
+notebook = [
+    "jupyterlab",
+    "ipykernel",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_circuits"]
+
+[tool.ruff]
+src = ["src"]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["llm_circuits"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-v", "--tb=short"]

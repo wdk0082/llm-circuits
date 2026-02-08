@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+import torch
+
 from llm_circuits.logging import get_logger
 from llm_circuits.transcoders.registry import ModelSpec, get_spec
 
@@ -42,8 +44,9 @@ def load_transcoder(
 ) -> LoadedTranscoder:
     """Download (or use cached) transcoders and return a :class:`LoadedTranscoder`.
 
-    If transcoders have been previously saved via :func:`cache_transcoder`,
-    they will be loaded from the local cache instead of downloading again.
+    On first load the transcoders are downloaded from the HF Hub and
+    automatically saved into the local cache so that subsequent loads
+    are served from disk.
 
     Args:
         spec_or_repo: Either a size key (e.g. ``"0.6b"``), a :class:`ModelSpec`,
@@ -52,13 +55,13 @@ def load_transcoder(
         dtype: Torch dtype override.
         lazy_decoder: If ``True``, decoder weights are loaded lazily.
         lazy_encoder: If ``True``, encoder weights are loaded lazily.
-        cache_dir: Local directory to check for cached transcoders. Defaults to
+        cache_dir: Local directory for cached transcoders. Defaults to
             :func:`~llm_circuits.settings.transcoder_cache_dir`.
 
     Returns:
         A :class:`LoadedTranscoder` wrapping the circuit-tracer result.
     """
-    from circuit_tracer.utils.hf_utils import load_transcoder_from_hub
+    from circuit_tracer.utils.caching import is_cached, load_transcoders_from_cache
 
     from llm_circuits.settings import transcoder_cache_dir
 
@@ -75,30 +78,45 @@ def load_transcoder(
 
     resolved_cache_dir = cache_dir if cache_dir is not None else str(transcoder_cache_dir())
 
-    kwargs: dict[str, Any] = {}
-    if device is not None:
-        kwargs["device"] = device
-    if dtype is not None:
-        kwargs["dtype"] = dtype
-    kwargs["lazy_decoder"] = lazy_decoder
-    kwargs["lazy_encoder"] = lazy_encoder
-    kwargs["cache_dir"] = resolved_cache_dir
+    torch_device = torch.device(device) if isinstance(device, str) else device
+    torch_dtype = dtype if dtype is not None else torch.float32
 
-    log.info("Loading transcoders from [bold]%s[/bold] (cache_dir=%s)", repo_id, resolved_cache_dir)
-    transcoder = load_transcoder_from_hub(repo_id, **kwargs)
-
-    # load_transcoder_from_hub returns (transcoder_obj, config_dict).
-    config: dict = {}
-    if isinstance(transcoder, tuple):
-        transcoder, config = transcoder
-        config = dict(config) if isinstance(config, dict) else {}
-    elif hasattr(transcoder, "config"):
-        cfg = transcoder.config
-        config = (
-            dict(cfg) if isinstance(cfg, dict) else vars(cfg) if hasattr(cfg, "__dict__") else {}
+    # --- Try local cache first ---------------------------------------------------
+    if is_cached(repo_id, resolved_cache_dir):
+        log.info(
+            "Loading transcoders from cache [bold]%s[/bold] (cache_dir=%s)",
+            repo_id,
+            resolved_cache_dir,
         )
+        transcoder_obj, config = load_transcoders_from_cache(
+            repo_id,
+            cache_dir=resolved_cache_dir,
+            device=torch_device,
+            dtype=torch_dtype,
+            lazy_encoder=lazy_encoder,
+            lazy_decoder=lazy_decoder,
+        )
+        config = dict(config) if isinstance(config, dict) else {}
+        return LoadedTranscoder(transcoder=transcoder_obj, config=config, repo_id=repo_id)
 
-    return LoadedTranscoder(transcoder=transcoder, config=config, repo_id=repo_id)
+    # --- Not cached: download, cache, then load from cache -----------------------
+    log.info(
+        "Downloading transcoders [bold]%s[/bold] and caching to %s",
+        repo_id,
+        resolved_cache_dir,
+    )
+    cache_transcoder(repo_id, cache_dir=resolved_cache_dir)
+
+    transcoder_obj, config = load_transcoders_from_cache(
+        repo_id,
+        cache_dir=resolved_cache_dir,
+        device=torch_device,
+        dtype=torch_dtype,
+        lazy_encoder=lazy_encoder,
+        lazy_decoder=lazy_decoder,
+    )
+    config = dict(config) if isinstance(config, dict) else {}
+    return LoadedTranscoder(transcoder=transcoder_obj, config=config, repo_id=repo_id)
 
 
 def cache_transcoder(repo_id: str, cache_dir: str | None = None) -> None:

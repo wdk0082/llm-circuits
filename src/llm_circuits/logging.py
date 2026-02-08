@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 
 from rich.logging import RichHandler
 
@@ -25,7 +24,6 @@ def setup_logging(level: int = logging.INFO) -> None:
         level=level,
         format="%(message)s",
         handlers=[handler],
-        stream=sys.stderr,
     )
     _CONFIGURED = True
 

@@ -14,7 +14,7 @@ giving us full control over the computation graph and experiment loop.
 
 ```bash
 # Install everything (requires uv)
-uv sync --all-groups
+make install
 
 # Show environment info and available model specs
 uv run llm-circuits info
@@ -60,16 +60,14 @@ notebooks/              # Research notebooks
 
 ## Development
 
+All development tasks are available as Makefile targets:
+
 ```bash
-# Lint
-make lint
-
-# Format
-make format
-
-# Test
-make test
-
-# All checks
-make check
+make install   # Install all dependencies (uv sync --all-groups)
+make lint      # Lint with ruff (src, tests, examples)
+make format    # Auto-format and fix with ruff (src, tests, examples)
+make test      # Run pytest
+make check     # Run lint + test
+make all       # Run format + check (format, lint, then test)
+make clean     # Remove __pycache__, .mypy_cache, .pytest_cache, .ruff_cache, build artifacts
 ```

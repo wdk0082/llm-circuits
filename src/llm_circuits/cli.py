@@ -44,9 +44,7 @@ def info():
 
 @app.command("transcoder-inspect")
 def transcoder_inspect(
-    size: str | None = typer.Option(
-        None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"
-    ),
+    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
 ):
     """Inspect a transcoder's config (lightweight -- does not download weights)."""
@@ -91,9 +89,7 @@ def transcoder_inspect(
 
 @app.command("transcoder-load")
 def transcoder_load(
-    size: str | None = typer.Option(
-        None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"
-    ),
+    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
     device: str | None = typer.Option(None, help="Device, e.g. 'cpu', 'cuda'"),
     cache_dir: str | None = typer.Option(None, help="Local cache directory for transcoders"),
@@ -152,9 +148,7 @@ def generate(
     from llm_circuits.transcoders.registry import get_spec
 
     spec = get_spec(key)
-    model, tokenizer = load_model_and_tokenizer(
-        spec.hf_model_id, cache_dir=cache_dir
-    )
+    model, tokenizer = load_model_and_tokenizer(spec.hf_model_id, cache_dir=cache_dir)
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)

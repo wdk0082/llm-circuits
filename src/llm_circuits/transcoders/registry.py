@@ -101,9 +101,7 @@ def list_specs(*, family: str | None = None) -> list[ModelSpec]:
         family = family.lower()
     unique: list[ModelSpec] = list(
         dict.fromkeys(
-            spec
-            for spec in _REGISTRY.values()
-            if family is None or spec.family == family
+            spec for spec in _REGISTRY.values() if family is None or spec.family == family
         )
     )
     return unique
@@ -119,8 +117,4 @@ def list_registry() -> list[tuple[str, ModelSpec]]:
 
     Excludes bare-size backward-compat aliases so each spec appears once.
     """
-    return [
-        (key, spec)
-        for key, spec in _REGISTRY.items()
-        if key.startswith(spec.family)
-    ]
+    return [(key, spec) for key, spec in _REGISTRY.items() if key.startswith(spec.family)]

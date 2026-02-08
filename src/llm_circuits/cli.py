@@ -89,6 +89,7 @@ def transcoder_load(
     size: str | None = typer.Option(None, help="Registry size key, e.g. '0.6b'"),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
     device: str | None = typer.Option(None, help="Device, e.g. 'cpu', 'cuda'"),
+    cache_dir: str | None = typer.Option(None, help="Local cache directory for transcoders"),
 ):
     """Load transcoders (downloads weights) and print basic info."""
     from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
@@ -98,7 +99,7 @@ def transcoder_load(
         raise typer.Exit(1)
 
     spec_or_repo = size if size else repo  # type: ignore[assignment]
-    result = load_transcoder(spec_or_repo, device=device)  # type: ignore[arg-type]
+    result = load_transcoder(spec_or_repo, device=device, cache_dir=cache_dir)  # type: ignore[arg-type]
 
     rprint(f"[green]Loaded transcoders from {result.repo_id}[/green]")
     rprint(f"  Type: {type(result.transcoder).__name__}")
@@ -113,13 +114,18 @@ def transcoder_load(
 @app.command("transcoder-cache")
 def transcoder_cache(
     repo: str = typer.Option(..., help="HF transcoder repo id"),
-    cache_dir: str = typer.Option(..., help="Local directory to cache into"),
+    cache_dir: str | None = typer.Option(
+        None, help="Local directory to cache into (default: .cache/transcoders)"
+    ),
 ):
     """Cache transcoder weights to a local directory."""
     from llm_circuits.transcoders.circuit_tracer_loader import cache_transcoder
 
     cache_transcoder(repo, cache_dir)
-    rprint(f"[green]Cached {repo} -> {cache_dir}[/green]")
+    from llm_circuits.settings import transcoder_cache_dir
+
+    resolved = cache_dir if cache_dir is not None else str(transcoder_cache_dir())
+    rprint(f"[green]Cached {repo} -> {resolved}[/green]")
 
 
 @app.command()
@@ -127,11 +133,12 @@ def generate(
     size: str = typer.Option("0.6b", help="Registry size key"),
     prompt: str = typer.Option("Hello, world!", help="Prompt text"),
     max_new_tokens: int = typer.Option(64, help="Max tokens to generate"),
+    cache_dir: str | None = typer.Option(None, help="Local cache directory for model weights"),
 ):
     """Generate text with a Qwen3 model using Transformers (no circuit-tracer)."""
     from llm_circuits.models.qwen3 import load_qwen3
 
-    model, tokenizer = load_qwen3(size)
+    model, tokenizer = load_qwen3(size, cache_dir=cache_dir)
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)

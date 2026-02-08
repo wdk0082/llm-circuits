@@ -34,5 +34,23 @@ def project_root() -> Path:
 
 
 def cache_dir() -> Path:
-    """Return the default local cache directory for transcoders."""
+    """Return the base local cache directory.
+
+    Priority:
+      1. ``LLM_CIRCUITS_CACHE_DIR`` env var
+      2. ``<project_root>/.cache``
+    """
+    override = os.environ.get("LLM_CIRCUITS_CACHE_DIR")
+    if override:
+        return Path(override)
     return project_root() / ".cache"
+
+
+def transcoder_cache_dir() -> Path:
+    """Return the default cache directory for transcoder weights."""
+    return cache_dir() / "transcoders"
+
+
+def model_cache_dir() -> Path:
+    """Return the default cache directory for HF model weights."""
+    return cache_dir() / "models"

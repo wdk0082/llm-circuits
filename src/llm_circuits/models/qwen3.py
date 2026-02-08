@@ -16,6 +16,7 @@ def load_qwen3(
     *,
     dtype_str: str = "bf16",
     device_map: str = "auto",
+    cache_dir: str | None = None,
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
     """Load a Qwen3 model by size key (e.g. ``"0.6b"``, ``"1.7b"``).
 
@@ -23,4 +24,6 @@ def load_qwen3(
     id stays consistent with the available transcoders.
     """
     spec = get_spec(size)
-    return load_model_and_tokenizer(spec.hf_model_id, dtype_str=dtype_str, device_map=device_map)
+    return load_model_and_tokenizer(
+        spec.hf_model_id, dtype_str=dtype_str, device_map=device_map, cache_dir=cache_dir
+    )

@@ -38,8 +38,12 @@ def load_transcoder(
     dtype: Any | None = None,
     lazy_decoder: bool = True,
     lazy_encoder: bool = False,
+    cache_dir: str | None = None,
 ) -> LoadedTranscoder:
     """Download (or use cached) transcoders and return a :class:`LoadedTranscoder`.
+
+    If transcoders have been previously saved via :func:`cache_transcoder`,
+    they will be loaded from the local cache instead of downloading again.
 
     Args:
         spec_or_repo: Either a size key (e.g. ``"0.6b"``), a :class:`ModelSpec`,
@@ -48,11 +52,15 @@ def load_transcoder(
         dtype: Torch dtype override.
         lazy_decoder: If ``True``, decoder weights are loaded lazily.
         lazy_encoder: If ``True``, encoder weights are loaded lazily.
+        cache_dir: Local directory to check for cached transcoders. Defaults to
+            :func:`~llm_circuits.settings.transcoder_cache_dir`.
 
     Returns:
         A :class:`LoadedTranscoder` wrapping the circuit-tracer result.
     """
     from circuit_tracer.utils.hf_utils import load_transcoder_from_hub
+
+    from llm_circuits.settings import transcoder_cache_dir
 
     # Resolve the repo id.
     if isinstance(spec_or_repo, ModelSpec):
@@ -65,6 +73,8 @@ def load_transcoder(
         except KeyError:
             repo_id = spec_or_repo
 
+    resolved_cache_dir = cache_dir if cache_dir is not None else str(transcoder_cache_dir())
+
     kwargs: dict[str, Any] = {}
     if device is not None:
         kwargs["device"] = device
@@ -72,13 +82,17 @@ def load_transcoder(
         kwargs["dtype"] = dtype
     kwargs["lazy_decoder"] = lazy_decoder
     kwargs["lazy_encoder"] = lazy_encoder
+    kwargs["cache_dir"] = resolved_cache_dir
 
-    log.info("Loading transcoders from [bold]%s[/bold]", repo_id)
+    log.info("Loading transcoders from [bold]%s[/bold] (cache_dir=%s)", repo_id, resolved_cache_dir)
     transcoder = load_transcoder_from_hub(repo_id, **kwargs)
 
-    # Try to extract config if the returned object exposes one.
+    # load_transcoder_from_hub returns (transcoder_obj, config_dict).
     config: dict = {}
-    if hasattr(transcoder, "config"):
+    if isinstance(transcoder, tuple):
+        transcoder, config = transcoder
+        config = dict(config) if isinstance(config, dict) else {}
+    elif hasattr(transcoder, "config"):
         cfg = transcoder.config
         config = (
             dict(cfg) if isinstance(cfg, dict) else vars(cfg) if hasattr(cfg, "__dict__") else {}
@@ -87,15 +101,19 @@ def load_transcoder(
     return LoadedTranscoder(transcoder=transcoder, config=config, repo_id=repo_id)
 
 
-def cache_transcoder(repo_id: str, cache_dir: str) -> None:
+def cache_transcoder(repo_id: str, cache_dir: str | None = None) -> None:
     """Download and cache transcoder weights to a local directory.
 
     Args:
         repo_id: HF repo id for the transcoder, e.g.
             ``"mwhanna/qwen3-0.6b-transcoders-lowl0"``.
-        cache_dir: Local directory to save cached files.
+        cache_dir: Local directory to save cached files. Defaults to
+            :func:`~llm_circuits.settings.transcoder_cache_dir`.
     """
     from circuit_tracer.utils.caching import save_transcoders_to_cache
 
-    log.info("Caching transcoders from %s -> %s", repo_id, cache_dir)
-    save_transcoders_to_cache(repo_id, cache_dir)
+    from llm_circuits.settings import transcoder_cache_dir
+
+    resolved = cache_dir if cache_dir is not None else str(transcoder_cache_dir())
+    log.info("Caching transcoders from %s -> %s", repo_id, resolved)
+    save_transcoders_to_cache(repo_id, resolved)

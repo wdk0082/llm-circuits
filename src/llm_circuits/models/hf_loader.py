@@ -30,6 +30,7 @@ def load_model_and_tokenizer(
     dtype_str: str = "bf16",
     device_map: str = "auto",
     trust_remote_code: bool = True,
+    cache_dir: str | None = None,
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
     """Load a causal-LM and its tokenizer from the Hugging Face Hub.
 
@@ -38,21 +39,36 @@ def load_model_and_tokenizer(
         dtype_str: One of ``"bf16"``, ``"fp16"``, ``"fp32"``.
         device_map: Passed to ``AutoModelForCausalLM.from_pretrained``.
         trust_remote_code: Whether to trust remote code in the repo.
+        cache_dir: Local directory for cached model weights. Defaults to
+            :func:`~llm_circuits.settings.model_cache_dir`.
 
     Returns:
         A ``(model, tokenizer)`` tuple ready for generation.
     """
+    from llm_circuits.settings import model_cache_dir
+
     dtype = _DTYPE_MAP.get(dtype_str)
     if dtype is None:
         raise ValueError(f"Unknown dtype_str {dtype_str!r}. Choose from {list(_DTYPE_MAP)}")
 
-    log.info("Loading model [bold]%s[/bold] (dtype=%s, device_map=%s)", model_id, dtype, device_map)
+    resolved_cache_dir = cache_dir if cache_dir is not None else str(model_cache_dir())
 
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_remote_code)
+    log.info(
+        "Loading model [bold]%s[/bold] (dtype=%s, device_map=%s, cache_dir=%s)",
+        model_id,
+        dtype,
+        device_map,
+        resolved_cache_dir,
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id, trust_remote_code=trust_remote_code, cache_dir=resolved_cache_dir
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         torch_dtype=dtype,
         device_map=device_map,
         trust_remote_code=trust_remote_code,
+        cache_dir=resolved_cache_dir,
     )
     return model, tokenizer

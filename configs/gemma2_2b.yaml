@@ -1,0 +1,17 @@
+model:
+  family: "gemma2"
+  size: "2b"
+  hf_model_id: "google/gemma-2-2b"
+  dtype: "bf16"
+  device_map: "auto"
+
+transcoder:
+  repo: "mwhanna/gemma-scope-transcoders"
+  type: "per-layer"
+  lazy_decoder: true
+  lazy_encoder: false
+
+generation:
+  max_new_tokens: 256
+  temperature: 0.7
+  top_p: 0.9

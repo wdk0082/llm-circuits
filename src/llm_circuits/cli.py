@@ -22,26 +22,31 @@ def info():
     import transformers
 
     from llm_circuits import __version__
-    from llm_circuits.transcoders.registry import list_specs
+    from llm_circuits.transcoders.registry import list_registry
 
     rprint(f"[bold]llm-circuits[/bold] v{__version__}")
     rprint(f"  Python        {sys.version.split()[0]}")
     rprint(f"  PyTorch       {torch.__version__}")
     rprint(f"  Transformers  {transformers.__version__}")
 
-    specs = list_specs()
+    entries = list_registry()
     table = Table(title="Available model specs")
-    table.add_column("Size", style="cyan")
+    table.add_column("Key", style="cyan")
+    table.add_column("Family")
+    table.add_column("Size")
     table.add_column("HF Model ID")
     table.add_column("Transcoder Repo")
-    for s in specs:
-        table.add_row(s.size, s.hf_model_id, s.transcoder_repo)
+    table.add_column("Transcoder Type")
+    for key, s in entries:
+        table.add_row(key, s.family, s.size, s.hf_model_id, s.transcoder_repo, s.transcoder_type)
     rprint(table)
 
 
 @app.command("transcoder-inspect")
 def transcoder_inspect(
-    size: str | None = typer.Option(None, help="Registry size key, e.g. '0.6b'"),
+    size: str | None = typer.Option(
+        None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"
+    ),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
 ):
     """Inspect a transcoder's config (lightweight -- does not download weights)."""
@@ -86,7 +91,9 @@ def transcoder_inspect(
 
 @app.command("transcoder-load")
 def transcoder_load(
-    size: str | None = typer.Option(None, help="Registry size key, e.g. '0.6b'"),
+    size: str | None = typer.Option(
+        None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"
+    ),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
     device: str | None = typer.Option(None, help="Device, e.g. 'cpu', 'cuda'"),
     cache_dir: str | None = typer.Option(None, help="Local cache directory for transcoders"),
@@ -130,15 +137,24 @@ def transcoder_cache(
 
 @app.command()
 def generate(
-    size: str = typer.Option("0.6b", help="Registry size key"),
+    key: str = typer.Option(
+        "qwen3-0.6b",
+        "--key",
+        "--size",
+        help="Registry key (e.g. 'qwen3-0.6b', 'gemma2-2b') or bare size for Qwen3 (e.g. '0.6b')",
+    ),
     prompt: str = typer.Option("Hello, world!", help="Prompt text"),
     max_new_tokens: int = typer.Option(64, help="Max tokens to generate"),
     cache_dir: str | None = typer.Option(None, help="Local cache directory for model weights"),
 ):
-    """Generate text with a Qwen3 model using Transformers (no circuit-tracer)."""
-    from llm_circuits.models.qwen3 import load_qwen3
+    """Generate text with a model using Transformers (no circuit-tracer)."""
+    from llm_circuits.models.hf_loader import load_model_and_tokenizer
+    from llm_circuits.transcoders.registry import get_spec
 
-    model, tokenizer = load_qwen3(size, cache_dir=cache_dir)
+    spec = get_spec(key)
+    model, tokenizer = load_model_and_tokenizer(
+        spec.hf_model_id, cache_dir=cache_dir
+    )
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)

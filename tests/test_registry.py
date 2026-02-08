@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from llm_circuits.transcoders.registry import ModelSpec, get_spec, list_specs
+from llm_circuits.transcoders.registry import (
+    ModelSpec,
+    get_spec,
+    list_families,
+    list_registry,
+    list_specs,
+)
 
 
 class TestModelSpec:
@@ -18,21 +24,39 @@ class TestModelSpec:
         b = ModelSpec(size="0.6b", hf_model_id="Qwen/Qwen3-0.6B", transcoder_repo="repo")
         assert a == b
 
+    def test_default_family(self):
+        spec = ModelSpec(size="0.6b", hf_model_id="m", transcoder_repo="r")
+        assert spec.family == "qwen3"
+
+    def test_default_transcoder_type(self):
+        spec = ModelSpec(size="0.6b", hf_model_id="m", transcoder_repo="r")
+        assert spec.transcoder_type == "per-layer"
+
 
 class TestGetSpec:
     @pytest.mark.parametrize(
-        "size,expected_model_id",
+        "key,expected_model_id",
         [
+            # Qwen3 family-prefixed keys
+            ("qwen3-0.6b", "Qwen/Qwen3-0.6B"),
+            ("qwen3-1.7b", "Qwen/Qwen3-1.7B"),
+            ("qwen3-4b", "Qwen/Qwen3-4B"),
+            ("qwen3-8b", "Qwen/Qwen3-8B"),
+            ("qwen3-14b", "Qwen/Qwen3-14B"),
+            # Qwen3 bare size aliases (backward compat)
             ("0.6b", "Qwen/Qwen3-0.6B"),
             ("1.7b", "Qwen/Qwen3-1.7B"),
             ("4b", "Qwen/Qwen3-4B"),
             ("8b", "Qwen/Qwen3-8B"),
             ("14b", "Qwen/Qwen3-14B"),
+            # Gemma2 keys
+            ("gemma2-2b", "google/gemma-2-2b"),
+            ("gemma2-2b-cross-layer-426k", "google/gemma-2-2b"),
+            ("gemma2-2b-cross-layer-2.5m", "google/gemma-2-2b"),
         ],
     )
-    def test_valid_sizes(self, size: str, expected_model_id: str):
-        spec = get_spec(size)
-        assert spec.size == size
+    def test_valid_keys(self, key: str, expected_model_id: str):
+        spec = get_spec(key)
         assert spec.hf_model_id == expected_model_id
 
     def test_case_insensitive(self):
@@ -41,20 +65,26 @@ class TestGetSpec:
     def test_strips_whitespace(self):
         assert get_spec("  0.6b  ") == get_spec("0.6b")
 
-    def test_unknown_size_raises(self):
-        with pytest.raises(KeyError, match="Unknown model size"):
+    def test_unknown_key_raises(self):
+        with pytest.raises(KeyError, match="Unknown model key"):
             get_spec("999b")
 
-    def test_unknown_size_message_lists_available(self):
+    def test_unknown_key_message_lists_available(self):
         with pytest.raises(KeyError, match=r"0\.6b"):
             get_spec("nope")
+
+    def test_bare_size_resolves_to_qwen3(self):
+        """Bare size keys like '0.6b' should resolve to the Qwen3 entry."""
+        spec = get_spec("0.6b")
+        assert spec.family == "qwen3"
+        assert spec == get_spec("qwen3-0.6b")
 
 
 class TestListSpecs:
     def test_returns_list(self):
         specs = list_specs()
         assert isinstance(specs, list)
-        assert len(specs) == 5
+        assert len(specs) == 8
 
     def test_all_model_spec(self):
         for spec in list_specs():
@@ -62,9 +92,42 @@ class TestListSpecs:
 
     def test_contains_expected_sizes(self):
         sizes = {s.size for s in list_specs()}
-        assert sizes == {"0.6b", "1.7b", "4b", "8b", "14b"}
+        assert sizes == {"0.6b", "1.7b", "4b", "8b", "14b", "2b"}
 
     def test_transcoder_repos_are_populated(self):
         for spec in list_specs():
             assert spec.transcoder_repo
             assert "/" in spec.transcoder_repo
+
+    def test_filter_by_family_qwen3(self):
+        specs = list_specs(family="qwen3")
+        assert len(specs) == 5
+        assert all(s.family == "qwen3" for s in specs)
+
+    def test_filter_by_family_gemma2(self):
+        specs = list_specs(family="gemma2")
+        assert len(specs) == 3
+        assert all(s.family == "gemma2" for s in specs)
+
+    def test_filter_by_family_case_insensitive(self):
+        assert list_specs(family="Qwen3") == list_specs(family="qwen3")
+
+
+class TestListFamilies:
+    def test_returns_sorted(self):
+        families = list_families()
+        assert families == ["gemma2", "qwen3"]
+
+
+class TestListRegistry:
+    def test_returns_canonical_keys(self):
+        entries = list_registry()
+        assert len(entries) == 8
+        keys = [k for k, _ in entries]
+        # No bare-size aliases
+        for key in keys:
+            assert "-" in key
+
+    def test_all_keys_start_with_family(self):
+        for key, spec in list_registry():
+            assert key.startswith(spec.family)

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Mechanistic-interpretability research toolkit for analyzing LLM circuits, focused on Qwen3 models with transcoder support. Uses Python 3.11, managed with `uv`.
+Mechanistic-interpretability research toolkit for analyzing LLM circuits, supporting Qwen3 and Gemma2 models with transcoder support. Uses Python 3.11, managed with `uv`.
 
 **Key design principle:** circuit-tracer is used **only** to load transcoders. We deliberately avoid importing `ReplacementModel`, `AttributionGraph`, or any intervention machinery from circuit-tracer. Attribution graphs and interventions are implemented from scratch under `src/llm_circuits/circuits/` for full control over the computation graph and experiment loop.
 
@@ -35,8 +35,8 @@ uv run llm-circuits generate --size 0.6b --prompt "Hello"
 - **`src/llm_circuits/`** — src-layout package
   - **`cli.py`** — Typer CLI entry point (`llm-circuits` command)
   - **`settings.py`** — Device/dtype/path defaults (auto-detects CUDA/MPS/CPU, bf16 for CUDA/CPU, fp32 for MPS)
-  - **`models/`** — HF model loading via `AutoModelForCausalLM`; `qwen3.py` has Qwen3-specific wrappers
-  - **`transcoders/`** — `registry.py` has frozen `ModelSpec` dataclass mapping sizes (0.6b–14b) to HF repos; `circuit_tracer_loader.py` is the **only** file that imports from circuit-tracer
+  - **`models/`** — HF model loading via `AutoModelForCausalLM`; `qwen3.py` and `gemma2.py` have family-specific wrappers
+  - **`transcoders/`** — `registry.py` has frozen `ModelSpec` dataclass mapping family-prefixed keys (e.g. `qwen3-0.6b`, `gemma2-2b`) to HF repos; `circuit_tracer_loader.py` is the **only** file that imports from circuit-tracer
   - **`instrumentation/`** — Generic PyTorch hook utilities (`attach_hook` context manager, `ActivationRecorder`)
   - **`circuits/`** — Custom attribution graphs and interventions (WIP); `ablate_module()` context manager for zero-ablation
   - **`utils/`** — Path resolution, config loading, `seed_everything`

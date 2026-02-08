@@ -20,17 +20,23 @@ make install
 uv run llm-circuits info
 
 # Inspect a transcoder config (lightweight, no big downloads)
-uv run llm-circuits transcoder-inspect --size 0.6b
+uv run llm-circuits transcoder-inspect --size qwen3-0.6b
 
 # Load transcoders (downloads weights)
-uv run llm-circuits transcoder-load --size 0.6b
+uv run llm-circuits transcoder-load --size qwen3-0.6b
 
 # Cache transcoders locally
 uv run llm-circuits transcoder-cache --repo mwhanna/qwen3-0.6b-transcoders-lowl0 --cache-dir .cache/transcoders
 
 # Generate text (pure Transformers, no circuit-tracer)
-uv run llm-circuits generate --size 0.6b --prompt "The capital of France is"
+uv run llm-circuits generate --key qwen3-0.6b --prompt "The capital of France is"
+
+# Generate with Gemma2
+uv run llm-circuits generate --key gemma2-2b --prompt "The capital of France is"
 ```
+
+> **Backward compatibility:** Bare size keys like `--size 0.6b` still work and
+> resolve to the corresponding Qwen3 entry.
 
 ## Project structure
 
@@ -39,6 +45,8 @@ src/llm_circuits/
   cli.py               # Typer CLI entry point
   settings.py           # Device / dtype / path defaults
   models/               # HF model loading (AutoModelForCausalLM)
+    qwen3.py            # Qwen3-specific convenience loader
+    gemma2.py           # Gemma2-specific convenience loader
   transcoders/          # Registry + circuit-tracer loader (the ONLY circuit-tracer import)
   instrumentation/      # Generic PyTorch hooks and activation recording
   circuits/             # Attribution graphs and interventions (our own impl)
@@ -50,13 +58,16 @@ notebooks/              # Research notebooks
 
 ## Available model specs
 
-| Size | HF Model ID | Transcoder Repo |
-|------|-------------|-----------------|
-| 0.6b | Qwen/Qwen3-0.6B | mwhanna/qwen3-0.6b-transcoders-lowl0 |
-| 1.7b | Qwen/Qwen3-1.7B | mwhanna/qwen3-1.7b-transcoders-lowl0 |
-| 4b   | Qwen/Qwen3-4B   | mwhanna/qwen3-4b-transcoders |
-| 8b   | Qwen/Qwen3-8B   | mwhanna/qwen3-8b-transcoders |
-| 14b  | Qwen/Qwen3-14B  | mwhanna/qwen3-14b-transcoders-lowl0 |
+| Key | Family | Size | HF Model ID | Transcoder Repo | Transcoder Type |
+|-----|--------|------|-------------|-----------------|-----------------|
+| qwen3-0.6b | qwen3 | 0.6b | Qwen/Qwen3-0.6B | mwhanna/qwen3-0.6b-transcoders-lowl0 | per-layer |
+| qwen3-1.7b | qwen3 | 1.7b | Qwen/Qwen3-1.7B | mwhanna/qwen3-1.7b-transcoders-lowl0 | per-layer |
+| qwen3-4b | qwen3 | 4b | Qwen/Qwen3-4B | mwhanna/qwen3-4b-transcoders | per-layer |
+| qwen3-8b | qwen3 | 8b | Qwen/Qwen3-8B | mwhanna/qwen3-8b-transcoders | per-layer |
+| qwen3-14b | qwen3 | 14b | Qwen/Qwen3-14B | mwhanna/qwen3-14b-transcoders-lowl0 | per-layer |
+| gemma2-2b | gemma2 | 2b | google/gemma-2-2b | mwhanna/gemma-scope-transcoders | per-layer |
+| gemma2-2b-cross-layer-426k | gemma2 | 2b | google/gemma-2-2b | mntss/clt-gemma-2-2b-426k | cross-layer |
+| gemma2-2b-cross-layer-2.5m | gemma2 | 2b | google/gemma-2-2b | mntss/clt-gemma-2-2b-2.5M | cross-layer |
 
 ## Development
 

@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Example: compare original vs. transcoder-replaced Qwen3-0.6B outputs.
+
+Loads the model and its transcoders, runs ``compare_models``, and prints
+per-position KL divergence, cosine similarity, and top-1 agreement.
+
+Usage:
+    uv run python examples/compare_replacement_model.py
+"""
+
+from __future__ import annotations
+
+import torch
+
+from llm_circuits.circuits.replacement_model import compare_models
+from llm_circuits.models.qwen3 import load_qwen3
+from llm_circuits.settings import default_device, default_dtype
+from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
+
+
+def main() -> None:
+    device = default_device()
+    dtype = default_dtype()
+    dtype_str = "bf16" if dtype == torch.bfloat16 else "fp32"
+    prompt = "The capital of France is"
+
+    print(f"Device: {device}  Dtype: {dtype}")
+
+    # --- Load model -----------------------------------------------------------
+    print(f"Loading Qwen3-0.6B ({dtype_str}) ...")
+    model, tokenizer = load_qwen3("0.6b", dtype_str=dtype_str, device_map=device)
+    model.eval()
+
+    # --- Load transcoders -----------------------------------------------------
+    print("Loading transcoders ...")
+    loaded = load_transcoder("qwen3-0.6b", device=device, dtype=dtype)
+    tc = loaded.transcoder
+    print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
+
+    # --- Tokenize -------------------------------------------------------------
+    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    tokens = [tokenizer.decode(t) for t in input_ids[0]]
+
+    # --- Compare --------------------------------------------------------------
+    print(f"\nPrompt: {prompt!r}")
+    print(f"Tokens: {tokens}\n")
+
+    with torch.no_grad():
+        result = compare_models(model, tc, input_ids)
+
+    # --- Print per-position metrics -------------------------------------------
+    print(f"{'Pos':>3}  {'Token':>12}  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}")
+    print("-" * 52)
+    for i, tok in enumerate(tokens):
+        kl = result.kl_divergence[i].item()
+        cos = result.cosine_similarity[i].item()
+        agree = "yes" if result.top1_agreement[i].item() else "NO"
+        print(f"{i:3d}  {tok:>12s}  {kl:10.4f}  {cos:10.4f}  {agree:>6s}")
+
+    # --- Summary --------------------------------------------------------------
+    mean_kl = result.kl_divergence.mean().item()
+    mean_cos = result.cosine_similarity.mean().item()
+    pct_agree = result.top1_agreement.float().mean().item() * 100
+
+    print(f"\nMean KL divergence:   {mean_kl:.4f}")
+    print(f"Mean cosine sim:      {mean_cos:.4f}")
+    print(f"Top-1 agreement:      {pct_agree:.1f}%")
+
+    # --- Per-layer reconstruction error ---------------------------------------
+    if result.reconstruction_errors:
+        print(f"\n{'Layer':>5}  {'Mean L2 error':>14}")
+        print("-" * 22)
+        for layer_idx in sorted(result.reconstruction_errors):
+            err = result.reconstruction_errors[layer_idx].mean().item()
+            print(f"{layer_idx:5d}  {err:14.4f}")
+
+
+if __name__ == "__main__":
+    main()

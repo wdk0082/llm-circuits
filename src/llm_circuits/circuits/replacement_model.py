@@ -124,7 +124,7 @@ def _make_per_layer_hook(
 
         ctx.reconstructions[layer_idx] = reconstruction.detach()
         if include_error:
-            ctx.errors[layer_idx] = (original_out.detach() - reconstruction.detach())
+            ctx.errors[layer_idx] = original_out.detach() - reconstruction.detach()
 
         if isinstance(output, tuple):
             return (reconstruction, *output[1:])
@@ -174,7 +174,7 @@ def _make_cross_layer_hook(
 
         ctx.reconstructions[layer_idx] = reconstruction.detach()
         if include_error:
-            ctx.errors[layer_idx] = (original_out.detach() - reconstruction.detach())
+            ctx.errors[layer_idx] = original_out.detach() - reconstruction.detach()
 
         if isinstance(output, tuple):
             return (reconstruction, *output[1:])

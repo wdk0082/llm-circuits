@@ -4,6 +4,21 @@ Supports both per-layer transcoders (``TranscoderSet``) and cross-layer
 transcoders (``CrossLayerTranscoder``).  The context manager
 :func:`replace_mlps_with_transcoders` temporarily hooks each MLP submodule
 so that its output is replaced by the corresponding transcoder reconstruction.
+
+.. note::
+
+    Transcoders cannot reliably reconstruct the first token position (the
+    attention-sink / BOS position).  By default ``n_bos_tokens=1`` preserves
+    the original MLP output at position 0.  **Callers should ensure the input
+    starts with a BOS or padding token** so that position 0 acts as the
+    attention sink and real content tokens occupy positions >= 1.
+
+.. note::
+
+    For **Gemma2** models the transcoder reads from ``pre_feedforward_layernorm``
+    output and writes to ``post_feedforward_layernorm`` output.  Pass
+    ``output_module_template="model.layers.{layer}.post_feedforward_layernorm"``
+    to :func:`replace_mlps_with_transcoders` and :func:`compare_models`.
 """
 
 from __future__ import annotations
@@ -51,6 +66,27 @@ class _CrossLayerBuffer:
 
     def pop(self, layer: int) -> Tensor | None:
         return self._buf.pop(layer, None)
+
+    def clear(self) -> None:
+        self._buf.clear()
+
+
+class _InputBuffer:
+    """Stores captured transcoder inputs for two-hook architectures (e.g. Gemma2).
+
+    When the transcoder's input source and output target live on different
+    submodules, an input-capture hook stores the MLP input here, and the
+    output-replacement hook consumes it.
+    """
+
+    def __init__(self) -> None:
+        self._buf: dict[int, Tensor] = {}
+
+    def store(self, layer: int, x: Tensor) -> None:
+        self._buf[layer] = x
+
+    def pop(self, layer: int) -> Tensor:
+        return self._buf.pop(layer)
 
     def clear(self) -> None:
         self._buf.clear()
@@ -114,78 +150,129 @@ def _is_transcoder_set(tc: Any) -> bool:
     return hasattr(tc, "transcoders")
 
 
-def _make_per_layer_hook(
+def _finalize_reconstruction(
+    reconstruction: Tensor,
+    original_out: Tensor,
     layer_idx: int,
-    transcoder: TranscoderSet,
     ctx: ReplacementContext,
     include_error: bool,
-) -> Any:
-    """Return a forward hook that replaces MLP output with per-layer transcoder."""
+    n_bos_tokens: int,
+) -> Tensor:
+    """Preserve BOS positions and store reconstruction/error in *ctx*."""
+    if n_bos_tokens > 0:
+        reconstruction = torch.cat(
+            [original_out[..., :n_bos_tokens, :], reconstruction[..., n_bos_tokens:, :]],
+            dim=-2,
+        )
+
+    ctx.reconstructions[layer_idx] = reconstruction.detach()
+    if include_error:
+        ctx.errors[layer_idx] = original_out.detach() - reconstruction.detach()
+
+    return reconstruction
+
+
+def _replace_output(output: Any, replacement: Tensor) -> Any:
+    """Swap the primary tensor in a module output, preserving tuple structure."""
+    if isinstance(output, tuple):
+        return (replacement, *output[1:])
+    return replacement
+
+
+def _compute_clt_reconstruction(
+    x: Tensor,
+    layer_idx: int,
+    clt: CrossLayerTranscoder,
+    buf: _CrossLayerBuffer,
+) -> Tensor:
+    """Run CLT encode + decode for *layer_idx*, updating *buf* with future contributions."""
+    features = clt.encode_layer(x, layer_idx)
+
+    # W_dec shape: (d_transcoder, n_target_layers, d_model)
+    W_dec = clt._get_decoder_vectors(layer_idx)
+
+    # Self-contribution (offset 0 = this layer)
+    self_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, 0, :])
+
+    # Future-layer contributions
+    for offset in range(1, W_dec.shape[1]):
+        future_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, offset, :])
+        buf.add(layer_idx + offset, future_contrib)
+
+    # Assemble reconstruction
+    reconstruction = clt.b_dec[layer_idx] + self_contrib
+
+    buffered = buf.pop(layer_idx)
+    if buffered is not None:
+        reconstruction = reconstruction + buffered
+
+    if clt.skip_connection:
+        reconstruction = reconstruction + clt.compute_skip(layer_idx, x)
+
+    return reconstruction
+
+
+def _make_input_capture_hook(layer_idx: int, ibuf: _InputBuffer) -> Any:
+    """Return a forward hook that captures ``inp[0]`` without modifying output."""
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
-        x = inp[0]
-        reconstruction = transcoder.transcoders[layer_idx](x)
-
-        # Handle tuple outputs (some models return (hidden, cache, ...))
-        original_out = output[0] if isinstance(output, tuple) else output
-
-        ctx.reconstructions[layer_idx] = reconstruction.detach()
-        if include_error:
-            ctx.errors[layer_idx] = original_out.detach() - reconstruction.detach()
-
-        if isinstance(output, tuple):
-            return (reconstruction, *output[1:])
-        return reconstruction
+        ibuf.store(layer_idx, inp[0])
+        return output
 
     return hook
 
 
-def _make_cross_layer_hook(
+def _make_plt_hook(
+    layer_idx: int,
+    transcoder: TranscoderSet,
+    ctx: ReplacementContext,
+    include_error: bool,
+    n_bos_tokens: int,
+    ibuf: _InputBuffer | None = None,
+) -> Any:
+    """Return a forward hook that replaces output with per-layer transcoder reconstruction.
+
+    When *ibuf* is provided (two-hook mode), the transcoder input is read from
+    the buffer instead of from the hooked module's ``inp[0]``.
+    """
+
+    def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
+        x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
+        original_out = output[0] if isinstance(output, tuple) else output
+
+        reconstruction = transcoder.transcoders[layer_idx](x)
+        reconstruction = _finalize_reconstruction(
+            reconstruction, original_out, layer_idx, ctx, include_error, n_bos_tokens
+        )
+        return _replace_output(output, reconstruction)
+
+    return hook
+
+
+def _make_clt_hook(
     layer_idx: int,
     clt: CrossLayerTranscoder,
     buf: _CrossLayerBuffer,
     ctx: ReplacementContext,
     include_error: bool,
+    n_bos_tokens: int,
+    ibuf: _InputBuffer | None = None,
 ) -> Any:
-    """Return a forward hook that replaces MLP output with CLT reconstruction."""
+    """Return a forward hook that replaces output with CLT reconstruction.
+
+    When *ibuf* is provided (two-hook mode), the transcoder input is read from
+    the buffer instead of from the hooked module's ``inp[0]``.
+    """
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
-        x = inp[0]
-
-        # Encode features at this layer
-        features = clt.encode_layer(x, layer_idx)
-
-        # Decode: W_dec shape is (d_transcoder, n_target_layers, d_model)
-        W_dec = clt._get_decoder_vectors(layer_idx)
-
-        # Self-contribution (offset 0 = this layer)
-        self_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, 0, :])
-
-        # Future-layer contributions
-        for offset in range(1, W_dec.shape[1]):
-            future_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, offset, :])
-            buf.add(layer_idx + offset, future_contrib)
-
-        # Assemble reconstruction
-        reconstruction = clt.b_dec[layer_idx] + self_contrib
-
-        buffered = buf.pop(layer_idx)
-        if buffered is not None:
-            reconstruction = reconstruction + buffered
-
-        if clt.skip_connection:
-            reconstruction = reconstruction + clt.compute_skip(layer_idx, x)
-
-        # Handle tuple outputs
+        x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
         original_out = output[0] if isinstance(output, tuple) else output
 
-        ctx.reconstructions[layer_idx] = reconstruction.detach()
-        if include_error:
-            ctx.errors[layer_idx] = original_out.detach() - reconstruction.detach()
-
-        if isinstance(output, tuple):
-            return (reconstruction, *output[1:])
-        return reconstruction
+        reconstruction = _compute_clt_reconstruction(x, layer_idx, clt, buf)
+        reconstruction = _finalize_reconstruction(
+            reconstruction, original_out, layer_idx, ctx, include_error, n_bos_tokens
+        )
+        return _replace_output(output, reconstruction)
 
     return hook
 
@@ -201,7 +288,9 @@ def replace_mlps_with_transcoders(
     transcoder: TranscoderSet | CrossLayerTranscoder,
     *,
     include_error: bool = False,
+    n_bos_tokens: int = 1,
     mlp_name_template: str = "model.layers.{layer}.mlp",
+    output_module_template: str | None = None,
 ) -> Generator[ReplacementContext, None, None]:
     """Temporarily replace every MLP with its transcoder reconstruction.
 
@@ -209,10 +298,20 @@ def replace_mlps_with_transcoders(
         model: The full language model (e.g. ``AutoModelForCausalLM``).
         transcoder: A ``TranscoderSet`` or ``CrossLayerTranscoder`` loaded
             via :func:`~llm_circuits.transcoders.circuit_tracer_loader.load_transcoder`.
-        include_error: If ``True``, store ``mlp_out - reconstruction`` per layer
+        include_error: If ``True``, store ``original - reconstruction`` per layer
             in :attr:`ReplacementContext.errors`.
+        n_bos_tokens: Number of leading token positions whose original MLP output
+            is preserved (not replaced).  Defaults to ``1`` because transcoders
+            cannot reconstruct the attention-sink position.  Set to ``0`` to
+            replace all positions (not recommended).
         mlp_name_template: Python format string with a ``{layer}`` placeholder
-            used to resolve each MLP submodule.
+            used to resolve the submodule whose ``inp[0]`` provides the
+            transcoder input.
+        output_module_template: If provided, a *separate* submodule whose output
+            is replaced by the transcoder reconstruction.  Required for
+            architectures where the transcoder output target differs from the
+            input source.  For Gemma2, pass
+            ``"model.layers.{layer}.post_feedforward_layernorm"``.
 
     Yields:
         A :class:`ReplacementContext` whose ``reconstructions`` (and optionally
@@ -220,22 +319,47 @@ def replace_mlps_with_transcoders(
     """
     is_set = _is_transcoder_set(transcoder)
     n_layers = len(transcoder) if is_set else transcoder.n_layers
+    two_hook = output_module_template is not None
 
     ctx = ReplacementContext()
     handles: list[torch.utils.hooks.RemovableHook] = []
     buf = _CrossLayerBuffer() if not is_set else None
+    ibuf = _InputBuffer() if two_hook else None
 
     try:
         for i in range(n_layers):
-            mlp_name = mlp_name_template.format(layer=i)
-            submodule = model.get_submodule(mlp_name)
+            input_mod = model.get_submodule(mlp_name_template.format(layer=i))
 
-            if is_set:
-                hook_fn = _make_per_layer_hook(i, transcoder, ctx, include_error)
+            if two_hook:
+                output_mod = model.get_submodule(output_module_template.format(layer=i))
+                handles.append(input_mod.register_forward_hook(_make_input_capture_hook(i, ibuf)))
+                if is_set:
+                    handles.append(
+                        output_mod.register_forward_hook(
+                            _make_plt_hook(i, transcoder, ctx, include_error, n_bos_tokens, ibuf)
+                        )
+                    )
+                else:
+                    handles.append(
+                        output_mod.register_forward_hook(
+                            _make_clt_hook(
+                                i, transcoder, buf, ctx, include_error, n_bos_tokens, ibuf
+                            )
+                        )
+                    )
             else:
-                hook_fn = _make_cross_layer_hook(i, transcoder, buf, ctx, include_error)
-
-            handles.append(submodule.register_forward_hook(hook_fn))
+                if is_set:
+                    handles.append(
+                        input_mod.register_forward_hook(
+                            _make_plt_hook(i, transcoder, ctx, include_error, n_bos_tokens)
+                        )
+                    )
+                else:
+                    handles.append(
+                        input_mod.register_forward_hook(
+                            _make_clt_hook(i, transcoder, buf, ctx, include_error, n_bos_tokens)
+                        )
+                    )
 
         yield ctx
     finally:
@@ -243,6 +367,8 @@ def replace_mlps_with_transcoders(
             h.remove()
         if buf is not None:
             buf.clear()
+        if ibuf is not None:
+            ibuf.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +382,9 @@ def compare_models(
     transcoder: TranscoderSet | CrossLayerTranscoder,
     input_ids: Tensor,
     *,
+    n_bos_tokens: int = 1,
     mlp_name_template: str = "model.layers.{layer}.mlp",
+    output_module_template: str | None = None,
 ) -> ComparisonResult:
     """Run the model with and without transcoder replacement and compare outputs.
 
@@ -265,23 +393,33 @@ def compare_models(
         transcoder: Transcoder set or cross-layer transcoder.
         input_ids: Token ids, shape ``(batch, seq)`` or ``(seq,)``.
             Batch dimension is squeezed in the returned metrics.
+        n_bos_tokens: Forwarded to :func:`replace_mlps_with_transcoders`.
         mlp_name_template: Forwarded to :func:`replace_mlps_with_transcoders`.
+        output_module_template: Forwarded to :func:`replace_mlps_with_transcoders`.
 
     Returns:
         A :class:`ComparisonResult` with per-position metrics.
     """
-    # --- Original forward pass (with hooks to capture MLP activations) --------
+    # --- Original forward pass (with hooks to capture activations) -------------
     is_set = _is_transcoder_set(transcoder)
     n_layers = len(transcoder) if is_set else transcoder.n_layers
 
-    mlp_names = [mlp_name_template.format(layer=i) for i in range(n_layers)]
+    # Record activations at the output module (= what the transcoder reconstructs).
+    out_template = output_module_template or mlp_name_template
+    record_names = [out_template.format(layer=i) for i in range(n_layers)]
+
     recorder = ActivationRecorder()
-    with recorder.attach(model, mlp_names):
+    with recorder.attach(model, record_names):
         original_logits = model(input_ids).logits
 
     # --- Replacement forward pass ---------------------------------------------
     with replace_mlps_with_transcoders(
-        model, transcoder, include_error=True, mlp_name_template=mlp_name_template
+        model,
+        transcoder,
+        include_error=True,
+        n_bos_tokens=n_bos_tokens,
+        mlp_name_template=mlp_name_template,
+        output_module_template=output_module_template,
     ) as rctx:
         replacement_logits = model(input_ids).logits
 
@@ -312,7 +450,7 @@ def compare_models(
 
     # --- Per-layer activations ------------------------------------------------
     original_acts: dict[int, Tensor] = {}
-    for i, name in enumerate(mlp_names):
+    for i, name in enumerate(record_names):
         if name in recorder.activations:
             act = recorder.activations[name]
             if act.dim() == 3:

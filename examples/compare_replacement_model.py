@@ -49,13 +49,24 @@ def main() -> None:
         result = compare_models(model, tc, input_ids)
 
     # --- Print per-position metrics -------------------------------------------
-    print(f"{'Pos':>3}  {'Token':>12}  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}")
-    print("-" * 52)
+    orig_preds = result.original_logits.argmax(dim=-1)
+    repl_preds = result.replacement_logits.argmax(dim=-1)
+
+    print(
+        f"{'Pos':>3}  {'Token':>12}  {'Orig pred':>12}  {'Repl pred':>12}"
+        f"  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}"
+    )
+    print("-" * 78)
     for i, tok in enumerate(tokens):
+        orig_tok = tokenizer.decode(orig_preds[i].item())
+        repl_tok = tokenizer.decode(repl_preds[i].item())
         kl = result.kl_divergence[i].item()
         cos = result.cosine_similarity[i].item()
         agree = "yes" if result.top1_agreement[i].item() else "NO"
-        print(f"{i:3d}  {tok:>12s}  {kl:10.4f}  {cos:10.4f}  {agree:>6s}")
+        print(
+            f"{i:3d}  {tok:>12s}  {orig_tok:>12s}  {repl_tok:>12s}"
+            f"  {kl:10.4f}  {cos:10.4f}  {agree:>6s}"
+        )
 
     # --- Summary --------------------------------------------------------------
     mean_kl = result.kl_divergence.mean().item()

@@ -17,6 +17,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
+from llm_circuits.instrumentation.hooks import ActivationRecorder
 from llm_circuits.logging import get_logger
 
 if TYPE_CHECKING:
@@ -95,6 +96,12 @@ class ComparisonResult:
 
     reconstruction_errors: dict[int, Tensor]
     """Per-layer L2 norm of error over *d_model*, shape ``(seq,)``."""
+
+    original_activations: dict[int, Tensor]
+    """Per-layer original MLP output, shape ``(seq, d_model)``."""
+
+    replacement_activations: dict[int, Tensor]
+    """Per-layer transcoder reconstruction, shape ``(seq, d_model)``."""
 
 
 # ---------------------------------------------------------------------------
@@ -263,8 +270,14 @@ def compare_models(
     Returns:
         A :class:`ComparisonResult` with per-position metrics.
     """
-    # --- Original forward pass ------------------------------------------------
-    original_logits = model(input_ids).logits
+    # --- Original forward pass (with hooks to capture MLP activations) --------
+    is_set = _is_transcoder_set(transcoder)
+    n_layers = len(transcoder) if is_set else transcoder.n_layers
+
+    mlp_names = [mlp_name_template.format(layer=i) for i in range(n_layers)]
+    recorder = ActivationRecorder()
+    with recorder.attach(model, mlp_names):
+        original_logits = model(input_ids).logits
 
     # --- Replacement forward pass ---------------------------------------------
     with replace_mlps_with_transcoders(
@@ -297,6 +310,21 @@ def compare_models(
             err = err[0]
         reconstruction_errors[layer_idx] = err.norm(dim=-1)
 
+    # --- Per-layer activations ------------------------------------------------
+    original_acts: dict[int, Tensor] = {}
+    for i, name in enumerate(mlp_names):
+        if name in recorder.activations:
+            act = recorder.activations[name]
+            if act.dim() == 3:
+                act = act[0]
+            original_acts[i] = act
+
+    replacement_acts: dict[int, Tensor] = {}
+    for layer_idx, recon in rctx.reconstructions.items():
+        if recon.dim() == 3:
+            recon = recon[0]
+        replacement_acts[layer_idx] = recon
+
     return ComparisonResult(
         kl_divergence=kl,
         cosine_similarity=cosine,
@@ -304,4 +332,6 @@ def compare_models(
         original_logits=original_logits,
         replacement_logits=replacement_logits,
         reconstruction_errors=reconstruction_errors,
+        original_activations=original_acts,
+        replacement_activations=replacement_acts,
     )

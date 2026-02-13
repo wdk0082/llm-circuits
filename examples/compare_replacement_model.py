@@ -13,6 +13,7 @@ from __future__ import annotations
 import torch
 
 from llm_circuits.circuits.replacement_model import compare_models
+from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
@@ -37,8 +38,11 @@ def main() -> None:
     tc = loaded.transcoder
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 
-    # --- Tokenize -------------------------------------------------------------
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    # --- Tokenize via chat template -------------------------------------------
+    messages, n_bos_tokens = prepare_messages(prompt, "qwen3")
+    input_ids = tokenizer.apply_chat_template(
+        messages, return_tensors="pt", add_generation_prompt=True,
+    ).to(device)
     tokens = [tokenizer.decode(t) for t in input_ids[0]]
 
     # --- Compare --------------------------------------------------------------
@@ -46,7 +50,7 @@ def main() -> None:
     print(f"Tokens: {tokens}\n")
 
     with torch.no_grad():
-        result = compare_models(model, tc, input_ids)
+        result = compare_models(model, tc, input_ids, n_bos_tokens=n_bos_tokens)
 
     # --- Print per-position metrics -------------------------------------------
     orig_preds = result.original_logits.argmax(dim=-1)

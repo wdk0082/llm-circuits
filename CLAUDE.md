@@ -54,3 +54,8 @@ uv run llm-circuits generate --size 0.6b --prompt "Hello"
 
 - `HF_TOKEN` required for gated models (see `.env.example`)
 - `LLM_CIRCUITS_DEVICE` overrides auto-detected device
+
+## Additional Requirements
+
+- Always run the `.github/workflows/ci.yml` to check CIs.
+- 

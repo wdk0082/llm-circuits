@@ -41,7 +41,9 @@ def main() -> None:
     # --- Tokenize via chat template -------------------------------------------
     messages, n_bos_tokens = prepare_messages(prompt, "qwen3")
     input_ids = tokenizer.apply_chat_template(
-        messages, return_tensors="pt", add_generation_prompt=True,
+        messages,
+        return_tensors="pt",
+        add_generation_prompt=True,
     ).to(device)
     tokens = [tokenizer.decode(t) for t in input_ids[0]]
 

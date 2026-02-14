@@ -124,6 +124,9 @@ class ComparisonResult:
     top1_agreement: Tensor
     """Whether top-1 predictions match per position, shape ``(seq,)``."""
 
+    top5_agreement: Tensor
+    """Whether original top-1 is within replacement top-5 per position, shape ``(seq,)``."""
+
     original_logits: Tensor
     """Shape ``(seq, vocab)``."""
 
@@ -440,6 +443,11 @@ def compare_models(
     # --- Top-1 agreement ------------------------------------------------------
     top1 = original_logits.argmax(dim=-1) == replacement_logits.argmax(dim=-1)
 
+    # --- Top-5 agreement ------------------------------------------------------
+    orig_top1 = original_logits.argmax(dim=-1)  # (seq,)
+    repl_top5 = replacement_logits.topk(5, dim=-1).indices  # (seq, 5)
+    top5 = (repl_top5 == orig_top1.unsqueeze(-1)).any(dim=-1)
+
     # --- Per-layer reconstruction error (L2 over d_model) ---------------------
     reconstruction_errors: dict[int, Tensor] = {}
     for layer_idx, err in rctx.errors.items():
@@ -467,6 +475,7 @@ def compare_models(
         kl_divergence=kl,
         cosine_similarity=cosine,
         top1_agreement=top1,
+        top5_agreement=top5,
         original_logits=original_logits,
         replacement_logits=replacement_logits,
         reconstruction_errors=reconstruction_errors,

@@ -23,7 +23,7 @@ def main() -> None:
     device = default_device()
     dtype = default_dtype()
     dtype_str = "bf16" if dtype == torch.bfloat16 else "fp32"
-    prompt = "The capital of France is"
+    prompt = "Answer immediately with one word: The capital of France is?"
 
     print(f"Device: {device}  Dtype: {dtype}")
 
@@ -57,19 +57,24 @@ def main() -> None:
     repl_preds = result.replacement_logits.argmax(dim=-1)
 
     print(
-        f"{'Pos':>3}  {'Token':>12}  {'Orig pred':>12}  {'Repl pred':>12}"
-        f"  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}"
+        f"{'Pos':>3}  {'Token':>16}  {'Orig pred':>16}  {'Repl pred':>16}"
+        f"  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}  {'Top-5':>6}"
     )
-    print("-" * 78)
+    print("-" * 98)
     for i, tok in enumerate(tokens):
         orig_tok = tokenizer.decode(orig_preds[i].item())
         repl_tok = tokenizer.decode(repl_preds[i].item())
         kl = result.kl_divergence[i].item()
         cos = result.cosine_similarity[i].item()
-        agree = "yes" if result.top1_agreement[i].item() else "NO"
+        agree1 = "yes" if result.top1_agreement[i].item() else "NO"
+        agree5 = "yes" if result.top5_agreement[i].item() else "NO"
+        # Use repr() to escape newlines and other control characters for display.
+        tok_d = repr(tok)[1:-1]
+        orig_d = repr(orig_tok)[1:-1]
+        repl_d = repr(repl_tok)[1:-1]
         print(
-            f"{i:3d}  {tok:>12s}  {orig_tok:>12s}  {repl_tok:>12s}"
-            f"  {kl:10.4f}  {cos:10.4f}  {agree:>6s}"
+            f"{i:3d}  {tok_d:>16s}  {orig_d:>16s}  {repl_d:>16s}"
+            f"  {kl:10.4f}  {cos:10.4f}  {agree1:>6s}  {agree5:>6s}"
         )
 
     # --- Summary --------------------------------------------------------------
@@ -77,9 +82,12 @@ def main() -> None:
     mean_cos = result.cosine_similarity.mean().item()
     pct_agree = result.top1_agreement.float().mean().item() * 100
 
+    pct_agree5 = result.top5_agreement.float().mean().item() * 100
+
     print(f"\nMean KL divergence:   {mean_kl:.4f}")
     print(f"Mean cosine sim:      {mean_cos:.4f}")
     print(f"Top-1 agreement:      {pct_agree:.1f}%")
+    print(f"Top-5 agreement:      {pct_agree5:.1f}%")
 
     # --- Per-layer reconstruction error ---------------------------------------
     if result.reconstruction_errors:

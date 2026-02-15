@@ -8,18 +8,14 @@ Mechanistic-interpretability research toolkit for analyzing LLM circuits, suppor
 
 **Key design principle:** circuit-tracer is used **only** to load transcoders. We deliberately avoid importing `ReplacementModel`, `AttributionGraph`, or any intervention machinery from circuit-tracer. Attribution graphs and interventions are implemented from scratch under `src/llm_circuits/circuits/` for full control over the computation graph and experiment loop.
 
-## Commands
+## HPC Environment (**Very important**)
 
-```bash
-make install   # uv sync --all-groups
-make lint      # uv run ruff check src tests examples
-make format    # uv run ruff format + ruff check --fix
-make test      # uv run pytest
-make check     # lint + test
-make all       # format + check
-```
+- **Queue System:** Slurm
+- **Current Session:** This session is running on a dedicated GPU compute node (Ampere).
+- **Project Account:** MPHIL-DIS-SL2-GPU
+- **Usage Policy:** All heavy computations, model training, or indexing must be done within this interactive session. Do not run heavy processes on the login nodes.
 
-Always use `uv` when running python scripts.
+**Always 1. load `.env` before any bash commands and 2. use `uv` when running python scripts.**
 
 ## Architecture
 
@@ -49,4 +45,3 @@ Always use `uv` when running python scripts.
 ## Additional Requirements
 
 - Always run the `.github/workflows/ci.yml` to check CIs.
-- 

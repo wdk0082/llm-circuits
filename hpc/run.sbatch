@@ -3,7 +3,6 @@
 #SBATCH --partition=ampere
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=16
 #SBATCH --time=00:30:00
 #SBATCH --job-name=llm-run-1gpu
 #SBATCH --output=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.out

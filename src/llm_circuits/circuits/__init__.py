@@ -1,5 +1,11 @@
 """Circuit analysis: attribution graphs and interventions (WIP)."""
 
+from llm_circuits.circuits.local_replacement_model import (
+    LocalReplacementContext as LocalReplacementContext,
+)
+from llm_circuits.circuits.local_replacement_model import (
+    run_local_replacement as run_local_replacement,
+)
 from llm_circuits.circuits.replacement_model import (
     ComparisonResult as ComparisonResult,
 )

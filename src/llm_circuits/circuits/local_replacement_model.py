@@ -226,8 +226,8 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
     # Cache module references
     v_proj = attn_mod.v_proj
     o_proj = attn_mod.o_proj
-    num_heads = attn_mod.num_heads
-    num_kv_heads = attn_mod.num_key_value_heads
+    num_heads = attn_mod.config.num_attention_heads
+    num_kv_heads = attn_mod.config.num_key_value_heads
     n_rep = num_heads // num_kv_heads
     head_dim = attn_mod.head_dim
 
@@ -249,7 +249,7 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
         attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, q_len, -1)
         attn_output = o_proj(attn_output)
 
-        return attn_output, frozen_weights, None
+        return attn_output, frozen_weights
 
     return frozen_forward
 

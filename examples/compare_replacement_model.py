@@ -18,6 +18,10 @@ from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
+# ── Choose model size here ───────────────────────────────────────────────────
+MODEL_SIZE = "0.6b"  # e.g. "0.6b", "4b"
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     device = default_device()
@@ -28,13 +32,13 @@ def main() -> None:
     print(f"Device: {device}  Dtype: {dtype}")
 
     # --- Load model -----------------------------------------------------------
-    print(f"Loading Qwen3-0.6B ({dtype_str}) ...")
-    model, tokenizer = load_qwen3("0.6b", dtype_str=dtype_str, device_map=device)
+    print(f"Loading Qwen3-{MODEL_SIZE.upper()} ({dtype_str}) ...")
+    model, tokenizer = load_qwen3(MODEL_SIZE, dtype_str=dtype_str, device_map=device)
     model.eval()
 
     # --- Load transcoders -----------------------------------------------------
     print("Loading transcoders ...")
-    loaded = load_transcoder("qwen3-0.6b", device=device, dtype=dtype)
+    loaded = load_transcoder(f"qwen3-{MODEL_SIZE}", device=device, dtype=dtype)
     tc = loaded.transcoder
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 

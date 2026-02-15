@@ -19,16 +19,7 @@ make check     # lint + test
 make all       # format + check
 ```
 
-Run a single test file:
-```bash
-uv run pytest tests/test_registry.py -v
-```
-
-Run the CLI:
-```bash
-uv run llm-circuits info
-uv run llm-circuits generate --size 0.6b --prompt "Hello"
-```
+Always use `uv` when running python scripts.
 
 ## Architecture
 

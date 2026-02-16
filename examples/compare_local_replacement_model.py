@@ -79,9 +79,7 @@ def _print_table(
         # For each variant, print a row
         for vi, name in enumerate(variant_names):
             logits = variant_logits[name]
-            kl, cosine, top1, top5 = _compute_metrics(
-                original_logits[i : i + 1], logits[i : i + 1]
-            )
+            kl, cosine, top1, top5 = _compute_metrics(original_logits[i : i + 1], logits[i : i + 1])
             pred_d = repr(tokenizer.decode(logits.argmax(dim=-1)[i].item()))[1:-1]
             agree1 = "yes" if top1[0].item() else "NO"
             agree5 = "yes" if top5[0].item() else "NO"

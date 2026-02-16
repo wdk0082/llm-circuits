@@ -210,3 +210,4 @@ __marimo__/
 outputs/
 artifacts/
 .cache/
+*.code-workspace

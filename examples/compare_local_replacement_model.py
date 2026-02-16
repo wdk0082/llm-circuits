@@ -32,7 +32,7 @@ from llm_circuits.settings import default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
 # ── Choose model size here ───────────────────────────────────────────────────
-MODEL_SIZE = "14b"  # e.g. "0.6b", "4b"
+MODEL_SIZE = "4b"  # e.g. "0.6b", "4b"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -60,10 +60,12 @@ def _print_table(
 ) -> None:
     """Print a per-position comparison table for multiple variants."""
     variant_names = list(variant_logits.keys())
+    n_variants = len(variant_names)
+    pred_w = 16
     # Header
     header = f"{'Pos':>3}  {'Token':>16}  {'Orig pred':>16}"
     for name in variant_names:
-        header += f"  {name + ' pred':>16}"
+        header += f"  {name + ' pred':>{pred_w}}"
     header += f"  {'KL div':>10}  {'Cos sim':>10}  {'Top-1':>6}  {'Top-5':>6}  {'Variant':>10}"
     print(header)
     print("-" * len(header))
@@ -77,7 +79,9 @@ def _print_table(
         # For each variant, print a row
         for vi, name in enumerate(variant_names):
             logits = variant_logits[name]
-            kl, cosine, top1, top5 = _compute_metrics(original_logits[i : i + 1], logits[i : i + 1])
+            kl, cosine, top1, top5 = _compute_metrics(
+                original_logits[i : i + 1], logits[i : i + 1]
+            )
             pred_d = repr(tokenizer.decode(logits.argmax(dim=-1)[i].item()))[1:-1]
             agree1 = "yes" if top1[0].item() else "NO"
             agree5 = "yes" if top5[0].item() else "NO"
@@ -87,11 +91,12 @@ def _print_table(
                 row = f"{i:3d}  {tok_d:>16s}  {orig_d:>16s}"
             else:
                 row = f"{'':3s}  {'':>16s}  {'':>16s}"
-            row += f"  {pred_d:>16s}"
-            # Pad for other variant columns
-            for vj in range(len(variant_names)):
-                if vj != vi:
-                    pass  # We only print one variant per sub-row
+            # Place prediction under the correct variant column
+            for vj in range(n_variants):
+                if vj == vi:
+                    row += f"  {pred_d:>{pred_w}s}"
+                else:
+                    row += f"  {'':>{pred_w}s}"
             row += (
                 f"  {kl[0].item():10.4f}"
                 f"  {cosine[0].item():10.4f}"

@@ -3,7 +3,7 @@
 #SBATCH --partition=ampere
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --job-name=llm-run-1gpu
 #SBATCH --output=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.out
 #SBATCH --error=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.err
@@ -29,4 +29,4 @@ set -a; source .env; set +a
 uv sync --frozen
 
 # Run training (single process, single GPU)
-uv run --frozen python examples/compare_replacement_model.py
+uv run --frozen python examples/compare_local_replacement_model.py

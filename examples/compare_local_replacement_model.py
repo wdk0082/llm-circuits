@@ -32,7 +32,7 @@ from llm_circuits.settings import default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
 # ── Choose model size here ───────────────────────────────────────────────────
-MODEL_SIZE = "4b"  # e.g. "0.6b", "4b"
+MODEL_SIZE = "0.6b"  # e.g. "0.6b", "4b"
 # ─────────────────────────────────────────────────────────────────────────────
 
 

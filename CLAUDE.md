@@ -15,7 +15,7 @@ Mechanistic-interpretability research toolkit for analyzing LLM circuits, suppor
 - **Project Account:** MPHIL-DIS-SL2-GPU
 - **Usage Policy:** All heavy computations, model training, or indexing must be done within this interactive session. Do not run heavy processes on the login nodes.
 
-**Always 1. load `.env` before any bash commands (by `set -a; source .env; set +a`) and 2. use `uv` when running python scripts.**
+**Always 1. load `.env` before any bash commands (by `set -a; source .env; set +a`) and 2. use `uv` when running python commands.**
 
 ## Architecture
 

@@ -46,6 +46,19 @@ def cache_dir() -> Path:
     return project_root() / ".cache"
 
 
+def artifacts_dir() -> Path:
+    """Return the directory for output artifacts (plots, saved graphs, etc.).
+
+    Priority:
+      1. ``LLM_CIRCUITS_ARTIFACTS_DIR`` env var
+      2. ``<project_root>/artifacts``
+    """
+    override = os.environ.get("LLM_CIRCUITS_ARTIFACTS_DIR")
+    if override:
+        return Path(override)
+    return project_root() / "artifacts"
+
+
 def transcoder_cache_dir() -> Path:
     """Return the default cache directory for transcoder weights."""
     return cache_dir() / "transcoders"

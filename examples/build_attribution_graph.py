@@ -10,8 +10,6 @@ Usage:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import torch
 
 from llm_circuits.circuits.attribution_graph import (
@@ -21,13 +19,14 @@ from llm_circuits.circuits.attribution_graph import (
 )
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
-from llm_circuits.settings import default_device, default_dtype
+from llm_circuits.settings import artifacts_dir, default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
 # ── Config ────────────────────────────────────────────────────────────────────
 MODEL_SIZE = "0.6b"
 PROMPT = "Answer immediately with one word: The capital of France is?"
-SAVE_PATH = Path(".cache/attribution_graph.pt")
+FEATURE_TO_FEATURE = True  # Include feature-to-feature edges (slower but more complete)
+SAVE_PATH = artifacts_dir() / "attribution_graph.pt"
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -107,14 +106,15 @@ def main() -> None:
     print(f"Tokens ({len(tokens)}): {tokens}\n")
 
     # --- Build attribution graph ----------------------------------------------
-    print("Building attribution graph (logit edges only) ...")
+    edge_desc = "feature-to-feature + logit" if FEATURE_TO_FEATURE else "logit edges only"
+    print(f"Building attribution graph ({edge_desc}) ...")
     graph = build_attribution_graph(
         model,
         tc,
         input_ids,
         tokenizer,
         n_bos_tokens=n_bos_tokens,
-        feature_to_feature=False,
+        feature_to_feature=FEATURE_TO_FEATURE,
         model_name=f"qwen3-{MODEL_SIZE}",
         transcoder_repo=loaded.repo_id,
     )

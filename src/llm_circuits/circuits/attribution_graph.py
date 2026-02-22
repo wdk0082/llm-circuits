@@ -182,13 +182,17 @@ def _make_feature_leaf_plt_hook(
         pre_acts = F.linear(x.to(tc.W_enc.dtype), tc.W_enc, tc.b_enc)
         acts_raw = tc.activation_function(pre_acts)
 
-        # Create leaf tensor — cuts the autograd graph at this feature boundary
-        acts_leaf = acts_raw.detach().clone().requires_grad_(True)
+        # Create leaf tensor — cuts the autograd graph at this feature boundary.
+        # Squeeze to 2D first so the leaf is the true autograd leaf; unsqueeze
+        # for decode creates a differentiable view that stays connected.
+        acts_raw_2d = acts_raw[0] if acts_raw.dim() == 3 else acts_raw
+        acts_leaf = acts_raw_2d.detach().clone().requires_grad_(True)
         fwd.feature_acts[layer_idx] = acts_leaf
-        fwd.active_masks[layer_idx] = acts_raw.detach() > 0
+        fwd.active_masks[layer_idx] = acts_raw_2d.detach() > 0
 
-        # Decode from the leaf
-        reconstruction = acts_leaf @ tc.W_dec + tc.b_dec
+        # Decode from the leaf — unsqueeze back to 3D for residual stream
+        acts_for_decode = acts_leaf.unsqueeze(0) if acts_raw.dim() == 3 else acts_leaf
+        reconstruction = acts_for_decode @ tc.W_dec + tc.b_dec
         if tc.W_skip is not None:
             reconstruction = reconstruction + x.detach() @ tc.W_skip.T
 
@@ -253,17 +257,20 @@ def _make_feature_leaf_clt_hook(
         )
         acts_raw = clt.apply_activation_function(layer_idx, pre_acts)
 
-        # Leaf activations
-        acts_leaf = acts_raw.detach().clone().requires_grad_(True)
+        # Leaf activations — squeeze to 2D so the leaf stays connected via
+        # unsqueeze view (same pattern as PLT hook).
+        acts_raw_2d = acts_raw[0] if acts_raw.dim() == 3 else acts_raw
+        acts_leaf = acts_raw_2d.detach().clone().requires_grad_(True)
         fwd.feature_acts[layer_idx] = acts_leaf
-        fwd.active_masks[layer_idx] = acts_raw.detach() > 0
+        fwd.active_masks[layer_idx] = acts_raw_2d.detach() > 0
 
         # Decode from leaf — mirrors _compute_clt_reconstruction but with acts_leaf
+        acts_for_decode = acts_leaf.unsqueeze(0) if acts_raw.dim() == 3 else acts_leaf
         W_dec = clt._get_decoder_vectors(layer_idx)
-        self_contrib = torch.einsum("...f,fd->...d", acts_leaf, W_dec[:, 0, :])
+        self_contrib = torch.einsum("...f,fd->...d", acts_for_decode, W_dec[:, 0, :])
 
         for offset in range(1, W_dec.shape[1]):
-            future_contrib = torch.einsum("...f,fd->...d", acts_leaf, W_dec[:, offset, :])
+            future_contrib = torch.einsum("...f,fd->...d", acts_for_decode, W_dec[:, offset, :])
             buf.add(layer_idx + offset, future_contrib)
 
         reconstruction = clt.b_dec[layer_idx] + self_contrib
@@ -431,17 +438,14 @@ def _linearized_forward_with_features(
         if buf is not None:
             buf.clear()
 
-    # Squeeze batch dimension
+    # Squeeze batch dimension — feature_acts are already 2D (created as leaves),
+    # so only squeeze non-leaf tensors.
     if fwd.logits.dim() == 3:
         fwd.logits = fwd.logits[0]
-    for layer_dict in (fwd.feature_acts, fwd.active_masks, fwd.errors_detached):
+    for layer_dict in (fwd.active_masks, fwd.errors_detached):
         for k, v in layer_dict.items():
             if v.dim() == 3:
                 layer_dict[k] = v[0]
-    for d in (fwd.error_scales,):
-        for k, v in d.items():
-            if v.dim() == 3:
-                d[k] = v[0]
     if fwd.embeddings_detached is not None and fwd.embeddings_detached.dim() == 3:
         fwd.embeddings_detached = fwd.embeddings_detached[0]
     if fwd.embed_scale is not None and fwd.embed_scale.dim() == 3:
@@ -497,20 +501,25 @@ def _linearized_forward_with_residual_leaves(
             x = inp[0]
             original_out = output[0] if isinstance(output, tuple) else output
 
-            # Make the transcoder input a leaf
-            x_leaf = x.detach().clone().requires_grad_(True)
+            # Make the transcoder input a leaf — squeeze to 2D so the leaf
+            # stays connected via unsqueeze view.
+            x_2d = x[0] if x.dim() == 3 else x
+            x_leaf = x_2d.detach().clone().requires_grad_(True)
             residual_leaves[layer_idx] = x_leaf
+
+            # Unsqueeze back to 3D for transcoder computation
+            x_for_tc = x_leaf.unsqueeze(0) if x.dim() == 3 else x_leaf
 
             # Normal transcoder forward from the leaf
             tc_layer = tc.transcoders[layer_idx]
-            pre_acts = F.linear(x_leaf.to(tc_layer.W_enc.dtype), tc_layer.W_enc, tc_layer.b_enc)
+            pre_acts = F.linear(x_for_tc.to(tc_layer.W_enc.dtype), tc_layer.W_enc, tc_layer.b_enc)
             acts = tc_layer.activation_function(pre_acts)
             feature_acts_detached[layer_idx] = acts.detach()
             active_masks[layer_idx] = acts.detach() > 0
 
             reconstruction = acts @ tc_layer.W_dec + tc_layer.b_dec
             if tc_layer.W_skip is not None:
-                reconstruction = reconstruction + x_leaf @ tc_layer.W_skip.T
+                reconstruction = reconstruction + x_for_tc @ tc_layer.W_skip.T
 
             if n_bos_tokens > 0:
                 reconstruction = torch.cat(
@@ -544,12 +553,16 @@ def _linearized_forward_with_residual_leaves(
             x = inp[0]
             original_out = output[0] if isinstance(output, tuple) else output
 
-            x_leaf = x.detach().clone().requires_grad_(True)
+            x_2d = x[0] if x.dim() == 3 else x
+            x_leaf = x_2d.detach().clone().requires_grad_(True)
             residual_leaves[layer_idx] = x_leaf
+
+            # Unsqueeze back to 3D for transcoder computation
+            x_for_tc = x_leaf.unsqueeze(0) if x.dim() == 3 else x_leaf
 
             # Encode from leaf
             pre_acts = clt_.encode_layer(
-                x_leaf.to(clt_.W_enc.dtype), layer_idx, apply_activation_function=False
+                x_for_tc.to(clt_.W_enc.dtype), layer_idx, apply_activation_function=False
             )
             acts = clt_.apply_activation_function(layer_idx, pre_acts)
             feature_acts_detached[layer_idx] = acts.detach()
@@ -567,7 +580,7 @@ def _linearized_forward_with_residual_leaves(
             if buffered is not None:
                 reconstruction = reconstruction + buffered
             if clt_.skip_connection:
-                reconstruction = reconstruction + clt_.compute_skip(layer_idx, x_leaf)
+                reconstruction = reconstruction + clt_.compute_skip(layer_idx, x_for_tc)
 
             if n_bos_tokens > 0:
                 reconstruction = torch.cat(
@@ -642,10 +655,10 @@ def _linearized_forward_with_residual_leaves(
         if buf is not None:
             buf.clear()
 
-    # Squeeze batch dim
+    # Squeeze batch dim — residual_leaves are already 2D (created as leaves).
     if logits.dim() == 3:
         logits = logits[0]
-    for d in (residual_leaves, feature_acts_detached, active_masks):
+    for d in (feature_acts_detached, active_masks):
         for k, v in d.items():
             if v.dim() == 3:
                 d[k] = v[0]

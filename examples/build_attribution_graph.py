@@ -10,6 +10,8 @@ Usage:
 
 from __future__ import annotations
 
+from collections import Counter
+
 import torch
 
 from llm_circuits.circuits.attribution_graph import (
@@ -40,6 +42,11 @@ def _print_graph_summary(graph: AttributionGraph) -> None:
     for nt in NodeType:
         print(f"    {nt.value:>12s}:  {by_type.get(nt, 0)}")
     print(f"  Total edges:  {len(graph.edges)}")
+    edge_pairs: Counter[tuple[NodeType, NodeType]] = Counter(
+        (src.node_type, tgt.node_type) for src, tgt, _w in graph.edges
+    )
+    for (src_type, tgt_type), count in edge_pairs.most_common():
+        print(f"    {src_type.value:>12} -> {tgt_type.value:<12}: {count}")
 
 
 def _print_top_edges(graph: AttributionGraph, *, n: int = 20) -> None:

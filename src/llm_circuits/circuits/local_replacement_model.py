@@ -85,6 +85,11 @@ class LocalReplacementContext:
     """Per-layer feature post-activations (detached, for reference),
     shape ``(seq, d_transcoder)``."""
 
+    pre_activations: dict[int, Tensor] = field(default_factory=dict)
+    """Per-layer encoder pre-activations (non-detached, in the autograd graph),
+    shape ``(seq, d_transcoder)``.  Only populated when
+    ``capture_pre_activations=True``."""
+
 
 @dataclass
 class CapturedConstants:
@@ -271,6 +276,7 @@ def _compute_clt_reconstruction_local(
     clt: CrossLayerTranscoder,
     buf: _CrossLayerBuffer,
     features_store: dict[int, Tensor],
+    pre_activations_store: dict[int, Tensor] | None = None,
 ) -> Tensor:
     """CLT encode + decode, storing features for reference.
 
@@ -278,8 +284,13 @@ def _compute_clt_reconstruction_local(
     but stores a detached copy of the features in *features_store*.  The caller
     is responsible for detaching the returned reconstruction.
     """
-    # Encode
-    features = clt.encode_layer(x, layer_idx)
+    # Encode — optionally capture non-detached pre-activations
+    if pre_activations_store is not None:
+        pre_acts = clt.encode_layer(x, layer_idx, apply_activation_function=False)
+        pre_activations_store[layer_idx] = pre_acts
+        features = clt.apply_activation_function(layer_idx, pre_acts)
+    else:
+        features = clt.encode_layer(x, layer_idx)
 
     # Store detached copy for reference (no gradient needed)
     features_store[layer_idx] = features.detach()
@@ -323,6 +334,7 @@ def _make_local_plt_hook(
     include_error: bool,
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
+    pre_activations_store: dict[int, Tensor] | None = None,
 ) -> Any:
     """Per-layer transcoder hook with constant reconstruction and constant error nodes."""
 
@@ -332,8 +344,13 @@ def _make_local_plt_hook(
 
         single_tc = transcoder.transcoders[layer_idx]
 
-        # 1. Encode → feature post-activations (no detach)
-        features = single_tc.encode(x)
+        # 1. Encode — optionally capture non-detached pre-activations
+        if pre_activations_store is not None:
+            pre_acts = single_tc.encode(x, apply_activation_function=False)
+            pre_activations_store[layer_idx] = pre_acts
+            features = single_tc.activation_function(pre_acts)
+        else:
+            features = single_tc.encode(x)
         features_store[layer_idx] = features.detach()  # store detached copy for reference
 
         # 2. Decode, then detach — reconstruction is a constant
@@ -372,6 +389,7 @@ def _make_local_clt_hook(
     include_error: bool,
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
+    pre_activations_store: dict[int, Tensor] | None = None,
 ) -> Any:
     """Cross-layer transcoder hook with constant reconstruction and constant error nodes."""
 
@@ -380,7 +398,7 @@ def _make_local_clt_hook(
         original_out = output[0] if isinstance(output, tuple) else output
 
         reconstruction = _compute_clt_reconstruction_local(
-            x, layer_idx, clt, buf, features_store
+            x, layer_idx, clt, buf, features_store, pre_activations_store
         ).detach()
 
         # Preserve BOS positions
@@ -433,6 +451,7 @@ class LocalReplacementModel:
         attn_name_template: str = "model.layers.{layer}.self_attn",
         layernorm_templates: list[str] | None = None,
         final_norm_name: str = "model.norm",
+        capture_pre_activations: bool = False,
     ) -> None:
         self._model = model
         self._transcoder = transcoder
@@ -448,6 +467,7 @@ class LocalReplacementModel:
             else list(_QWEN3_LAYERNORM_TEMPLATES)
         )
         self._final_norm_name = final_norm_name
+        self._capture_pre_activations = capture_pre_activations
 
         self._is_set = _is_transcoder_set(transcoder)
         self._n_layers = len(transcoder) if self._is_set else transcoder.n_layers
@@ -457,6 +477,7 @@ class LocalReplacementModel:
         self._reconstructions: dict[int, Tensor] = {}
         self._errors: dict[int, Tensor] = {}
         self._features_store: dict[int, Tensor] = {}
+        self._pre_activations: dict[int, Tensor] = {}
         self._buf: _CrossLayerBuffer | None = None
         self._ibuf: _InputBuffer | None = None
 
@@ -502,13 +523,12 @@ class LocalReplacementModel:
             attn_mod.forward = _make_frozen_attn_forward(attn_mod, self._caps.attn_weights[i])
 
         # --- Transcoder replacement hooks ---
+        pre_act_store = self._pre_activations if self._capture_pre_activations else None
         for i in range(self._n_layers):
             input_mod = self._model.get_submodule(self._mlp_name_template.format(layer=i))
 
             if self._two_hook:
-                output_mod = self._model.get_submodule(
-                    self._output_module_template.format(layer=i)
-                )
+                output_mod = self._model.get_submodule(self._output_module_template.format(layer=i))
                 self._handles.append(
                     input_mod.register_forward_hook(_make_input_capture_hook(i, self._ibuf))
                 )
@@ -525,6 +545,7 @@ class LocalReplacementModel:
                                 self._include_error,
                                 self._n_bos_tokens,
                                 self._ibuf,
+                                pre_act_store,
                             )
                         )
                     )
@@ -542,6 +563,7 @@ class LocalReplacementModel:
                                 self._include_error,
                                 self._n_bos_tokens,
                                 self._ibuf,
+                                pre_act_store,
                             )
                         )
                     )
@@ -558,6 +580,7 @@ class LocalReplacementModel:
                                 self._caps.mlp_outputs,
                                 self._include_error,
                                 self._n_bos_tokens,
+                                pre_activations_store=pre_act_store,
                             )
                         )
                     )
@@ -574,6 +597,7 @@ class LocalReplacementModel:
                                 self._caps.mlp_outputs,
                                 self._include_error,
                                 self._n_bos_tokens,
+                                pre_activations_store=pre_act_store,
                             )
                         )
                     )
@@ -618,6 +642,7 @@ class LocalReplacementModel:
         self._reconstructions.clear()
         self._errors.clear()
         self._features_store.clear()
+        self._pre_activations.clear()
         if self._buf is not None:
             self._buf.clear()
         if self._ibuf is not None:
@@ -644,6 +669,7 @@ class LocalReplacementModel:
             reconstructions=reconstructions,
             errors=dict(self._errors),
             features=dict(self._features_store),
+            pre_activations=dict(self._pre_activations),
         )
 
 

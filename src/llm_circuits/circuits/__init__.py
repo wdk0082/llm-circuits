@@ -1,5 +1,17 @@
 """Circuit analysis: attribution graphs and interventions."""
 
+from llm_circuits.circuits.attribution_graph import (
+    AttributionEdge as AttributionEdge,
+)
+from llm_circuits.circuits.attribution_graph import (
+    AttributionGraph as AttributionGraph,
+)
+from llm_circuits.circuits.attribution_graph import (
+    AttributionNode as AttributionNode,
+)
+from llm_circuits.circuits.attribution_graph import (
+    build_attribution_graph as build_attribution_graph,
+)
 from llm_circuits.circuits.local_replacement_model import (
     CapturedConstants as CapturedConstants,
 )

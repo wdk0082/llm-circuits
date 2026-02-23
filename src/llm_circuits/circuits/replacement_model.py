@@ -329,6 +329,15 @@ def replace_mlps_with_transcoders(
     buf = _CrossLayerBuffer() if not is_set else None
     ibuf = _InputBuffer() if two_hook else None
 
+    # Freeze all model and transcoder parameters
+    frozen_params: list[tuple[nn.Parameter, bool]] = []
+    for p in model.parameters():
+        frozen_params.append((p, p.requires_grad))
+        p.requires_grad_(False)
+    for p in transcoder.parameters():
+        frozen_params.append((p, p.requires_grad))
+        p.requires_grad_(False)
+
     try:
         for i in range(n_layers):
             input_mod = model.get_submodule(mlp_name_template.format(layer=i))
@@ -372,6 +381,9 @@ def replace_mlps_with_transcoders(
             buf.clear()
         if ibuf is not None:
             ibuf.clear()
+        # Restore original requires_grad state
+        for p, orig in frozen_params:
+            p.requires_grad_(orig)
 
 
 # ---------------------------------------------------------------------------

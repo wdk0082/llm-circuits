@@ -1,15 +1,20 @@
 """Local replacement model conditioned on a specific input.
 
 Like :func:`~llm_circuits.circuits.replacement_model.replace_mlps_with_transcoders`,
-this replaces MLP layers with transcoder reconstructions.  In addition it can:
+this replaces MLP layers with transcoder reconstructions.  In addition it:
 
-* **Add error nodes** — the reconstruction error (``original_mlp_out -
+* **Adds error nodes** — the reconstruction error (``original_mlp_out -
   transcoder_reconstruction``) is injected back into the residual stream so that
   the final logits are identical to the original model.  Individual error nodes
   can later be ablated for attribution studies.
-* **Freeze attention weights and RMSNorm denominators** — this linearises the
+* **Freezes attention weights and RMSNorm denominators** — this linearises the
   model in the residual stream (the only remaining nonlinearities are inside the
   transcoders).
+* **Detaches feature post-activations** — after the transcoder encoder produces
+  features, they are detached and re-wrapped as leaf tensors with
+  ``requires_grad=True``.  The decoder then multiplies these leaves by the
+  (frozen) decoder weights, so ``logits.backward()`` populates ``.grad`` on
+  every feature leaf and error leaf for direct attribution.
 
 Scope: **Qwen3 only** (Gemma2 support deferred).
 """
@@ -23,7 +28,6 @@ import torch
 from torch import Tensor, nn
 
 from llm_circuits.circuits.replacement_model import (
-    _compute_clt_reconstruction,
     _CrossLayerBuffer,
     _InputBuffer,
     _is_transcoder_set,
@@ -64,16 +68,15 @@ class LocalReplacementContext:
     """Original model logits, shape ``(seq, vocab)``."""
 
     reconstructions: dict[int, Tensor] = field(default_factory=dict)
-    """Per-layer transcoder reconstruction, shape ``(seq, d_model)``."""
+    """Per-layer transcoder reconstruction (detached), shape ``(seq, d_model)``."""
 
     errors: dict[int, Tensor] = field(default_factory=dict)
-    """Per-layer error ``original_mlp_out - reconstruction``, shape ``(seq, d_model)``."""
+    """Per-layer error as leaf tensors with ``requires_grad=True``,
+    shape ``(seq, d_model)``."""
 
-    frozen_attn_weights: dict[int, Tensor] = field(default_factory=dict)
-    """Per-layer frozen attention patterns, shape ``(batch, n_heads, seq, seq)``."""
-
-    frozen_rmsnorm_scales: dict[str, Tensor] = field(default_factory=dict)
-    """Per-module frozen RMSNorm scale factors."""
+    features: dict[int, Tensor] = field(default_factory=dict)
+    """Per-layer feature post-activations as leaf tensors with
+    ``requires_grad=True``, shape ``(seq, d_transcoder)``."""
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +126,6 @@ def _capture_constants(
     attn_name_template: str,
     layernorm_templates: list[str],
     final_norm_name: str,
-    freeze_attention: bool,
-    freeze_layernorms: bool,
 ) -> _CapturedConstants:
     """Run the original model once and capture all needed constants."""
     caps = _CapturedConstants(original_logits=torch.empty(0))
@@ -132,36 +133,34 @@ def _capture_constants(
 
     # Temporarily force eager attention so weights are returned
     attn_impls: dict[int, str] = {}
-    if freeze_attention:
-        for i in range(n_layers):
-            attn_mod = model.get_submodule(attn_name_template.format(layer=i))
-            old_impl = getattr(attn_mod, "config", None)
-            if old_impl is not None:
-                old_val = getattr(attn_mod.config, "_attn_implementation", None)
-                if old_val is not None and old_val != "eager":
-                    attn_impls[i] = old_val
-                    attn_mod.config._attn_implementation = "eager"
+    for i in range(n_layers):
+        attn_mod = model.get_submodule(attn_name_template.format(layer=i))
+        old_impl = getattr(attn_mod, "config", None)
+        if old_impl is not None:
+            old_val = getattr(attn_mod.config, "_attn_implementation", None)
+            if old_val is not None and old_val != "eager":
+                attn_impls[i] = old_val
+                attn_mod.config._attn_implementation = "eager"
 
-            handles.append(
-                attn_mod.register_forward_hook(_make_attn_capture_hook(i, caps.attn_weights))
-            )
+        handles.append(
+            attn_mod.register_forward_hook(_make_attn_capture_hook(i, caps.attn_weights))
+        )
 
     # RMSNorm capture hooks
-    if freeze_layernorms:
-        for tmpl in layernorm_templates:
-            for i in range(n_layers):
-                name = tmpl.format(layer=i)
-                mod = model.get_submodule(name)
-                handles.append(
-                    mod.register_forward_hook(_make_rmsnorm_capture_hook(name, caps.rmsnorm_scales))
-                )
-        # Final norm
-        final_mod = model.get_submodule(final_norm_name)
-        handles.append(
-            final_mod.register_forward_hook(
-                _make_rmsnorm_capture_hook(final_norm_name, caps.rmsnorm_scales)
+    for tmpl in layernorm_templates:
+        for i in range(n_layers):
+            name = tmpl.format(layer=i)
+            mod = model.get_submodule(name)
+            handles.append(
+                mod.register_forward_hook(_make_rmsnorm_capture_hook(name, caps.rmsnorm_scales))
             )
+    # Final norm
+    final_mod = model.get_submodule(final_norm_name)
+    handles.append(
+        final_mod.register_forward_hook(
+            _make_rmsnorm_capture_hook(final_norm_name, caps.rmsnorm_scales)
         )
+    )
 
     # MLP output capture via ActivationRecorder
     mlp_names = [mlp_name_template.format(layer=i) for i in range(n_layers)]
@@ -173,7 +172,7 @@ def _capture_constants(
 
     try:
         with torch.no_grad():
-            out = model(input_ids, output_attentions=freeze_attention)
+            out = model(input_ids, output_attentions=True)
         caps.original_logits = out.logits.detach()
 
         # Copy MLP outputs from recorder
@@ -255,6 +254,54 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
 
 
 # ---------------------------------------------------------------------------
+# CLT reconstruction with gradient-aware feature detach
+# ---------------------------------------------------------------------------
+
+
+def _compute_clt_reconstruction_with_grad(
+    x: Tensor,
+    layer_idx: int,
+    clt: CrossLayerTranscoder,
+    buf: _CrossLayerBuffer,
+    features_store: dict[int, Tensor],
+) -> Tensor:
+    """CLT encode + decode with feature detach for attribution.
+
+    Like :func:`~llm_circuits.circuits.replacement_model._compute_clt_reconstruction`
+    but detaches features after encoding and stores them as leaf tensors.
+    """
+    # Encode
+    features_raw = clt.encode_layer(x, layer_idx)
+
+    # Detach and make leaf tensor for attribution
+    features = features_raw.detach().requires_grad_(True)
+    features_store[layer_idx] = features
+
+    # W_dec shape: (d_transcoder, n_target_layers, d_model)
+    W_dec = clt._get_decoder_vectors(layer_idx)
+
+    # Self-contribution (offset 0 = this layer)
+    self_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, 0, :])
+
+    # Future-layer contributions
+    for offset in range(1, W_dec.shape[1]):
+        future_contrib = torch.einsum("...f,fd->...d", features, W_dec[:, offset, :])
+        buf.add(layer_idx + offset, future_contrib)
+
+    # Assemble reconstruction
+    reconstruction = clt.b_dec[layer_idx] + self_contrib
+
+    buffered = buf.pop(layer_idx)
+    if buffered is not None:
+        reconstruction = reconstruction + buffered
+
+    if clt.skip_connection:
+        reconstruction = reconstruction + clt.compute_skip(layer_idx, x)
+
+    return reconstruction
+
+
+# ---------------------------------------------------------------------------
 # Local transcoder hook factories
 # ---------------------------------------------------------------------------
 
@@ -264,28 +311,48 @@ def _make_local_plt_hook(
     transcoder: TranscoderSet,
     reconstructions: dict[int, Tensor],
     errors: dict[int, Tensor],
+    features_store: dict[int, Tensor],
     captured_mlp_outputs: dict[int, Tensor],
     include_error: bool,
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
 ) -> Any:
-    """Like ``_make_plt_hook`` but with error node support."""
+    """Per-layer transcoder hook with feature detach and error leaf nodes."""
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
         x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
         original_out = output[0] if isinstance(output, tuple) else output
 
-        reconstruction = transcoder.transcoders[layer_idx](x)
+        single_tc = transcoder.transcoders[layer_idx]
 
-        # Preserve BOS positions
+        # 1. Encode → feature post-activations
+        features_raw = single_tc.encode(x)
+
+        # 2. Detach features, make leaf tensor for attribution
+        features = features_raw.detach().requires_grad_(True)
+        features_store[layer_idx] = features
+
+        # 3. Decode using detached features (W_dec frozen, grad flows to features)
+        reconstruction = single_tc.decode(features, x)
+
+        # 4. Preserve BOS positions (detach BOS slice)
         if n_bos_tokens > 0:
             reconstruction = torch.cat(
-                [original_out[..., :n_bos_tokens, :], reconstruction[..., n_bos_tokens:, :]],
+                [
+                    original_out[..., :n_bos_tokens, :].detach(),
+                    reconstruction[..., n_bos_tokens:, :],
+                ],
                 dim=-2,
             )
 
         reconstructions[layer_idx] = reconstruction.detach()
-        error = captured_mlp_outputs[layer_idx] - reconstruction.detach()
+
+        # 5. Error node — detach, make leaf tensor
+        error = (
+            (captured_mlp_outputs[layer_idx] - reconstruction.detach())
+            .detach()
+            .requires_grad_(True)
+        )
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction
@@ -300,28 +367,40 @@ def _make_local_clt_hook(
     buf: _CrossLayerBuffer,
     reconstructions: dict[int, Tensor],
     errors: dict[int, Tensor],
+    features_store: dict[int, Tensor],
     captured_mlp_outputs: dict[int, Tensor],
     include_error: bool,
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
 ) -> Any:
-    """Like ``_make_clt_hook`` but with error node support."""
+    """Cross-layer transcoder hook with feature detach and error leaf nodes."""
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
         x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
         original_out = output[0] if isinstance(output, tuple) else output
 
-        reconstruction = _compute_clt_reconstruction(x, layer_idx, clt, buf)
+        reconstruction = _compute_clt_reconstruction_with_grad(
+            x, layer_idx, clt, buf, features_store
+        )
 
-        # Preserve BOS positions
+        # Preserve BOS positions (detach BOS slice)
         if n_bos_tokens > 0:
             reconstruction = torch.cat(
-                [original_out[..., :n_bos_tokens, :], reconstruction[..., n_bos_tokens:, :]],
+                [
+                    original_out[..., :n_bos_tokens, :].detach(),
+                    reconstruction[..., n_bos_tokens:, :],
+                ],
                 dim=-2,
             )
 
         reconstructions[layer_idx] = reconstruction.detach()
-        error = captured_mlp_outputs[layer_idx] - reconstruction.detach()
+
+        # Error node — detach, make leaf tensor
+        error = (
+            (captured_mlp_outputs[layer_idx] - reconstruction.detach())
+            .detach()
+            .requires_grad_(True)
+        )
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction
@@ -335,15 +414,12 @@ def _make_local_clt_hook(
 # ---------------------------------------------------------------------------
 
 
-@torch.no_grad()
 def run_local_replacement(
     model: nn.Module,
     transcoder: TranscoderSet | CrossLayerTranscoder,
     input_ids: Tensor,
     *,
     include_error: bool = True,
-    freeze_attention: bool = True,
-    freeze_layernorms: bool = True,
     n_bos_tokens: int = 1,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
@@ -355,11 +431,13 @@ def run_local_replacement(
 
     This performs two forward passes:
 
-    1. **Capture pass** — run the original model to record attention weights,
-       RMSNorm denominators, and MLP outputs.
+    1. **Capture pass** — run the original model (under ``no_grad``) to record
+       attention weights, RMSNorm denominators, and MLP outputs.
     2. **Local pass** — run the model again with hooks that replace MLPs with
-       transcoders, optionally inject error nodes, and optionally freeze
-       attention and layernorms.
+       transcoders, freeze attention and layernorms, and inject error nodes.
+       Feature post-activations and error nodes are exposed as leaf tensors
+       with ``requires_grad=True`` so that ``logits.backward()`` populates
+       their ``.grad`` for attribution.
 
     Args:
         model: The full language model (e.g. ``AutoModelForCausalLM``).
@@ -367,10 +445,6 @@ def run_local_replacement(
         input_ids: Token ids, shape ``(batch, seq)`` or ``(seq,)``.
         include_error: If ``True``, add reconstruction error back so that
             logits match the original model.
-        freeze_attention: If ``True``, freeze attention weight matrices
-            (softmax outputs) from the capture pass.
-        freeze_layernorms: If ``True``, freeze RMSNorm denominators from
-            the capture pass.
         n_bos_tokens: Number of leading positions to preserve original MLP
             output (transcoders cannot reconstruct the attention-sink position).
         mlp_name_template: Format string for MLP submodule names.
@@ -383,7 +457,7 @@ def run_local_replacement(
 
     Returns:
         A :class:`LocalReplacementContext` with logits, reconstructions,
-        errors, and frozen constants.
+        errors, and feature activations.
     """
     if layernorm_templates is None:
         layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
@@ -403,8 +477,6 @@ def run_local_replacement(
         attn_name_template=attn_name_template,
         layernorm_templates=layernorm_templates,
         final_norm_name=final_norm_name,
-        freeze_attention=freeze_attention,
-        freeze_layernorms=freeze_layernorms,
     )
 
     # ------------------------------------------------------------------
@@ -414,34 +486,40 @@ def run_local_replacement(
     saved_forwards: dict[int, Any] = {}
     reconstructions: dict[int, Tensor] = {}
     errors: dict[int, Tensor] = {}
+    features_store: dict[int, Tensor] = {}
     buf = _CrossLayerBuffer() if not is_set else None
     ibuf = _InputBuffer() if two_hook else None
 
+    # Freeze all model and transcoder parameters
+    frozen_params: list[tuple[nn.Parameter, bool]] = []
+    for p in model.parameters():
+        frozen_params.append((p, p.requires_grad))
+        p.requires_grad_(False)
+    for p in transcoder.parameters():
+        frozen_params.append((p, p.requires_grad))
+        p.requires_grad_(False)
+
     try:
         # --- Frozen RMSNorm hooks ---
-        if freeze_layernorms:
-            for tmpl in layernorm_templates:
-                for i in range(n_layers):
-                    name = tmpl.format(layer=i)
-                    mod = model.get_submodule(name)
-                    handles.append(
-                        mod.register_forward_hook(
-                            _make_frozen_rmsnorm_hook(name, caps.rmsnorm_scales)
-                        )
-                    )
-            final_mod = model.get_submodule(final_norm_name)
-            handles.append(
-                final_mod.register_forward_hook(
-                    _make_frozen_rmsnorm_hook(final_norm_name, caps.rmsnorm_scales)
+        for tmpl in layernorm_templates:
+            for i in range(n_layers):
+                name = tmpl.format(layer=i)
+                mod = model.get_submodule(name)
+                handles.append(
+                    mod.register_forward_hook(_make_frozen_rmsnorm_hook(name, caps.rmsnorm_scales))
                 )
+        final_mod = model.get_submodule(final_norm_name)
+        handles.append(
+            final_mod.register_forward_hook(
+                _make_frozen_rmsnorm_hook(final_norm_name, caps.rmsnorm_scales)
             )
+        )
 
         # --- Frozen attention ---
-        if freeze_attention:
-            for i in range(n_layers):
-                attn_mod = model.get_submodule(attn_name_template.format(layer=i))
-                saved_forwards[i] = attn_mod.forward
-                attn_mod.forward = _make_frozen_attn_forward(attn_mod, caps.attn_weights[i])
+        for i in range(n_layers):
+            attn_mod = model.get_submodule(attn_name_template.format(layer=i))
+            saved_forwards[i] = attn_mod.forward
+            attn_mod.forward = _make_frozen_attn_forward(attn_mod, caps.attn_weights[i])
 
         # --- Transcoder replacement hooks ---
         for i in range(n_layers):
@@ -458,6 +536,7 @@ def run_local_replacement(
                                 transcoder,
                                 reconstructions,
                                 errors,
+                                features_store,
                                 caps.mlp_outputs,
                                 include_error,
                                 n_bos_tokens,
@@ -474,6 +553,7 @@ def run_local_replacement(
                                 buf,
                                 reconstructions,
                                 errors,
+                                features_store,
                                 caps.mlp_outputs,
                                 include_error,
                                 n_bos_tokens,
@@ -490,6 +570,7 @@ def run_local_replacement(
                                 transcoder,
                                 reconstructions,
                                 errors,
+                                features_store,
                                 caps.mlp_outputs,
                                 include_error,
                                 n_bos_tokens,
@@ -505,6 +586,7 @@ def run_local_replacement(
                                 buf,
                                 reconstructions,
                                 errors,
+                                features_store,
                                 caps.mlp_outputs,
                                 include_error,
                                 n_bos_tokens,
@@ -512,8 +594,8 @@ def run_local_replacement(
                         )
                     )
 
-        # Run the local forward pass
-        local_logits = model(input_ids).logits.detach()
+        # Run the local forward pass (keep graph alive for backward)
+        local_logits = model(input_ids).logits
 
     finally:
         for h in handles:
@@ -526,6 +608,9 @@ def run_local_replacement(
             buf.clear()
         if ibuf is not None:
             ibuf.clear()
+        # Restore original requires_grad state
+        for p, orig in frozen_params:
+            p.requires_grad_(orig)
 
     # Squeeze batch dim
     original_logits = caps.original_logits
@@ -533,7 +618,7 @@ def run_local_replacement(
         original_logits = original_logits[0]
     if local_logits.dim() == 3:
         local_logits = local_logits[0]
-    for d in (reconstructions, errors):
+    for d in (reconstructions,):
         for k, v in d.items():
             if v.dim() == 3:
                 d[k] = v[0]
@@ -543,6 +628,5 @@ def run_local_replacement(
         original_logits=original_logits,
         reconstructions=reconstructions,
         errors=errors,
-        frozen_attn_weights=caps.attn_weights,
-        frozen_rmsnorm_scales=caps.rmsnorm_scales,
+        features=features_store,
     )

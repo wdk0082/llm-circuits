@@ -147,6 +147,7 @@ def build_attribution_graph(
     *,
     n_bos_tokens: int = 1,
     top_k_logits: int = 3,
+    max_feature_targets: int | None = None,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
@@ -345,11 +346,58 @@ def build_attribution_graph(
     )
 
     # ------------------------------------------------------------------
-    # Phase 4: compute edges via autograd.grad
+    # Phase 4: pre-compute source contribution vectors
     # ------------------------------------------------------------------
-    # Build list of tensors to differentiate w.r.t.:
-    # [embedding, residuals[0], residuals[1], ..., residuals[n_layers-1]]
-    # Index 0 = embedding, index l+1 = residuals[l]
+    # Build them once so we don't hit lazy-loaded W_dec per edge.
+    # source_contribs[node_idx] = contribution vector (d_model,)
+    # source_layer_map[layer] = list of (node_idx, position, contrib) for that layer
+    # embed_sources = list of (node_idx, position, contrib) for embedding nodes
+
+    log.info("Pre-computing source contribution vectors ...")
+    source_contribs: dict[int, Tensor] = {}
+    source_by_layer: dict[int, list[tuple[int, int, Tensor]]] = {lay: [] for lay in range(n_layers)}
+    embed_sources: list[tuple[int, int, Tensor]] = []
+
+    # Embedding sources
+    for node_idx, node in enumerate(graph.nodes):
+        if node.node_type == "embedding":
+            contrib = embed_squeezed[node.position, :]
+            source_contribs[node_idx] = contrib
+            embed_sources.append((node_idx, node.position, contrib))
+
+    # Error sources (no W_dec needed)
+    for node_idx, node in enumerate(graph.nodes):
+        if node.node_type == "error":
+            contrib = errors[node.layer][node.position, :]
+            source_contribs[node_idx] = contrib
+            source_by_layer[node.layer].append((node_idx, node.position, contrib))
+
+    # Feature sources — batch W_dec reads per layer to avoid repeated lazy loads
+    feat_nodes_by_layer: dict[int, list[tuple[int, AttributionNode]]] = {}
+    for node_idx, node in enumerate(graph.nodes):
+        if node.node_type == "feature":
+            feat_nodes_by_layer.setdefault(node.layer, []).append((node_idx, node))
+
+    for layer in sorted(feat_nodes_by_layer):
+        layer_nodes = feat_nodes_by_layer[layer]
+        feat_indices = torch.tensor([n.feature_idx for _, n in layer_nodes], dtype=torch.long)
+        if is_set:
+            # Load W_dec once for this layer (handles lazy loading internally)
+            dec_vecs = transcoder.transcoders[layer]._get_decoder_vectors(feat_indices)
+        else:
+            # CLT: shape (n_feats, n_target_layers, d_model); take offset 0 (self-layer)
+            dec_vecs = transcoder._get_decoder_vectors(layer, feat_indices)[:, 0, :]
+
+        for k, (node_idx, node) in enumerate(layer_nodes):
+            act_val = features[node.layer][node.position, node.feature_idx]
+            contrib = act_val * dec_vecs[k]
+            source_contribs[node_idx] = contrib
+            source_by_layer[node.layer].append((node_idx, node.position, contrib))
+        log.info("  layer %d: %d feature contributions computed", layer, len(layer_nodes))
+
+    # ------------------------------------------------------------------
+    # Phase 5: compute edges via autograd.grad
+    # ------------------------------------------------------------------
 
     def _compute_edges_for_target(
         target_scalar: Tensor,
@@ -357,9 +405,7 @@ def build_attribution_graph(
         source_layers: list[int],
     ) -> None:
         """Compute edges from all sources at *source_layers* to the target."""
-        grad_inputs = [embedding]
-        for sl in source_layers:
-            grad_inputs.append(residuals[sl])
+        grad_inputs = [embedding] + [residuals[sl] for sl in source_layers]
 
         grads = torch.autograd.grad(
             target_scalar,
@@ -368,54 +414,46 @@ def build_attribution_graph(
             allow_unused=True,
         )
 
-        # grads[0] = d(target)/d(embedding), shape (1, seq, d_model)
-        # grads[k+1] = d(target)/d(residuals[source_layers[k]]), shape (1, seq, d_model)
+        # grads[0] = d(target)/d(embedding)
+        # grads[k+1] = d(target)/d(residuals[source_layers[k]])
 
-        # Iterate over all source nodes and compute edge weights
-        for node_idx, node in enumerate(graph.nodes):
-            if node.node_type not in ("embedding", "feature", "error"):
-                continue
+        # Embedding sources
+        grad_embed = grads[0]
+        if grad_embed is not None:
+            for src_idx, pos, contrib in embed_sources:
+                g = grad_embed[0, pos, :] if grad_embed.dim() == 3 else grad_embed[pos, :]
+                weight = (g @ contrib).item()
+                if weight != 0.0:
+                    graph.edges.append(
+                        AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)
+                    )
 
-            # Determine which grad tensor and position to use
-            if node.node_type == "embedding":
-                grad_idx = 0
-                grad_layer = -1
-            else:
-                grad_layer = node.layer
-                if grad_layer not in source_layers:
-                    continue
-                grad_idx = source_layers.index(grad_layer) + 1
-
-            grad_tensor = grads[grad_idx]
+        # Feature/error sources at each layer
+        for k, layer in enumerate(source_layers):
+            grad_tensor = grads[k + 1]
             if grad_tensor is None:
                 continue
-
-            # Get contribution vector
-            contrib = _get_source_contribution(
-                node, transcoder, features, errors, embed_squeezed, is_set
-            )
-
-            # Grad shape is (1, seq, d_model) or (seq, d_model)
-            if grad_tensor.dim() == 3:
-                g = grad_tensor[0, node.position, :]
-            else:
-                g = grad_tensor[node.position, :]
-
-            weight = (g @ contrib).item()
-            if weight != 0.0:
-                graph.edges.append(
-                    AttributionEdge(source=node_idx, target=target_node_idx, weight=weight)
-                )
+            for src_idx, pos, contrib in source_by_layer[layer]:
+                g = grad_tensor[0, pos, :] if grad_tensor.dim() == 3 else grad_tensor[pos, :]
+                weight = (g @ contrib).item()
+                if weight != 0.0:
+                    graph.edges.append(
+                        AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)
+                    )
 
     # --- Feature targets ---
-    feature_targets = [
-        (idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"
-    ]
+    feature_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"]
+    if max_feature_targets is not None and len(feature_targets) > max_feature_targets:
+        # Sort by activation magnitude (descending) to keep the most important features
+        feature_targets.sort(key=lambda t: abs(t[1].activation), reverse=True)
+        feature_targets = feature_targets[:max_feature_targets]
     n_feat = len(feature_targets)
     log.info("Computing edges for %d feature targets ...", n_feat)
     for i, (node_idx, node) in enumerate(feature_targets):
         if (i + 1) % 50 == 0 or i == 0:
-            log.info("  feature target %d / %d  (edges so far: %d)", i + 1, n_feat, len(graph.edges))
+            log.info(
+                "  feature target %d / %d  (edges so far: %d)", i + 1, n_feat, len(graph.edges)
+            )
         layer = node.layer
         pre_act = pre_activations[layer]
         if pre_act.dim() == 3:
@@ -427,9 +465,7 @@ def build_attribution_graph(
         _compute_edges_for_target(target_scalar, node_idx, source_layers)
 
     # --- Logit targets ---
-    logit_targets = [
-        (idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"
-    ]
+    logit_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"]
     log.info("Computing edges for %d logit targets ...", len(logit_targets))
     for i, (node_idx, node) in enumerate(logit_targets):
         log.info("  logit target %d / %d", i + 1, len(logit_targets))

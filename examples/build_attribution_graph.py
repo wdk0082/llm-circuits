@@ -24,6 +24,7 @@ from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 MODEL_SIZE = "0.6b"
 PROMPT = "The capital of France is"
 TOP_K_LOGITS = 3
+MAX_FEATURE_TARGETS = 100  # cap feature targets for tractable edge computation
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -66,6 +67,7 @@ def main() -> None:
         input_ids,
         n_bos_tokens=n_bos_tokens,
         top_k_logits=TOP_K_LOGITS,
+        max_feature_targets=MAX_FEATURE_TARGETS,
     )
 
     # --- Summary statistics ---------------------------------------------------

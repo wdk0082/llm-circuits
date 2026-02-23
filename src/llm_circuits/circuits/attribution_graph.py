@@ -335,6 +335,15 @@ def build_attribution_graph(
             )
         )
 
+    log.info(
+        "Built %d nodes (emb=%d, feat=%d, err=%d, logit=%d)",
+        len(graph.nodes),
+        sum(1 for n in graph.nodes if n.node_type == "embedding"),
+        sum(1 for n in graph.nodes if n.node_type == "feature"),
+        sum(1 for n in graph.nodes if n.node_type == "error"),
+        sum(1 for n in graph.nodes if n.node_type == "logit"),
+    )
+
     # ------------------------------------------------------------------
     # Phase 4: compute edges via autograd.grad
     # ------------------------------------------------------------------
@@ -399,28 +408,31 @@ def build_attribution_graph(
                 )
 
     # --- Feature targets ---
-    for node_idx, node in enumerate(graph.nodes):
-        if node.node_type != "feature":
-            continue
+    feature_targets = [
+        (idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"
+    ]
+    n_feat = len(feature_targets)
+    log.info("Computing edges for %d feature targets ...", n_feat)
+    for i, (node_idx, node) in enumerate(feature_targets):
+        if (i + 1) % 50 == 0 or i == 0:
+            log.info("  feature target %d / %d  (edges so far: %d)", i + 1, n_feat, len(graph.edges))
         layer = node.layer
         pre_act = pre_activations[layer]
-        # pre_act shape: (1, seq, d_transcoder) or (seq, d_transcoder)
         if pre_act.dim() == 3:
             target_scalar = pre_act[0, node.position, node.feature_idx]
         else:
             target_scalar = pre_act[node.position, node.feature_idx]
 
-        # Sources can come from embedding + all layers before this one
         source_layers = list(range(layer))
         _compute_edges_for_target(target_scalar, node_idx, source_layers)
 
     # --- Logit targets ---
-    # logits is (seq, vocab), but we need it connected to the autograd graph.
-    # ctx.logits was computed inside the local model forward, so it should be in the graph
-    # because embedding has requires_grad=True.
-    for node_idx, node in enumerate(graph.nodes):
-        if node.node_type != "logit":
-            continue
+    logit_targets = [
+        (idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"
+    ]
+    log.info("Computing edges for %d logit targets ...", len(logit_targets))
+    for i, (node_idx, node) in enumerate(logit_targets):
+        log.info("  logit target %d / %d", i + 1, len(logit_targets))
         target_scalar = logits[node.position, node.token_id]
         source_layers = list(range(n_layers))
         _compute_edges_for_target(target_scalar, node_idx, source_layers)

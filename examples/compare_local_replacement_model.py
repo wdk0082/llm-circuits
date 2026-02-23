@@ -6,8 +6,9 @@ Loads Qwen3-0.6B and its transcoders, then runs three forward passes:
 1. **Original model** — unmodified forward pass.
 2. **Global replacement** — MLPs swapped with transcoders (no freezing).
 3. **Local replacement** — MLPs swapped with transcoders, error nodes
-   injected, attention weights and RMSNorm denominators frozen, feature
-   post-activations and errors exposed as gradient-ready leaf tensors.
+   injected as detached constants, attention weights and RMSNorm
+   denominators frozen.  Uses :func:`run_local_replacement` (a convenience
+   wrapper around :class:`LocalReplacementModel`).
 
 Prints per-position metrics (KL divergence, cosine similarity, top-1/5
 agreement) for each variant against the original, plus a verification that
@@ -206,7 +207,7 @@ def main() -> None:
     print(f"  max |diff| = {max_diff:.6e}  mean |diff| = {mean_diff:.6e}  --> {status}")
 
     # ==========================================================================
-    # Feature and error leaf tensors (gradient-ready)
+    # Feature and error tensors (detached constants)
     # ==========================================================================
     print("\n" + "=" * 80)
     print("Feature post-activations (detached, for reference)")
@@ -217,11 +218,11 @@ def main() -> None:
         shape_str = f"{tuple(f.shape)!s}"
         print(f"  Layer {layer_idx:2d}: shape={shape_str:>20s}")
 
-    print("\nError leaf tensors (gradient-ready)")
+    print("\nError tensors (detached constants)")
     for layer_idx in sorted(local_ctx.errors):
         e = local_ctx.errors[layer_idx]
         shape_str = f"{tuple(e.shape)!s}"
-        print(f"  Layer {layer_idx:2d}: shape={shape_str:>20s}  requires_grad={e.requires_grad}")
+        print(f"  Layer {layer_idx:2d}: shape={shape_str:>20s}")
 
     # ==========================================================================
     # Per-layer reconstruction errors

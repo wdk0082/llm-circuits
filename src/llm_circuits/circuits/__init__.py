@@ -1,7 +1,16 @@
 """Circuit analysis: attribution graphs and interventions."""
 
 from llm_circuits.circuits.local_replacement_model import (
+    CapturedConstants as CapturedConstants,
+)
+from llm_circuits.circuits.local_replacement_model import (
     LocalReplacementContext as LocalReplacementContext,
+)
+from llm_circuits.circuits.local_replacement_model import (
+    LocalReplacementModel as LocalReplacementModel,
+)
+from llm_circuits.circuits.local_replacement_model import (
+    capture_constants as capture_constants,
 )
 from llm_circuits.circuits.local_replacement_model import (
     run_local_replacement as run_local_replacement,

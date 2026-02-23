@@ -10,11 +10,13 @@ this replaces MLP layers with transcoder reconstructions.  In addition it:
 * **Freezes attention weights and RMSNorm denominators** — this linearises the
   model in the residual stream (the only remaining nonlinearities are inside the
   transcoders).
-* **Detaches feature post-activations** — after the transcoder encoder produces
-  features, they are detached and re-wrapped as leaf tensors with
-  ``requires_grad=True``.  The decoder then multiplies these leaves by the
-  (frozen) decoder weights, so ``logits.backward()`` populates ``.grad`` on
-  every feature leaf and error leaf for direct attribution.
+* **Detaches reconstructions** — after the transcoder produces a
+  reconstruction, the entire reconstruction tensor is detached so it
+  becomes a constant (no gradient flows through encoder or decoder
+  weights).  Feature post-activations are stored detached for reference
+  only.  The error nodes (see above) are the only leaf tensors with
+  ``requires_grad=True``, so ``logits.backward()`` populates ``.grad``
+  on every error leaf for direct attribution.
 
 Scope: **Qwen3 only** (Gemma2 support deferred).
 """

@@ -75,8 +75,8 @@ class LocalReplacementContext:
     shape ``(seq, d_model)``."""
 
     features: dict[int, Tensor] = field(default_factory=dict)
-    """Per-layer feature post-activations as leaf tensors with
-    ``requires_grad=True``, shape ``(seq, d_transcoder)``."""
+    """Per-layer feature post-activations (detached, for reference),
+    shape ``(seq, d_transcoder)``."""
 
 
 # ---------------------------------------------------------------------------
@@ -258,24 +258,24 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
 # ---------------------------------------------------------------------------
 
 
-def _compute_clt_reconstruction_with_grad(
+def _compute_clt_reconstruction_local(
     x: Tensor,
     layer_idx: int,
     clt: CrossLayerTranscoder,
     buf: _CrossLayerBuffer,
     features_store: dict[int, Tensor],
 ) -> Tensor:
-    """CLT encode + decode with feature detach for attribution.
+    """CLT encode + decode, storing features for reference.
 
     Like :func:`~llm_circuits.circuits.replacement_model._compute_clt_reconstruction`
-    but detaches features after encoding and stores them as leaf tensors.
+    but stores a detached copy of the features in *features_store*.  The caller
+    is responsible for detaching the returned reconstruction.
     """
     # Encode
-    features_raw = clt.encode_layer(x, layer_idx)
+    features = clt.encode_layer(x, layer_idx)
 
-    # Detach and make leaf tensor for attribution
-    features = features_raw.detach().requires_grad_(True)
-    features_store[layer_idx] = features
+    # Store detached copy for reference (no gradient needed)
+    features_store[layer_idx] = features.detach()
 
     # W_dec shape: (d_transcoder, n_target_layers, d_model)
     W_dec = clt._get_decoder_vectors(layer_idx)
@@ -317,7 +317,7 @@ def _make_local_plt_hook(
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
 ) -> Any:
-    """Per-layer transcoder hook with feature detach and error leaf nodes."""
+    """Per-layer transcoder hook with constant reconstruction and error leaf nodes."""
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
         x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
@@ -325,17 +325,14 @@ def _make_local_plt_hook(
 
         single_tc = transcoder.transcoders[layer_idx]
 
-        # 1. Encode → feature post-activations
-        features_raw = single_tc.encode(x)
+        # 1. Encode → feature post-activations (no detach)
+        features = single_tc.encode(x)
+        features_store[layer_idx] = features.detach()  # store detached copy for reference
 
-        # 2. Detach features, make leaf tensor for attribution
-        features = features_raw.detach().requires_grad_(True)
-        features_store[layer_idx] = features
+        # 2. Decode, then detach — reconstruction is a constant
+        reconstruction = single_tc.decode(features, x).detach()
 
-        # 3. Decode using detached features (W_dec frozen, grad flows to features)
-        reconstruction = single_tc.decode(features, x)
-
-        # 4. Preserve BOS positions (detach BOS slice)
+        # 3. Preserve BOS positions
         if n_bos_tokens > 0:
             reconstruction = torch.cat(
                 [
@@ -345,14 +342,10 @@ def _make_local_plt_hook(
                 dim=-2,
             )
 
-        reconstructions[layer_idx] = reconstruction.detach()
+        reconstructions[layer_idx] = reconstruction
 
-        # 5. Error node — detach, make leaf tensor
-        error = (
-            (captured_mlp_outputs[layer_idx] - reconstruction.detach())
-            .detach()
-            .requires_grad_(True)
-        )
+        # 4. Error node — leaf tensor with requires_grad
+        error = (captured_mlp_outputs[layer_idx] - reconstruction).detach().requires_grad_(True)
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction
@@ -373,17 +366,17 @@ def _make_local_clt_hook(
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
 ) -> Any:
-    """Cross-layer transcoder hook with feature detach and error leaf nodes."""
+    """Cross-layer transcoder hook with constant reconstruction and error leaf nodes."""
 
     def hook(_mod: nn.Module, inp: tuple[Any, ...], output: Any) -> Any:
         x = ibuf.pop(layer_idx) if ibuf is not None else inp[0]
         original_out = output[0] if isinstance(output, tuple) else output
 
-        reconstruction = _compute_clt_reconstruction_with_grad(
+        reconstruction = _compute_clt_reconstruction_local(
             x, layer_idx, clt, buf, features_store
-        )
+        ).detach()
 
-        # Preserve BOS positions (detach BOS slice)
+        # Preserve BOS positions
         if n_bos_tokens > 0:
             reconstruction = torch.cat(
                 [
@@ -393,14 +386,10 @@ def _make_local_clt_hook(
                 dim=-2,
             )
 
-        reconstructions[layer_idx] = reconstruction.detach()
+        reconstructions[layer_idx] = reconstruction
 
-        # Error node — detach, make leaf tensor
-        error = (
-            (captured_mlp_outputs[layer_idx] - reconstruction.detach())
-            .detach()
-            .requires_grad_(True)
-        )
+        # Error node — leaf tensor with requires_grad
+        error = (captured_mlp_outputs[layer_idx] - reconstruction).detach().requires_grad_(True)
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction

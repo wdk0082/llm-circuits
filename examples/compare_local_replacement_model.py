@@ -209,13 +209,13 @@ def main() -> None:
     # Feature and error leaf tensors (gradient-ready)
     # ==========================================================================
     print("\n" + "=" * 80)
-    print("Feature leaf tensors (gradient-ready)")
+    print("Feature post-activations (detached, for reference)")
     print("=" * 80)
 
     for layer_idx in sorted(local_ctx.features):
         f = local_ctx.features[layer_idx]
         shape_str = f"{tuple(f.shape)!s}"
-        print(f"  Layer {layer_idx:2d}: shape={shape_str:>20s}  requires_grad={f.requires_grad}")
+        print(f"  Layer {layer_idx:2d}: shape={shape_str:>20s}")
 
     print("\nError leaf tensors (gradient-ready)")
     for layer_idx in sorted(local_ctx.errors):

@@ -22,9 +22,9 @@ from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MODEL_SIZE = "0.6b"
-PROMPT = "The capital of France is"
+PROMPT = "5+7=?"
 TOP_K_LOGITS = 3
-MAX_FEATURE_TARGETS = 100  # cap feature targets for tractable edge computation
+MAX_FEATURE_TARGETS = None  # cap feature targets for tractable edge computation
 # ─────────────────────────────────────────────────────────────────────────────
 
 

@@ -422,7 +422,7 @@ def build_attribution_graph(
         if grad_embed is not None:
             for src_idx, pos, contrib in embed_sources:
                 g = grad_embed[0, pos, :] if grad_embed.dim() == 3 else grad_embed[pos, :]
-                weight = (g @ contrib).item()
+                weight = (g.float() @ contrib.float()).item()
                 if weight != 0.0:
                     graph.edges.append(
                         AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)
@@ -435,7 +435,7 @@ def build_attribution_graph(
                 continue
             for src_idx, pos, contrib in source_by_layer[layer]:
                 g = grad_tensor[0, pos, :] if grad_tensor.dim() == 3 else grad_tensor[pos, :]
-                weight = (g @ contrib).item()
+                weight = (g.float() @ contrib.float()).item()
                 if weight != 0.0:
                     graph.edges.append(
                         AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)

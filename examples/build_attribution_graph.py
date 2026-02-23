@@ -85,13 +85,17 @@ def main() -> None:
     print(f"  Total edges: {len(graph.edges)}")
 
     if graph.edges:
-        weights = [abs(e.weight) for e in graph.edges]
-        mean_w = sum(weights) / len(weights)
-        max_w = max(weights)
-        nonzero = sum(1 for w in weights if w > 0)
-        print(f"  Non-zero edges: {nonzero}")
+        raw_weights = [e.weight for e in graph.edges]
+        abs_weights = [abs(w) for w in raw_weights]
+        mean_w = sum(abs_weights) / len(abs_weights)
+        max_w = max(abs_weights)
+        n_pos = sum(1 for w in raw_weights if w > 0)
+        n_neg = sum(1 for w in raw_weights if w < 0)
+        print(f"  Non-zero edges: {len(raw_weights)}")
         print(f"  Mean |weight|:  {mean_w:.6f}")
         print(f"  Max  |weight|:  {max_w:.6f}")
+        print(f"  Positive edges: {n_pos}  ({n_pos / len(raw_weights) * 100:.1f}%)")
+        print(f"  Negative edges: {n_neg}  ({n_neg / len(raw_weights) * 100:.1f}%)")
 
     # --- Print top edges ------------------------------------------------------
     print("\n" + "=" * 70)

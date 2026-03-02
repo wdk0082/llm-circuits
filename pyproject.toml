@@ -19,6 +19,7 @@ dependencies = [
     "rich",
     "pyyaml",
     "circuit-tracer @ git+https://github.com/safety-research/circuit-tracer.git@v0.3.1",
+    "matplotlib>=3.8",
 ]
 
 [project.scripts]

@@ -18,7 +18,7 @@ module load rhel8/default-amp
 REPO="$HOME/llm-circuits"                      # <-- change this
 WORK="$HOME/rds/hpc-work/llm-circuits"               # symlinked to /rds/user/.../hpc-work/llm
 PATH="$HOME/.local/bin:$PATH"
-mkdir -p "$WORK"/{logs,checkpoints,.cache/uv,.cache/huggingface,.cache/wandb,.venv}
+mkdir -p "$WORK"/{logs,artifacts,checkpoints,.cache/uv,.cache/huggingface,.cache/wandb,.venv}
 
 cd "$REPO"
 

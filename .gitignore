@@ -211,3 +211,4 @@ outputs/
 artifacts/
 .cache/
 *.code-workspace
+.vscode/

@@ -12,6 +12,18 @@ from llm_circuits.circuits.attribution_graph import (
 from llm_circuits.circuits.attribution_graph import (
     build_attribution_graph as build_attribution_graph,
 )
+from llm_circuits.circuits.graph_pruning import (
+    PrunedGraph as PrunedGraph,
+)
+from llm_circuits.circuits.graph_pruning import (
+    graph_from_dict as graph_from_dict,
+)
+from llm_circuits.circuits.graph_pruning import (
+    graph_to_dict as graph_to_dict,
+)
+from llm_circuits.circuits.graph_pruning import (
+    prune_graph as prune_graph,
+)
 from llm_circuits.circuits.local_replacement_model import (
     CapturedConstants as CapturedConstants,
 )

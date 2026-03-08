@@ -119,7 +119,7 @@ def main() -> None:
     device = default_device()
     dtype = default_dtype()
     dtype_str = "bf16" if dtype == torch.bfloat16 else "fp32"
-    prompt = "Answer immediately with one word: The capital of France is?"
+    prompt = "4+3=?"
 
     print(f"Device: {device}  Dtype: {dtype}")
 
@@ -135,7 +135,7 @@ def main() -> None:
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 
     # --- Tokenize via chat template -------------------------------------------
-    messages, n_bos_tokens, template_kwargs = prepare_messages(prompt, "qwen3")
+    messages, n_bos_tokens, template_kwargs = prepare_messages(prompt, "qwen3", enable_thinking=False)
     input_ids = tokenizer.apply_chat_template(
         messages,
         return_tensors="pt",

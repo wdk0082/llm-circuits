@@ -35,6 +35,10 @@ class FeatureLabel:
     top_logits: list[str] = field(default_factory=list)
     bottom_logits: list[str] = field(default_factory=list)
     activation_frequency: float = 0.0
+    act_min: float = 0.0
+    act_max: float = 0.0
+    quantile_values: list[float] = field(default_factory=list)
+    histogram: list[float] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +46,10 @@ class FeatureLabel:
             "top_logits": self.top_logits,
             "bottom_logits": self.bottom_logits,
             "activation_frequency": self.activation_frequency,
+            "act_min": self.act_min,
+            "act_max": self.act_max,
+            "quantile_values": self.quantile_values,
+            "histogram": self.histogram,
         }
 
 
@@ -134,6 +142,10 @@ def load_feature_labels(
                 top_logits=blob.get("top_logits", []),
                 bottom_logits=blob.get("bottom_logits", []),
                 activation_frequency=blob.get("activation_frequency", 0.0),
+                act_min=blob.get("act_min", 0.0),
+                act_max=blob.get("act_max", 0.0),
+                quantile_values=blob.get("quantile_values", []),
+                histogram=blob.get("histogram", []),
             )
         except (IndexError, ValueError) as exc:
             log.warning("Failed to load label for layer %d feature %d: %s", layer, feat_idx, exc)

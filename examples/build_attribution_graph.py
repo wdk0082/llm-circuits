@@ -19,6 +19,7 @@ from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import artifacts_dir, default_device, default_dtype
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
+from llm_circuits.transcoders.feature_labels import load_feature_labels
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MODEL_SIZE = "0.6b"
@@ -70,6 +71,25 @@ def main() -> None:
         top_k_logits=TOP_K_LOGITS,
         max_feature_targets=MAX_FEATURE_TARGETS,
     )
+
+    # --- Load feature labels --------------------------------------------------
+    print("Loading feature labels ...")
+    feat_indices_by_layer: dict[int, list[int]] = {}
+    for node in graph.nodes:
+        if node.node_type == "feature":
+            feat_indices_by_layer.setdefault(node.layer, []).append(node.feature_idx)
+
+    labels_by_layer: dict[int, dict] = {}
+    for layer, indices in sorted(feat_indices_by_layer.items()):
+        labels_by_layer[layer] = load_feature_labels(loaded.repo_id, layer, indices)
+        print(f"  Layer {layer}: {len(labels_by_layer[layer])} labels loaded")
+
+    # Attach labels to feature nodes
+    for node in graph.nodes:
+        if node.node_type == "feature":
+            label = labels_by_layer.get(node.layer, {}).get(node.feature_idx)
+            if label is not None:
+                node.label = label.to_dict()
 
     # --- Summary statistics ---------------------------------------------------
     print("\n" + "=" * 70)
@@ -142,6 +162,7 @@ def main() -> None:
                 "feature_idx": n.feature_idx,
                 "token_id": n.token_id,
                 "activation": n.activation,
+                "label": n.label,
             }
             for n in graph.nodes
         ],

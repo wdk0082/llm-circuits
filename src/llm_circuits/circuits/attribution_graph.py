@@ -64,6 +64,13 @@ class AttributionNode:
     activation: float = 0.0
     """Scalar activation value (feature activation, logit value, or L2 norm)."""
 
+    label: dict | None = None
+    """Feature label metadata (only for ``"feature"`` nodes).
+
+    When populated, contains ``top_logits``, ``bottom_logits``, and
+    ``activation_frequency`` from the transcoder repo's feature index.
+    """
+
 
 @dataclass
 class AttributionEdge:

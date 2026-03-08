@@ -135,7 +135,9 @@ def main() -> None:
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 
     # --- Tokenize via chat template -------------------------------------------
-    messages, n_bos_tokens, template_kwargs = prepare_messages(prompt, "qwen3", enable_thinking=False)
+    messages, n_bos_tokens, template_kwargs = prepare_messages(
+        prompt, "qwen3", enable_thinking=False
+    )
     input_ids = tokenizer.apply_chat_template(
         messages,
         return_tensors="pt",

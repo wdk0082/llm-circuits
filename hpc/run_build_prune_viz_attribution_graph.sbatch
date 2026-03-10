@@ -29,4 +29,7 @@ set -a; source .env; set +a
 uv sync --frozen
 
 # Run training (single process, single GPU)
-uv run --frozen python examples/visualize_attibution_graph.py
+uv run --frozen python examples/build_attribution_graph.py
+uv run --frozen python examples/prune_attribution_graph.py
+uv run --frozen python examples/visualize_attribution_graph.py
+

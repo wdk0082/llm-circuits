@@ -270,23 +270,17 @@ def prune_graph(
     pruned_A[:, ~kept_nodes] = 0.0
 
     # Step 4: edge threshold — compute per-edge influence scores
+    # Following circuit-tracer: edge_score[i,j] = normalized_A[i,j] * influence[i]
+    # where influence includes the logit weights themselves.
     A_norm_pruned = _normalize_matrix(pruned_A)
-    At = A_norm_pruned.T
-    # Forward pass of logit weights through the normalised transpose
-    edge_scores_matrix = np.zeros_like(pruned_A)
-    current = logit_weights.copy()
-    for _ in range(1000):
-        contrib = current[:, None] * At
-        edge_scores_matrix += contrib
-        current = current @ At
-        if not np.any(current > 0):
-            break
+    pruned_influence = _compute_influence(A_norm_pruned, logit_weights) + logit_weights
+    edge_scores_matrix = A_norm_pruned * pruned_influence[:, None]
 
     # Flatten edge scores to per-edge list
     kept_edges = np.zeros(len(edges), dtype=bool)
     edge_score_vals = np.zeros(len(edges), dtype=np.float64)
     for i, e in enumerate(edges):
-        edge_score_vals[i] = edge_scores_matrix[e.target, e.source]
+        edge_score_vals[i] = edge_scores_matrix[e.source, e.target]
 
     edge_cutoff = _find_threshold(edge_score_vals, edge_threshold)
     kept_edges = edge_score_vals >= edge_cutoff

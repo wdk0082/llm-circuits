@@ -18,8 +18,8 @@ from llm_circuits.settings import artifacts_dir
 
 # ── Config ───────────────────────────────────────────────────────────────────
 INPUT_FILE = "example_attribution_graph.json"
-NODE_THRESHOLD = 0.8
-EDGE_THRESHOLD = 0.98
+NODE_THRESHOLD = 0.5
+EDGE_THRESHOLD = 0.8
 # ─────────────────────────────────────────────────────────────────────────────
 
 

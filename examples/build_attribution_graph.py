@@ -148,12 +148,18 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "example_attribution_graph.json"
 
+    # Build logit token_id -> decoded string mapping
+    logit_token_strs = {
+        str(n.token_id): tokenizer.decode(n.token_id) for n in graph.nodes if n.node_type == "logit"
+    }
+
     graph_dict = {
         "prompt": PROMPT,
         "model": f"qwen3-{MODEL_SIZE}",
         "tokens": tokens,
         "n_bos_tokens": n_bos_tokens,
         "top_k_logits": TOP_K_LOGITS,
+        "logit_token_strs": logit_token_strs,
         "nodes": [
             {
                 "node_type": n.node_type,

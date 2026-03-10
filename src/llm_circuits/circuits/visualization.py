@@ -27,11 +27,12 @@ _NODE_COLORS: dict[str, str] = {
     "logit": "#FF9800",
 }
 
-_MIN_RADIUS = 8
-_MAX_RADIUS = 20
+_MIN_RADIUS = 4
+_MAX_RADIUS = 12
 _MIN_EDGE_WIDTH = 0.5
 _MAX_EDGE_WIDTH = 4.0
 _MARGIN = 60
+_NODE_SPACING = 28  # fixed horizontal spacing between nodes in the same (position, layer) cell
 
 # ---------------------------------------------------------------------------
 # Layout
@@ -42,37 +43,88 @@ def _compute_layout(
     nodes: list[dict],
     width: int,
     height: int,
-) -> list[dict[str, float]]:
-    """Compute ``(x, y)`` for each node using a layered DAG layout."""
-    # Group node indices by layer
-    layers: dict[int, list[int]] = {}
+) -> tuple[list[dict[str, float]], int]:
+    """Compute ``(x, y)`` for each node.
+
+    X-axis represents sequence **position** and Y-axis represents **layer**
+    (embedding at the bottom, logits at the top).  Each position is given a
+    column whose width is proportional to the maximum number of nodes at any
+    single layer within that position, so busy positions get more room.
+
+    Returns ``(positions, actual_width)`` where *actual_width* is the
+    computed width (may exceed the requested *width* to avoid overlap).
+    """
+    if not nodes:
+        return [], width
+
+    # --- Collect distinct positions and layers ---
+    sorted_positions = sorted({nd["position"] for nd in nodes})
+    sorted_layers = sorted({nd["layer"] for nd in nodes})
+
+    if not sorted_positions or not sorted_layers:
+        return [{"x": 0.0, "y": 0.0}] * len(nodes), width
+
+    # --- Y-axis: layer → y (bottom = lowest layer, top = highest) ---
+    layer_to_y: dict[int, float] = {}
+    n_layers = len(sorted_layers)
+    for rank, layer in enumerate(sorted_layers):
+        # Invert so lowest layer is at the bottom
+        t = rank / (n_layers - 1) if n_layers > 1 else 0.5
+        layer_to_y[layer] = height - _MARGIN - t * (height - 2 * _MARGIN)
+
+    # --- X-axis: variable-width position columns, right-aligned nodes ---
+    # Group node indices by (position, layer)
+    pos_layer_nodes: dict[tuple[int, int], list[int]] = {}
     for i, nd in enumerate(nodes):
-        layers.setdefault(nd["layer"], []).append(i)
+        key = (nd["position"], nd["layer"])
+        pos_layer_nodes.setdefault(key, []).append(i)
 
-    sorted_layer_keys = sorted(layers.keys())
-    n_layers = len(sorted_layer_keys)
-    if n_layers == 0:
-        return []
+    # Column width = max nodes at any layer in that position * fixed spacing
+    pos_max_count: dict[int, int] = {}
+    for pos in sorted_positions:
+        max_at_layer = 1
+        for layer in sorted_layers:
+            count = len(pos_layer_nodes.get((pos, layer), []))
+            max_at_layer = max(max_at_layer, count)
+        pos_max_count[pos] = max_at_layer
 
-    layer_to_x: dict[int, float] = {}
-    if n_layers == 1:
-        layer_to_x[sorted_layer_keys[0]] = width / 2
-    else:
-        for rank, key in enumerate(sorted_layer_keys):
-            layer_to_x[key] = _MARGIN + rank * (width - 2 * _MARGIN) / (n_layers - 1)
+    col_widths: dict[int, float] = {
+        pos: max(pos_max_count[pos] * _NODE_SPACING, _NODE_SPACING) for pos in sorted_positions
+    }
+    total_col_width = sum(col_widths.values())
+    # Add inter-column gaps
+    n_gaps = max(len(sorted_positions) - 1, 0)
+    gap = 20.0
+    total_needed = total_col_width + n_gaps * gap + 2 * _MARGIN
 
+    # Expand width to fit all columns without overlap
+    actual_width = max(width, int(total_needed) + 1)
+
+    # Compute the right edge of each position column
+    pos_right: dict[int, float] = {}
+    x_cursor = _MARGIN
+    for pos in sorted_positions:
+        x_cursor += col_widths[pos]
+        pos_right[pos] = x_cursor
+        x_cursor += gap
+
+    # --- Place nodes (right-aligned, fixed spacing) ---
     positions: list[dict[str, float]] = [{"x": 0.0, "y": 0.0}] * len(nodes)
-    for layer_key in sorted_layer_keys:
-        indices = layers[layer_key]
-        # Sort within layer by sequence position for consistent ordering
-        indices.sort(key=lambda i: nodes[i].get("position", 0))
+    for (pos, layer), indices in pos_layer_nodes.items():
+        right = pos_right[pos]
+        y = layer_to_y[layer]
         n = len(indices)
-        x = layer_to_x[layer_key]
+        # Sort by feature_idx (or token_id) for deterministic ordering
+        indices.sort(
+            key=lambda i: (nodes[i].get("feature_idx") or 0, nodes[i].get("token_id") or 0)
+        )
+        # Place nodes right-aligned with fixed spacing
         for rank, idx in enumerate(indices):
-            y = height / 2 if n == 1 else _MARGIN + rank * (height - 2 * _MARGIN) / (n - 1)
+            # rightmost node at right edge, others spaced left
+            x = right - (n - 1 - rank) * _NODE_SPACING
             positions[idx] = {"x": x, "y": y}
 
-    return positions
+    return positions, actual_width
 
 
 # ---------------------------------------------------------------------------
@@ -91,22 +143,31 @@ def _node_radius(activation: float, act_min: float, act_range: float) -> float:
     return _MIN_RADIUS + t * (_MAX_RADIUS - _MIN_RADIUS)
 
 
-def _node_display_label(node: dict, tokens: list[str] | None) -> str:
+def _make_visible(s: str) -> str:
+    """Replace whitespace characters with visible representations."""
+    return s.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t").replace(" ", " ")
+
+
+def _node_display_label(
+    node: dict, tokens: list[str] | None, logit_token_strs: dict[str, str] | None = None
+) -> str:
     ntype = node["node_type"]
     if ntype == "embedding":
         if tokens and 0 <= node["position"] < len(tokens):
-            return tokens[node["position"]]
+            return _make_visible(tokens[node["position"]])
         return f"p{node['position']}"
     if ntype == "feature":
-        return f"f{node['feature_idx']}"
+        return ""  # too many to label; use tooltip on hover
     if ntype == "error":
-        return "err"
+        return ""
     if ntype == "logit":
-        if tokens and node.get("token_id") is not None:
-            # token_id doesn't directly index into tokens list; just show id
-            return f"tok{node['token_id']}"
+        tid = node.get("token_id")
+        if tid is not None and logit_token_strs and str(tid) in logit_token_strs:
+            return logit_token_strs[str(tid)]
+        if tid is not None:
+            return f"tok{tid}"
         return "logit"
-    return "?"
+    return ""
 
 
 def _node_tooltip_html(node: dict, tokens: list[str] | None) -> str:
@@ -183,6 +244,7 @@ def _render_html(
     edges: list[dict],
     layout: list[dict[str, float]],
     tokens: list[str] | None,
+    logit_token_strs: dict[str, str] | None,
     title: str,
     width: int,
     height: int,
@@ -193,63 +255,77 @@ def _render_html(
     act_max = max(activations) if activations else 0
     act_range = act_max - act_min
 
-    # Pre-compute max edge weight for scaling
-    abs_weights = [abs(e["weight"]) for e in edges] if edges else [0]
-    max_abs_w = max(abs_weights) if abs_weights else 0
-
-    # --- SVG edges ---
-    edge_lines: list[str] = []
-    for i, e in enumerate(edges):
-        sx = layout[e["source"]]["x"]
-        sy = layout[e["source"]]["y"]
-        tx = layout[e["target"]]["x"]
-        ty = layout[e["target"]]["y"]
-        w = _edge_width(e["weight"], max_abs_w)
-        c = _edge_color(e["weight"], max_abs_w)
-        edge_lines.append(
-            f'<line class="edge" data-idx="{i}" data-src="{e["source"]}" '
-            f'data-tgt="{e["target"]}" '
-            f'x1="{sx:.1f}" y1="{sy:.1f}" x2="{tx:.1f}" y2="{ty:.1f}" '
-            f'stroke="{c}" stroke-width="{w:.2f}" />'
-        )
-
-    # --- SVG nodes ---
+    # --- SVG nodes only (no edges in initial render) ---
     node_groups: list[str] = []
     for i, nd in enumerate(nodes):
         x = layout[i]["x"]
         y = layout[i]["y"]
         r = _node_radius(nd.get("activation", 0.0), act_min, act_range)
         color = _node_color(nd["node_type"])
-        label = html.escape(_node_display_label(nd, tokens))
-        # Truncate long labels
-        if len(label) > 12:
-            label = label[:10] + ".."
+        label = html.escape(_node_display_label(nd, tokens, logit_token_strs))
+        # No truncation — vertical text has room
+        ntype = nd["node_type"]
+        # Vertical text: embedding labels below, logit labels above
+        if label and ntype == "logit":
+            tx = x + 4
+            ty = y - r - 6
+            text_el = (
+                f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="start" '
+                f'font-size="11" fill="#333" '
+                f'transform="rotate(-90,{tx:.1f},{ty:.1f})">{label}</text>'
+            )
+        elif label and ntype == "embedding":
+            tx = x + 4
+            ty = y + r + 6
+            text_el = (
+                f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="end" '
+                f'font-size="11" fill="#333" '
+                f'transform="rotate(-90,{tx:.1f},{ty:.1f})">{label}</text>'
+            )
+        elif label:
+            text_el = (
+                f'<text x="{x:.1f}" y="{y + r + 14:.1f}" text-anchor="middle" '
+                f'font-size="11" fill="#333">{label}</text>'
+            )
+        else:
+            text_el = ""
         node_groups.append(
             f'<g class="node" data-idx="{i}">'
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{color}" '
             f'stroke="#333" stroke-width="1.5" />'
-            f'<text x="{x:.1f}" y="{y + r + 14:.1f}" text-anchor="middle" '
-            f'font-size="11" fill="#333">{label}</text>'
+            f"{text_el}"
             f"</g>"
         )
 
-    edges_svg = "\n    ".join(edge_lines)
     nodes_svg = "\n    ".join(node_groups)
 
     # Build tooltip data as JSON for JS
-    tooltip_data = []
-    for nd in nodes:
-        tooltip_data.append(_node_tooltip_html(nd, tokens))
+    tooltip_data = [_node_tooltip_html(nd, tokens) for nd in nodes]
 
-    # Build edge adjacency for highlight: node_idx -> list of edge indices
-    node_edges: dict[int, list[int]] = {}
+    # Build compact edge data for JS: [source, target, weight] per edge
+    # and node positions for drawing lines on demand
+    node_positions = [
+        [round(layout[i]["x"], 1), round(layout[i]["y"], 1)] for i in range(len(nodes))
+    ]
+
+    # Build per-node edge index: node_idx -> list of edge indices
+    node_edge_map: dict[int, list[int]] = {}
     for i, e in enumerate(edges):
-        node_edges.setdefault(e["source"], []).append(i)
-        node_edges.setdefault(e["target"], []).append(i)
+        node_edge_map.setdefault(e["source"], []).append(i)
+        node_edge_map.setdefault(e["target"], []).append(i)
+
+    # Compact edge array: [source, target, weight]
+    edge_data = [[e["source"], e["target"], round(e["weight"], 6)] for e in edges]
+
+    # Pre-compute max abs weight for JS edge styling
+    abs_weights = [abs(e["weight"]) for e in edges] if edges else [0]
+    max_abs_w = max(abs_weights) if abs_weights else 0
 
     title_escaped = html.escape(title)
     tooltips_json = json.dumps(tooltip_data)
-    node_edges_json = json.dumps(node_edges)
+    node_pos_json = json.dumps(node_positions)
+    edge_data_json = json.dumps(edge_data)
+    node_edge_map_json = json.dumps(node_edge_map)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -263,9 +339,6 @@ def _render_html(
   svg:active {{ cursor: grabbing; }}
   .node circle {{ cursor: pointer; transition: opacity 0.15s; }}
   .node text {{ pointer-events: none; user-select: none; }}
-  .edge {{ pointer-events: none; }}
-  .edge.dim {{ opacity: 0.07; }}
-  .edge.highlight {{ opacity: 1 !important; }}
   .node.dim circle {{ opacity: 0.2; }}
   .node.dim text {{ opacity: 0.2; }}
   #tooltip {{
@@ -280,15 +353,15 @@ def _render_html(
   #legend .item {{ display: flex; align-items: center; margin: 3px 0; }}
   #legend .swatch {{ width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; border: 1px solid #999; }}
   #stats {{ margin: 2px 16px 8px; font-size: 12px; color: #777; }}
+  #hint {{ margin: 2px 16px; font-size: 11px; color: #999; }}
 </style>
 </head>
 <body>
 <h2>{title_escaped}</h2>
 <div id="stats">{len(nodes)} nodes, {len(edges)} edges</div>
+<div id="hint">Click a node to show its edges. Click again or click background to hide.</div>
 <svg id="graph" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-  <g id="edges">
-    {edges_svg}
-  </g>
+  <g id="edges"></g>
   <g id="nodes">
     {nodes_svg}
   </g>
@@ -306,34 +379,93 @@ def _render_html(
       <span style="color:rgba(198,40,40,0.8);margin-right:4px;">&#x2500;&#x2500;</span> negative
     </div>
   </div>
+  <div style="margin-top:4px;font-size:11px;color:#555;">
+    Node size = |activation|
+  </div>
 </div>
 <script>
 (function() {{
   const tooltips = {tooltips_json};
-  const nodeEdges = {node_edges_json};
+  const nodePos = {node_pos_json};
+  const edgeData = {edge_data_json};
+  const nodeEdgeMap = {node_edge_map_json};
+  const maxAbsW = {max_abs_w};
   const svg = document.getElementById('graph');
   const tip = document.getElementById('tooltip');
+  const edgesG = document.getElementById('edges');
   const allNodes = svg.querySelectorAll('.node');
-  const allEdges = svg.querySelectorAll('.edge');
+  const SVG_NS = 'http://www.w3.org/2000/svg';
 
-  // Tooltip + highlight on hover
+  let selectedIdx = null;
+
+  function edgeColor(w) {{
+    const a = maxAbsW === 0 ? 0.3 : 0.15 + 0.65 * (Math.abs(w) / maxAbsW);
+    return w >= 0
+      ? 'rgba(46,125,50,' + Math.min(a, 0.8).toFixed(2) + ')'
+      : 'rgba(198,40,40,' + Math.min(a, 0.8).toFixed(2) + ')';
+  }}
+  function edgeWidth(w) {{
+    if (maxAbsW === 0) return 1;
+    const t = Math.abs(w) / maxAbsW;
+    return {_MIN_EDGE_WIDTH} + t * {_MAX_EDGE_WIDTH - _MIN_EDGE_WIDTH};
+  }}
+
+  function clearEdges() {{
+    while (edgesG.firstChild) edgesG.removeChild(edgesG.firstChild);
+  }}
+
+  function showEdgesFor(idx) {{
+    clearEdges();
+    const eIndices = nodeEdgeMap[idx] || [];
+    const connectedNodes = new Set();
+    connectedNodes.add(idx);
+    eIndices.forEach(ei => {{
+      const [src, tgt, w] = edgeData[ei];
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', nodePos[src][0]);
+      line.setAttribute('y1', nodePos[src][1]);
+      line.setAttribute('x2', nodePos[tgt][0]);
+      line.setAttribute('y2', nodePos[tgt][1]);
+      line.setAttribute('stroke', edgeColor(w));
+      line.setAttribute('stroke-width', edgeWidth(w).toFixed(2));
+      line.style.pointerEvents = 'none';
+      edgesG.appendChild(line);
+      connectedNodes.add(src);
+      connectedNodes.add(tgt);
+    }});
+    // Dim unconnected nodes
+    allNodes.forEach(g => {{
+      const nIdx = parseInt(g.dataset.idx);
+      if (connectedNodes.has(nIdx)) {{
+        g.classList.remove('dim');
+      }} else {{
+        g.classList.add('dim');
+      }}
+    }});
+  }}
+
+  function deselect() {{
+    selectedIdx = null;
+    clearEdges();
+    allNodes.forEach(g => g.classList.remove('dim'));
+  }}
+
+  // Click to select/deselect
   allNodes.forEach(g => {{
     const idx = parseInt(g.dataset.idx);
+    g.addEventListener('click', e => {{
+      e.stopPropagation();
+      if (selectedIdx === idx) {{
+        deselect();
+      }} else {{
+        selectedIdx = idx;
+        showEdgesFor(idx);
+      }}
+    }});
+    // Tooltip on hover
     g.addEventListener('mouseenter', e => {{
       tip.innerHTML = tooltips[idx];
       tip.style.display = 'block';
-      // Dim everything, highlight connected
-      allEdges.forEach(el => el.classList.add('dim'));
-      allNodes.forEach(el => el.classList.add('dim'));
-      g.classList.remove('dim');
-      (nodeEdges[idx] || []).forEach(ei => {{
-        const el = allEdges[ei];
-        if (el) {{ el.classList.remove('dim'); el.classList.add('highlight'); }}
-        // Also highlight the other node
-        const src = parseInt(el.dataset.src), tgt = parseInt(el.dataset.tgt);
-        const other = src === idx ? tgt : src;
-        allNodes[other] && allNodes[other].classList.remove('dim');
-      }});
     }});
     g.addEventListener('mousemove', e => {{
       tip.style.left = (e.clientX + 14) + 'px';
@@ -341,9 +473,14 @@ def _render_html(
     }});
     g.addEventListener('mouseleave', () => {{
       tip.style.display = 'none';
-      allEdges.forEach(el => {{ el.classList.remove('dim'); el.classList.remove('highlight'); }});
-      allNodes.forEach(el => el.classList.remove('dim'));
     }});
+  }});
+
+  // Click background to deselect
+  svg.addEventListener('click', e => {{
+    if (e.target === svg || e.target.tagName === 'rect') {{
+      deselect();
+    }}
   }});
 
   // Zoom & pan
@@ -420,12 +557,15 @@ def render_graph_html(
     nodes = graph_dict.get("nodes", [])
     edges = graph_dict.get("edges", [])
     tokens: list[str] | None = graph_dict.get("tokens")
+    logit_token_strs: dict[str, str] | None = graph_dict.get("logit_token_strs")
 
     if title is None:
         title = graph_dict.get("prompt", "Attribution Graph")
 
-    layout = _compute_layout(nodes, width, height)
-    html_str = _render_html(nodes, edges, layout, tokens, title, width, height)
+    layout, actual_width = _compute_layout(nodes, width, height)
+    html_str = _render_html(
+        nodes, edges, layout, tokens, logit_token_strs, title, actual_width, height
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html_str, encoding="utf-8")

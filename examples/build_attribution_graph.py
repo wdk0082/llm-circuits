@@ -23,7 +23,7 @@ from llm_circuits.transcoders.feature_labels import load_feature_labels
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MODEL_SIZE = "0.6b"
-PROMPT = "5+7=?"
+PROMPT = "2x3="
 TOP_K_LOGITS = 3
 MAX_FEATURE_TARGETS = None  # cap feature targets for tractable edge computation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ def main() -> None:
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 
     # --- Tokenize via chat template -------------------------------------------
-    messages, n_bos_tokens, template_kwargs = prepare_messages(PROMPT, "qwen3")
+    messages, n_bos_tokens, template_kwargs = prepare_messages(PROMPT, "qwen3", enable_thinking=False)
     input_ids = tokenizer.apply_chat_template(
         messages,
         return_tensors="pt",

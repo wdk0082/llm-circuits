@@ -476,13 +476,6 @@ def _render_html(
     }});
   }});
 
-  // Click background to deselect
-  svg.addEventListener('click', e => {{
-    if (e.target === svg || e.target.tagName === 'rect') {{
-      deselect();
-    }}
-  }});
-
   // Zoom & pan
   let vb = {{ x: 0, y: 0, w: {width}, h: {height} }};
   let isPanning = false, panStart = {{ x: 0, y: 0 }};

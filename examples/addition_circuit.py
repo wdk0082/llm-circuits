@@ -134,6 +134,21 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
     pg = pruned.graph
     print(f"  pruned graph: {len(pg.nodes)} nodes, {len(pg.edges)} edges")
 
+    # Attach feature labels to every feature node so the HTML viz / info panel
+    # shows what each feature means (top logits), not just its index.
+    feat_by_layer: dict[int, list[int]] = {}
+    for nd in pg.nodes:
+        if nd.node_type == "feature":
+            feat_by_layer.setdefault(nd.layer, []).append(nd.feature_idx)
+    label_lookup: dict[tuple[int, int], dict] = {}
+    for layer, idxs in feat_by_layer.items():
+        for fidx, lab in load_feature_labels(repo_id, layer, idxs).items():
+            label_lookup[(layer, fidx)] = lab.to_dict()
+    for nd in pg.nodes:
+        if nd.node_type == "feature":
+            nd.label = label_lookup.get((nd.layer, nd.feature_idx))
+    print(f"  attached {len(label_lookup)} feature labels")
+
     # --- 2. Identify features driving the answer logit ------------------------
     logit_idxs = [i for i, n in enumerate(pg.nodes) if n.node_type == "logit"]
     answer_logit_idx = next(
@@ -152,19 +167,12 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
     direct.sort(key=lambda t: abs(t[1]), reverse=True)
     top = direct[:N_TOP_FEATURES]
 
-    by_layer: dict[int, list[int]] = {}
-    for src_idx, _ in top:
-        nd = pg.nodes[src_idx]
-        by_layer.setdefault(nd.layer, []).append(nd.feature_idx)
-    labels = {layer: load_feature_labels(repo_id, layer, idxs) for layer, idxs in by_layer.items()}
-
     print(f"\nTop {len(top)} features feeding the {answer_str!r} logit:")
     print(f"  {'L':>3} {'feat':>7} {'pos':>4} {'edge_w':>9}  top-logits")
     candidate_ablations: list[FeatureAblation] = []
     for src_idx, w in top:
         nd = pg.nodes[src_idx]
-        lab = labels.get(nd.layer, {}).get(nd.feature_idx)
-        top_logits = ", ".join(str(t) for t in (lab.top_logits[:6] if lab else []))
+        top_logits = ", ".join(str(t) for t in (nd.label["top_logits"][:6] if nd.label else []))
         print(f"  {nd.layer:>3} {nd.feature_idx:>7} {nd.position:>4} {w:>9.4f}  {top_logits}")
         candidate_ablations.append(FeatureAblation(nd.layer, nd.feature_idx, position=nd.position))
 

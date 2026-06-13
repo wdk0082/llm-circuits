@@ -170,6 +170,29 @@ def _node_display_label(
     return ""
 
 
+def _node_short_label(
+    node: dict, tokens: list[str] | None, logit_token_strs: dict[str, str] | None = None
+) -> str:
+    """A compact one-line label (HTML-escaped) used in the click-to-pin info panel."""
+    ntype = node["node_type"]
+    layer = node["layer"]
+    pos = node["position"]
+    if ntype == "embedding":
+        tok = tokens[pos] if (tokens and 0 <= pos < len(tokens)) else f"p{pos}"
+        label = f'emb "{_make_visible(tok)}" p{pos}'
+    elif ntype == "feature":
+        label = f"L{layer} f{node['feature_idx']} p{pos}"
+    elif ntype == "error":
+        label = f"err L{layer} p{pos}"
+    elif ntype == "logit":
+        tid = node.get("token_id")
+        s = logit_token_strs.get(str(tid)) if (logit_token_strs and tid is not None) else None
+        label = f'logit "{s}"' if s else f"logit tok{tid}"
+    else:
+        label = ntype
+    return html.escape(label)
+
+
 def _node_tooltip_html(node: dict, tokens: list[str] | None) -> str:
     ntype = node["node_type"]
     layer = node["layer"]
@@ -301,6 +324,7 @@ def _render_html(
 
     # Build tooltip data as JSON for JS
     tooltip_data = [_node_tooltip_html(nd, tokens) for nd in nodes]
+    short_labels = [_node_short_label(nd, tokens, logit_token_strs) for nd in nodes]
 
     # Build compact edge data for JS: [source, target, weight] per edge
     # and node positions for drawing lines on demand
@@ -323,6 +347,7 @@ def _render_html(
 
     title_escaped = html.escape(title)
     tooltips_json = json.dumps(tooltip_data)
+    short_labels_json = json.dumps(short_labels)
     node_pos_json = json.dumps(node_positions)
     edge_data_json = json.dumps(edge_data)
     node_edge_map_json = json.dumps(node_edge_map)
@@ -346,6 +371,12 @@ def _render_html(
     color: #eee; border-radius: 6px; font-size: 12px; line-height: 1.5;
     max-width: 360px; pointer-events: none; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }}
+  #info {{
+    display: none; position: fixed; top: 16px; right: 16px; width: 300px; max-height: 78vh;
+    overflow: auto; background: #fff; color: #222; border: 1px solid #bbb; border-radius: 6px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.55; z-index: 90;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }}
   #legend {{
     position: fixed; bottom: 16px; right: 16px; background: rgba(255,255,255,0.95);
     border: 1px solid #ccc; border-radius: 6px; padding: 10px 14px; font-size: 12px;
@@ -359,7 +390,7 @@ def _render_html(
 <body>
 <h2>{title_escaped}</h2>
 <div id="stats">{len(nodes)} nodes, {len(edges)} edges</div>
-<div id="hint">Click a node to show its edges. Click again or click background to hide.</div>
+<div id="hint">Click a node to pin its label &amp; connections (panel, top-right). Click it again or the background to close. Hover any node for a quick tooltip.</div>
 <svg id="graph" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
   <g id="edges"></g>
   <g id="nodes">
@@ -367,6 +398,7 @@ def _render_html(
   </g>
 </svg>
 <div id="tooltip"></div>
+<div id="info"></div>
 <div id="legend">
   <div class="item"><div class="swatch" style="background:#4CAF50"></div>Embedding</div>
   <div class="item"><div class="swatch" style="background:#2196F3"></div>Feature</div>
@@ -386,12 +418,14 @@ def _render_html(
 <script>
 (function() {{
   const tooltips = {tooltips_json};
+  const nodeLabels = {short_labels_json};
   const nodePos = {node_pos_json};
   const edgeData = {edge_data_json};
   const nodeEdgeMap = {node_edge_map_json};
   const maxAbsW = {max_abs_w};
   const svg = document.getElementById('graph');
   const tip = document.getElementById('tooltip');
+  const info = document.getElementById('info');
   const edgesG = document.getElementById('edges');
   const allNodes = svg.querySelectorAll('.node');
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -442,11 +476,33 @@ def _render_html(
         g.classList.add('dim');
       }}
     }});
+    // Pin the node's label + connections in the info panel
+    let html = tooltips[idx];
+    const conns = eIndices.map(ei => {{
+      const [src, tgt, w] = edgeData[ei];
+      const isOut = src === idx;
+      return {{ other: isOut ? tgt : src, w: w, dir: isOut ? '→ to' : '← from' }};
+    }});
+    conns.sort((a, b) => Math.abs(b.w) - Math.abs(a.w));
+    if (conns.length) {{
+      html += '<hr style="border:none;border-top:1px solid #ccc;margin:8px 0 6px;">';
+      html += '<b>Connections (' + conns.length + ')</b>';
+      conns.slice(0, 20).forEach(c => {{
+        const col = c.w >= 0 ? '#2e7d32' : '#c62828';
+        html += '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+              + c.dir + ' ' + nodeLabels[c.other]
+              + ' <span style="color:' + col + ';font-weight:bold;">' + c.w.toFixed(3) + '</span></div>';
+      }});
+      if (conns.length > 20) html += '<div style="color:#888;">… ' + (conns.length - 20) + ' more</div>';
+    }}
+    info.innerHTML = html;
+    info.style.display = 'block';
   }}
 
   function deselect() {{
     selectedIdx = null;
     clearEdges();
+    info.style.display = 'none';
     allNodes.forEach(g => g.classList.remove('dim'));
   }}
 

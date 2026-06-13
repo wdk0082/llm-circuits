@@ -266,6 +266,32 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
 
 
 # ---------------------------------------------------------------------------
+# Feature ablation helper (shared by attribution and intervention forwards)
+# ---------------------------------------------------------------------------
+
+
+def _apply_ablations(
+    features: Tensor,
+    layer_ablations: list[tuple[int | None, int]] | None,
+) -> Tensor:
+    """Return *features* with the specified ``(position, feature_idx)`` entries zeroed.
+
+    ``features`` has shape ``(..., seq, d_transcoder)``.  A ``position`` of ``None``
+    zeroes that feature at every sequence position.  Implemented by multiplying
+    with a mask (not in-place) so it is safe inside the autograd graph.
+    """
+    if not layer_ablations:
+        return features
+    mask = torch.ones_like(features)
+    for pos, fidx in layer_ablations:
+        if pos is None:
+            mask[..., fidx] = 0.0
+        else:
+            mask[..., pos, fidx] = 0.0
+    return features * mask
+
+
+# ---------------------------------------------------------------------------
 # CLT reconstruction with gradient-aware feature detach
 # ---------------------------------------------------------------------------
 
@@ -277,6 +303,7 @@ def _compute_clt_reconstruction_local(
     buf: _CrossLayerBuffer,
     features_store: dict[int, Tensor],
     pre_activations_store: dict[int, Tensor] | None = None,
+    layer_ablations: list[tuple[int | None, int]] | None = None,
 ) -> Tensor:
     """CLT encode + decode, storing features for reference.
 
@@ -291,6 +318,8 @@ def _compute_clt_reconstruction_local(
         features = clt.apply_activation_function(layer_idx, pre_acts)
     else:
         features = clt.encode_layer(x, layer_idx)
+
+    features = _apply_ablations(features, layer_ablations)
 
     # Store detached copy for reference (no gradient needed)
     features_store[layer_idx] = features.detach()
@@ -335,6 +364,8 @@ def _make_local_plt_hook(
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
     pre_activations_store: dict[int, Tensor] | None = None,
+    layer_ablations: list[tuple[int | None, int]] | None = None,
+    frozen_error: Tensor | None = None,
 ) -> Any:
     """Per-layer transcoder hook with constant reconstruction and constant error nodes."""
 
@@ -351,6 +382,7 @@ def _make_local_plt_hook(
             features = single_tc.activation_function(pre_acts)
         else:
             features = single_tc.encode(x)
+        features = _apply_ablations(features, layer_ablations)
         features_store[layer_idx] = features.detach()  # store detached copy for reference
 
         # 2. Decode, then detach — reconstruction is a constant
@@ -368,8 +400,16 @@ def _make_local_plt_hook(
 
         reconstructions[layer_idx] = reconstruction
 
-        # 4. Error node — detached constant
-        error = (captured_mlp_outputs[layer_idx] - reconstruction).detach()
+        # 4. Error node — a detached constant.  On a clean pass this is
+        #    ``captured_mlp_out - reconstruction`` so the layer output exactly
+        #    equals the original MLP output.  For an intervention pass a *frozen*
+        #    error from the clean run is supplied, so that ablating a feature
+        #    actually changes the output instead of being cancelled by a
+        #    re-derived error term.
+        if frozen_error is not None:
+            error = frozen_error
+        else:
+            error = (captured_mlp_outputs[layer_idx] - reconstruction).detach()
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction
@@ -390,6 +430,8 @@ def _make_local_clt_hook(
     n_bos_tokens: int,
     ibuf: _InputBuffer | None = None,
     pre_activations_store: dict[int, Tensor] | None = None,
+    layer_ablations: list[tuple[int | None, int]] | None = None,
+    frozen_error: Tensor | None = None,
 ) -> Any:
     """Cross-layer transcoder hook with constant reconstruction and constant error nodes."""
 
@@ -398,7 +440,7 @@ def _make_local_clt_hook(
         original_out = output[0] if isinstance(output, tuple) else output
 
         reconstruction = _compute_clt_reconstruction_local(
-            x, layer_idx, clt, buf, features_store, pre_activations_store
+            x, layer_idx, clt, buf, features_store, pre_activations_store, layer_ablations
         ).detach()
 
         # Preserve BOS positions
@@ -413,8 +455,12 @@ def _make_local_clt_hook(
 
         reconstructions[layer_idx] = reconstruction
 
-        # Error node — detached constant
-        error = (captured_mlp_outputs[layer_idx] - reconstruction).detach()
+        # Error node — detached constant (frozen from the clean run during an
+        # intervention pass; see the per-layer hook for the rationale).
+        if frozen_error is not None:
+            error = frozen_error
+        else:
+            error = (captured_mlp_outputs[layer_idx] - reconstruction).detach()
         errors[layer_idx] = error
 
         result = reconstruction + error if include_error else reconstruction
@@ -452,12 +498,16 @@ class LocalReplacementModel:
         layernorm_templates: list[str] | None = None,
         final_norm_name: str = "model.norm",
         capture_pre_activations: bool = False,
+        ablations: dict[int, list[tuple[int | None, int]]] | None = None,
+        frozen_errors: dict[int, Tensor] | None = None,
     ) -> None:
         self._model = model
         self._transcoder = transcoder
         self._caps = caps
         self._include_error = include_error
         self._n_bos_tokens = n_bos_tokens
+        self._ablations = ablations or {}
+        self._frozen_errors = frozen_errors or {}
         self._mlp_name_template = mlp_name_template
         self._output_module_template = output_module_template
         self._attn_name_template = attn_name_template
@@ -526,6 +576,8 @@ class LocalReplacementModel:
         pre_act_store = self._pre_activations if self._capture_pre_activations else None
         for i in range(self._n_layers):
             input_mod = self._model.get_submodule(self._mlp_name_template.format(layer=i))
+            layer_abl = self._ablations.get(i)
+            layer_ferr = self._frozen_errors.get(i)
 
             if self._two_hook:
                 output_mod = self._model.get_submodule(self._output_module_template.format(layer=i))
@@ -546,6 +598,8 @@ class LocalReplacementModel:
                                 self._n_bos_tokens,
                                 self._ibuf,
                                 pre_act_store,
+                                layer_abl,
+                                layer_ferr,
                             )
                         )
                     )
@@ -564,6 +618,8 @@ class LocalReplacementModel:
                                 self._n_bos_tokens,
                                 self._ibuf,
                                 pre_act_store,
+                                layer_abl,
+                                layer_ferr,
                             )
                         )
                     )
@@ -581,6 +637,8 @@ class LocalReplacementModel:
                                 self._include_error,
                                 self._n_bos_tokens,
                                 pre_activations_store=pre_act_store,
+                                layer_ablations=layer_abl,
+                                frozen_error=layer_ferr,
                             )
                         )
                     )
@@ -598,6 +656,8 @@ class LocalReplacementModel:
                                 self._include_error,
                                 self._n_bos_tokens,
                                 pre_activations_store=pre_act_store,
+                                layer_ablations=layer_abl,
+                                frozen_error=layer_ferr,
                             )
                         )
                     )

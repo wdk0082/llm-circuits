@@ -17,7 +17,7 @@ import torch
 from llm_circuits.circuits.attribution_graph import build_attribution_graph
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
-from llm_circuits.settings import artifacts_dir, default_device, default_dtype
+from llm_circuits.settings import artifacts_dir, default_device
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 
@@ -26,13 +26,16 @@ MODEL_SIZE = "0.6b"
 PROMPT = "2x3="
 TOP_K_LOGITS = 3
 MAX_FEATURE_TARGETS = None  # cap feature targets for tractable edge computation
+# fp32 keeps the linearised local-replacement model faithful to the original; the
+# attribution gradients are then computed in full precision. Use "bf16" only on OOM.
+DTYPE_STR = "fp32"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
     device = default_device()
-    dtype = default_dtype()
-    dtype_str = "bf16" if dtype == torch.bfloat16 else "fp32"
+    dtype_str = DTYPE_STR
+    dtype = torch.float32 if dtype_str == "fp32" else torch.bfloat16
 
     print(f"Device: {device}  Dtype: {dtype}")
 
@@ -48,7 +51,9 @@ def main() -> None:
     print(f"  Type: {type(tc).__name__}  Repo: {loaded.repo_id}")
 
     # --- Tokenize via chat template -------------------------------------------
-    messages, n_bos_tokens, template_kwargs = prepare_messages(PROMPT, "qwen3", enable_thinking=False)
+    messages, n_bos_tokens, template_kwargs = prepare_messages(
+        PROMPT, "qwen3", enable_thinking=False
+    )
     input_ids = tokenizer.apply_chat_template(
         messages,
         return_tensors="pt",

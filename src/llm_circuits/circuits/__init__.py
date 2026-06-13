@@ -24,6 +24,21 @@ from llm_circuits.circuits.graph_pruning import (
 from llm_circuits.circuits.graph_pruning import (
     prune_graph as prune_graph,
 )
+from llm_circuits.circuits.interventions import (
+    AblationResult as AblationResult,
+)
+from llm_circuits.circuits.interventions import (
+    FeatureAblation as FeatureAblation,
+)
+from llm_circuits.circuits.interventions import (
+    ablation_logit_effect as ablation_logit_effect,
+)
+from llm_circuits.circuits.interventions import (
+    ablations_to_dict as ablations_to_dict,
+)
+from llm_circuits.circuits.interventions import (
+    run_feature_ablation as run_feature_ablation,
+)
 from llm_circuits.circuits.local_replacement_model import (
     CapturedConstants as CapturedConstants,
 )

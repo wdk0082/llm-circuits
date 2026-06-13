@@ -28,11 +28,15 @@ from llm_circuits.circuits.local_replacement_model import run_local_replacement
 from llm_circuits.circuits.replacement_model import replace_mlps_with_transcoders
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
-from llm_circuits.settings import default_device, default_dtype
+from llm_circuits.settings import default_device
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
 # ── Choose model size here ───────────────────────────────────────────────────
 MODEL_SIZE = "0.6b"  # e.g. "0.6b", "4b"
+# fp32 makes the local replacement model reproduce the original logits almost
+# exactly: the frozen-attention / frozen-LayerNorm recomputation no longer drifts
+# in low precision. Switch to "bf16" only if a larger model does not fit in fp32.
+DTYPE_STR = "fp32"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -117,8 +121,8 @@ def _print_summary(label: str, original_logits: Tensor, other_logits: Tensor) ->
 
 def main() -> None:
     device = default_device()
-    dtype = default_dtype()
-    dtype_str = "bf16" if dtype == torch.bfloat16 else "fp32"
+    dtype_str = DTYPE_STR
+    dtype = torch.float32 if dtype_str == "fp32" else torch.bfloat16
     prompt = "4+3=?"
 
     print(f"Device: {device}  Dtype: {dtype}")
@@ -204,9 +208,13 @@ def main() -> None:
     logit_diff = (original_logits - local_ctx.logits.detach()).abs()
     max_diff = logit_diff.max().item()
     mean_diff = logit_diff.mean().item()
-    # bf16 precision with autograd enabled accumulates small differences across
-    # layers — use a relaxed threshold and rely on KL/agreement metrics above.
-    status = "PASS" if max_diff < 2.0 else "FAIL"
+    # With error nodes injected, the local model is exact up to floating-point
+    # recomputation drift in the frozen attention / LayerNorm. In fp32 this drift
+    # is tiny; in bf16 it accumulates noticeably across layers. Use a precision-aware
+    # tolerance so the check is meaningful instead of rubber-stamping with a huge bound.
+    tol = 0.05 if dtype == torch.float32 else 2.0
+    status = "PASS" if max_diff < tol else "FAIL"
+    print(f"  dtype={dtype_str}  tolerance={tol}")
     print(f"  max |diff| = {max_diff:.6e}  mean |diff| = {mean_diff:.6e}  --> {status}")
 
     # ==========================================================================

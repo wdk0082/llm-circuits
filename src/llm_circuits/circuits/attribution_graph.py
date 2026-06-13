@@ -17,6 +17,7 @@ import torch
 from torch import Tensor, nn
 
 from llm_circuits.circuits.local_replacement_model import (
+    _QWEN3_LAYERNORM_TEMPLATES,
     LocalReplacementModel,
     capture_constants,
 )
@@ -27,15 +28,6 @@ if TYPE_CHECKING:
     from circuit_tracer.transcoder.single_layer_transcoder import TranscoderSet
 
 log = get_logger(__name__)
-
-# ---------------------------------------------------------------------------
-# Default templates (Qwen3)
-# ---------------------------------------------------------------------------
-
-_QWEN3_LAYERNORM_TEMPLATES: list[str] = [
-    "model.layers.{layer}.input_layernorm",
-    "model.layers.{layer}.post_attention_layernorm",
-]
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -105,41 +97,21 @@ def _is_transcoder_set(tc: Any) -> bool:
     return isinstance(tc, TranscoderSet)
 
 
-def _get_source_contribution(
-    node: AttributionNode,
-    transcoder: TranscoderSet | CrossLayerTranscoder,
-    features: dict[int, Tensor],
-    errors: dict[int, Tensor],
-    embedding: Tensor,
-    is_set: bool,
+def _batched_edge_weights(
+    grad_2d: Tensor,
+    positions: Tensor,
+    contrib_mat: Tensor,
 ) -> Tensor:
-    """Return the contribution vector for a source node.
+    """Edge weights for a batch of sources sharing a gradient tensor.
 
-    * Feature at (l, q, f): ``activation * W_dec[f, :]``
-    * Error at (l, q): ``errors[l][q, :]``
-    * Embedding at q: ``embedding[q, :]``
+    ``weight_i = <grad_2d[positions_i], contrib_i>``.  ``grad_2d`` is
+    ``(seq, d_model)``, ``positions`` is ``(n,)`` long, ``contrib_mat`` is
+    ``(n, d_model)``.  Returns ``(n,)``.  This is the fused replacement for the
+    old per-source ``(grad[pos] @ contrib).item()`` loop — one device->host
+    transfer instead of one per edge.
     """
-    if node.node_type == "feature":
-        layer = node.layer
-        feat_idx = node.feature_idx
-        act = features[layer]
-        # Get the scalar activation
-        act_val = act[node.position, feat_idx]
-        if is_set:
-            dec_vec = transcoder.transcoders[layer].W_dec[feat_idx, :]
-        else:
-            # CLT: W_dec shape is (d_transcoder, n_target_layers, d_model)
-            # Self-contribution is offset 0
-            dec_vec = transcoder._get_decoder_vectors(layer)[feat_idx, 0, :]
-        return act_val * dec_vec
-
-    if node.node_type == "error":
-        return errors[node.layer][node.position, :]
-
-    if node.node_type == "embedding":
-        return embedding[node.position, :]
-
-    raise ValueError(f"Cannot compute contribution for node type {node.node_type!r}")
+    g = grad_2d.index_select(0, positions).to(contrib_mat.dtype)  # (n, d_model)
+    return (g * contrib_mat).sum(dim=1)
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +127,7 @@ def build_attribution_graph(
     n_bos_tokens: int = 1,
     top_k_logits: int = 3,
     max_feature_targets: int | None = None,
+    min_edge_weight: float = 0.0,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
@@ -361,7 +334,7 @@ def build_attribution_graph(
     # embed_sources = list of (node_idx, position, contrib) for embedding nodes
 
     log.info("Pre-computing source contribution vectors ...")
-    source_contribs: dict[int, Tensor] = {}
+    dev = embed_squeezed.device
     source_by_layer: dict[int, list[tuple[int, int, Tensor]]] = {lay: [] for lay in range(n_layers)}
     embed_sources: list[tuple[int, int, Tensor]] = []
 
@@ -369,14 +342,12 @@ def build_attribution_graph(
     for node_idx, node in enumerate(graph.nodes):
         if node.node_type == "embedding":
             contrib = embed_squeezed[node.position, :]
-            source_contribs[node_idx] = contrib
             embed_sources.append((node_idx, node.position, contrib))
 
     # Error sources (no W_dec needed)
     for node_idx, node in enumerate(graph.nodes):
         if node.node_type == "error":
             contrib = errors[node.layer][node.position, :]
-            source_contribs[node_idx] = contrib
             source_by_layer[node.layer].append((node_idx, node.position, contrib))
 
     # Feature sources — batch W_dec reads per layer to avoid repeated lazy loads
@@ -398,13 +369,52 @@ def build_attribution_graph(
         for k, (node_idx, node) in enumerate(layer_nodes):
             act_val = features[node.layer][node.position, node.feature_idx]
             contrib = act_val * dec_vecs[k]
-            source_contribs[node_idx] = contrib
             source_by_layer[node.layer].append((node_idx, node.position, contrib))
         log.info("  layer %d: %d feature contributions computed", layer, len(layer_nodes))
+
+    # Stack each source group into (n_sources, d_model) matrices once so that each
+    # (target, source-layer) edge computation is a single fused index-select + dot,
+    # rather than one GPU->CPU ``.item()`` sync per edge (the old hot path).
+    def _to_batch(
+        rows: list[tuple[int, int, Tensor]],
+    ) -> tuple[list[int], Tensor, Tensor] | None:
+        if not rows:
+            return None
+        node_idx = [r[0] for r in rows]
+        positions = torch.tensor([r[1] for r in rows], dtype=torch.long, device=dev)
+        contrib_mat = torch.stack([r[2] for r in rows]).float()  # (n_sources, d_model)
+        return node_idx, positions, contrib_mat
+
+    embed_batch = _to_batch(embed_sources)
+    layer_batches: dict[int, tuple[list[int], Tensor, Tensor]] = {}
+    for lay in range(n_layers):
+        batch = _to_batch(source_by_layer[lay])
+        if batch is not None:
+            layer_batches[lay] = batch
 
     # ------------------------------------------------------------------
     # Phase 5: compute edges via autograd.grad
     # ------------------------------------------------------------------
+
+    def _emit_edges(
+        grad_tensor: Tensor | None,
+        batch: tuple[list[int], Tensor, Tensor] | None,
+        target_node_idx: int,
+    ) -> None:
+        """Emit edges from one batched source group to *target_node_idx*.
+
+        ``weight_i = <grad[pos_i], contrib_i>`` for every source ``i`` in the
+        batch, computed as a single fused op with one device->host transfer.
+        """
+        if grad_tensor is None or batch is None:
+            return
+        node_idx, positions, contrib_mat = batch
+        grad_2d = grad_tensor[0] if grad_tensor.dim() == 3 else grad_tensor
+        weights = _batched_edge_weights(grad_2d, positions, contrib_mat)  # (n_sources,)
+        edges = graph.edges
+        for src_idx, w in zip(node_idx, weights.tolist(), strict=True):
+            if abs(w) > min_edge_weight:
+                edges.append(AttributionEdge(source=src_idx, target=target_node_idx, weight=w))
 
     def _compute_edges_for_target(
         target_scalar: Tensor,
@@ -421,32 +431,10 @@ def build_attribution_graph(
             allow_unused=True,
         )
 
-        # grads[0] = d(target)/d(embedding)
-        # grads[k+1] = d(target)/d(residuals[source_layers[k]])
-
-        # Embedding sources
-        grad_embed = grads[0]
-        if grad_embed is not None:
-            for src_idx, pos, contrib in embed_sources:
-                g = grad_embed[0, pos, :] if grad_embed.dim() == 3 else grad_embed[pos, :]
-                weight = (g.float() @ contrib.float()).item()
-                if weight != 0.0:
-                    graph.edges.append(
-                        AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)
-                    )
-
-        # Feature/error sources at each layer
+        # grads[0] = d(target)/d(embedding); grads[k+1] = d(target)/d(residuals[layer_k])
+        _emit_edges(grads[0], embed_batch, target_node_idx)
         for k, layer in enumerate(source_layers):
-            grad_tensor = grads[k + 1]
-            if grad_tensor is None:
-                continue
-            for src_idx, pos, contrib in source_by_layer[layer]:
-                g = grad_tensor[0, pos, :] if grad_tensor.dim() == 3 else grad_tensor[pos, :]
-                weight = (g.float() @ contrib.float()).item()
-                if weight != 0.0:
-                    graph.edges.append(
-                        AttributionEdge(source=src_idx, target=target_node_idx, weight=weight)
-                    )
+            _emit_edges(grads[k + 1], layer_batches.get(layer), target_node_idx)
 
     # --- Feature targets ---
     feature_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"]

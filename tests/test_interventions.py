@@ -8,6 +8,7 @@ from llm_circuits.circuits.interventions import (
     AblationResult,
     FeatureAblation,
     ablation_logit_effect,
+    ablation_prob_effect,
     ablations_to_dict,
 )
 from llm_circuits.circuits.local_replacement_model import _apply_ablations
@@ -87,3 +88,24 @@ class TestAblationLogitEffect:
         r = self._result()
         # position 0 has no changes
         assert ablation_logit_effect(r, [5, 1], position=0) == {5: 0.0, 1: 0.0}
+
+
+class TestAblationProbEffect:
+    def test_baseline_and_ablated_probs(self):
+        # Baseline: token 0 dominates (logit 10 vs 0). Ablated: uniform over 4.
+        base = torch.zeros(2, 4)
+        base[-1] = torch.tensor([10.0, 0.0, 0.0, 0.0])
+        abl = torch.zeros(2, 4)  # all zeros -> uniform softmax
+        r = AblationResult(baseline_logits=base, ablated_logits=abl)
+        bp, ap = ablation_prob_effect(r, [0])[0]
+        assert bp > 0.99  # token 0 ~certain at baseline
+        assert abs(ap - 0.25) < 1e-5  # uniform after ablation
+
+    def test_probs_are_valid_distribution(self):
+        base = torch.randn(3, 5)
+        abl = torch.randn(3, 5)
+        r = AblationResult(baseline_logits=base, ablated_logits=abl)
+        effects = ablation_prob_effect(r, [0, 1, 2, 3, 4])
+        for bp, ap in effects.values():
+            assert 0.0 <= bp <= 1.0
+            assert 0.0 <= ap <= 1.0

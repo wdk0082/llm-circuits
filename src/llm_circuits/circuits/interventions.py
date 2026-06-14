@@ -215,3 +215,20 @@ def ablation_logit_effect(
     base = result.baseline_logits[position]
     abl = result.ablated_logits[position]
     return {int(t): (abl[t] - base[t]).item() for t in token_ids}
+
+
+def ablation_prob_effect(
+    result: AblationResult,
+    token_ids: list[int],
+    *,
+    position: int = -1,
+) -> dict[int, tuple[float, float]]:
+    """Return ``(baseline_prob, ablated_prob)`` for each token in *token_ids*.
+
+    Post-softmax probabilities at *position* (default last) — a more intuitive
+    companion to :func:`ablation_logit_effect`, e.g. ``0.72 -> 0.08`` makes the
+    effect of an ablation clearer than the raw logit delta.
+    """
+    base = result.baseline_logits[position].softmax(dim=-1)
+    abl = result.ablated_logits[position].softmax(dim=-1)
+    return {int(t): (base[t].item(), abl[t].item()) for t in token_ids}

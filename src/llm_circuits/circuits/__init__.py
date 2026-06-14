@@ -34,6 +34,9 @@ from llm_circuits.circuits.interventions import (
     ablation_logit_effect as ablation_logit_effect,
 )
 from llm_circuits.circuits.interventions import (
+    ablation_prob_effect as ablation_prob_effect,
+)
+from llm_circuits.circuits.interventions import (
     ablations_to_dict as ablations_to_dict,
 )
 from llm_circuits.circuits.interventions import (

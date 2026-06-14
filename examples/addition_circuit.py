@@ -28,6 +28,7 @@ from llm_circuits.circuits.graph_pruning import graph_to_dict, prune_graph
 from llm_circuits.circuits.interventions import (
     FeatureAblation,
     ablation_logit_effect,
+    ablation_prob_effect,
     run_feature_ablation,
 )
 from llm_circuits.circuits.visualization import render_graph_html_str, render_suite_html
@@ -170,16 +171,24 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
     )
     print(f"  top features: {top3}")
 
-    # Ablate to validate.
+    # Ablate to validate — report both the logit delta and the post-softmax
+    # probability transition (more intuitive: e.g. p 0.72 -> 0.08).
     eff = 0.0
+    base_p = top_p = 0.0
     if ablations:
         single = run_feature_ablation(model, tc, input_ids, [ablations[0]], n_bos_tokens=n_bos)
         eff = ablation_logit_effect(single, [answer_id])[answer_id]
+        base_p, top_p = ablation_prob_effect(single, [answer_id])[answer_id]
     joint = run_feature_ablation(model, tc, input_ids, ablations, n_bos_tokens=n_bos)
     joint_eff = ablation_logit_effect(joint, [answer_id])[answer_id]
+    jb_p, all_p = ablation_prob_effect(joint, [answer_id])[answer_id]
+    if not ablations:
+        base_p = jb_p
     new_top = tokenizer.decode(int(joint.ablated_logits[-1].argmax().item()))
+    print(f"  ablate top:  Δlogit={eff:+.2f}  p({answer_str!r}) {base_p:.3f}→{top_p:.3f}")
     print(
-        f"  ablate top Δ={eff:+.2f}, all {len(ablations)} Δ={joint_eff:+.2f} (new top {new_top!r})"
+        f"  ablate all {len(ablations)}: Δlogit={joint_eff:+.2f}  "
+        f"p {base_p:.3f}→{all_p:.3f}  new top {new_top!r}"
     )
 
     # Serialise + render this example.
@@ -197,6 +206,15 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
         answer_token=answer_str,
         expected_answer=expected,
         correct=correct,
+        ablation={
+            "n_ablated": len(ablations),
+            "top_logit_delta": eff,
+            "all_logit_delta": joint_eff,
+            "answer_prob_baseline": base_p,
+            "answer_prob_ablate_top": top_p,
+            "answer_prob_ablate_all": all_p,
+            "new_top_after_ablation": new_top,
+        },
     )
     stem = f"addition_graph_qwen3-{size}_{a}plus{b}"
     (out_dir / f"{stem}.json").write_text(json.dumps(graph_dict, indent=2))
@@ -205,15 +223,27 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
 
     mark = "✓" if correct else "✗"
     summary = (
-        f"<b>{a}+{b}={expected}</b> → predicts '{answer_str}' {mark} &nbsp;|&nbsp; "
-        f"top features: {top3} &nbsp;|&nbsp; ablate top Δlogit={eff:+.2f}, "
-        f"all {len(ablations)} Δlogit={joint_eff:+.2f} (new top '{new_top}')"
+        f"<b>{a}+{b}={expected}</b> → '{answer_str}' {mark} &nbsp;|&nbsp; "
+        f"p('{answer_str}'): {base_p:.2f} -> {top_p:.2f} (-top) -> {all_p:.2f} (-all {len(ablations)}) "
+        f"&nbsp;|&nbsp; Δlogit {eff:+.1f} / {joint_eff:+.1f} &nbsp;|&nbsp; "
+        f"top: {top3} &nbsp;|&nbsp; new top '{new_top}'"
     )
     return {
         "label": f"{a}+{b}={expected} ({mark})",
         "summary": summary,
         "graph_html": graph_html,
-        "row": (f"{a}+{b}", expected, answer_str, mark, eff, joint_eff, new_top),
+        "row": (
+            f"{a}+{b}",
+            expected,
+            answer_str,
+            mark,
+            eff,
+            joint_eff,
+            base_p,
+            top_p,
+            all_p,
+            new_top,
+        ),
     }
 
 
@@ -238,10 +268,14 @@ def build_suite(model, tokenizer, tc, repo_id, size, tmpl, problems, out_dir) ->
     print("\n" + "=" * 78)
     print(f"Summary ({len(rows)} examples, Qwen3-{size})")
     print("=" * 78)
-    print(f"  {'prob':>6} {'exp':>4} {'pred':>5} {'ok':>3} {'Δtop':>8} {'Δall':>8} {'new top':>8}")
-    for prob, exp, pred, mark, eff, joint_eff, new_top in rows:
+    print(
+        f"  {'prob':>6} {'pred':>5} {'ok':>3} {'Δtop':>7} {'Δall':>7} "
+        f"{'p:base→top→all':>22} {'newtop':>7}"
+    )
+    for prob, _exp, pred, mark, eff, joint_eff, base_p, top_p, all_p, new_top in rows:
+        ptrans = f"{base_p:.2f}→{top_p:.2f}→{all_p:.2f}"
         print(
-            f"  {prob:>6} {exp:>4} {pred:>5} {mark:>3} {eff:>8.2f} {joint_eff:>8.2f} {new_top!r:>8}"
+            f"  {prob:>6} {pred:>5} {mark:>3} {eff:>7.2f} {joint_eff:>7.2f} {ptrans:>22} {new_top!r:>7}"
         )
     print(f"\nSaved suite viewer: {suite_path}")
 

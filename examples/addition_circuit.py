@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Addition circuit: find a correctly-solved prompt, then build → prune → identify → ablate.
+"""Addition circuits: find a model that adds, then graph SEVERAL examples.
 
 Biology-paper style analysis for single-digit addition on Qwen3. The 0.6B model
-is unreliable at arithmetic under some prompt formats, so this script first
-*searches* for a (model, prompt-format, problem) where the model's next-token
-prediction is actually the correct sum, preferring the smallest model and the
-simplest (zero-shot) format. It then runs the full interpretability protocol on
-that case:
+is unreliable at arithmetic, so this script first *searches* for a (model,
+prompt-format) where the model's next-token prediction is the correct sum,
+preferring the smallest model and the simplest format. It then runs the full
+interpretability protocol on several correctly-solved problems:
 
-1. Build the attribution graph for the correctly-solved ``a+b=`` and prune it.
-2. Identify the transcoder features that most influence the answer-digit logit
-   (the candidate addition-output / lookup features) and show their label logits.
-3. **Validate** by ablating those features on the local replacement model and
-   measuring how far the answer logit drops — a causal check, not a correlation.
+  build attribution graph -> prune -> attach feature labels -> identify the
+  features driving the answer-digit logit -> **ablate** them to causally confirm.
 
-Usage:
+Output: one self-contained ``addition_suite_qwen3-<size>.html`` with a dropdown
+to switch between examples (each an interactive graph), plus per-example
+JSON/HTML. Run:
+
     uv run python examples/addition_circuit.py
 """
 
@@ -31,7 +30,7 @@ from llm_circuits.circuits.interventions import (
     ablation_logit_effect,
     run_feature_ablation,
 )
-from llm_circuits.circuits.visualization import render_graph_html
+from llm_circuits.circuits.visualization import render_graph_html_str, render_suite_html
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import artifacts_dir, default_device
@@ -39,13 +38,10 @@ from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 
 # ── Config ───────────────────────────────────────────────────────────────────
-# Try the smallest model first; escalate only if it cannot do the arithmetic.
-# fp32 keeps the linearised model faithful; bf16 is used for the larger model to
-# fit in memory (the user confirmed bf16 is acceptable on OOM).
 MODEL_CANDIDATES: list[tuple[str, str]] = [("0.6b", "fp32"), ("4b", "bf16")]
 
-# Single-digit sums keep the answer a single token (unambiguous target logit).
-PROBLEMS: list[tuple[int, int]] = [(2, 3), (4, 5), (1, 6), (3, 4), (6, 2), (5, 4), (7, 2), (4, 4)]
+# Single-digit sums (answer is a single token); chosen to span distinct sums.
+PROBLEMS: list[tuple[int, int]] = [(1, 2), (2, 2), (2, 3), (2, 4), (3, 4), (4, 4), (4, 5)]
 
 # Prompt formats, simplest (zero-shot) first so we prefer a clean circuit.
 FORMATS: list[tuple[str, str]] = [
@@ -56,12 +52,13 @@ FORMATS: list[tuple[str, str]] = [
     ("fewshot", "1+1=2\n3+2=5\n7+1=8\n{a}+{b}="),
 ]
 
+N_EXAMPLES = 6  # how many solved problems to graph
 TOP_K_LOGITS = 5
 MAX_FEATURE_TARGETS = 500
 MIN_EDGE_WEIGHT = 1e-4
 NODE_THRESHOLD = 0.7
 EDGE_THRESHOLD = 0.9
-N_TOP_FEATURES = 8
+N_TOP_FEATURES = 8  # features ablated per example
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -79,35 +76,32 @@ def _next_token_id(model, input_ids) -> int:
     return int(logits[-1].argmax().item())
 
 
-def evaluate_formats(
-    model, tokenizer, device
-) -> dict[str, tuple[float, list[tuple[int, int]], str]]:
+def evaluate_formats(model, tokenizer, device):
     """Return ``{format_name: (accuracy, solved_problems, template)}`` for *model*."""
     out: dict[str, tuple[float, list[tuple[int, int]], str]] = {}
     for name, tmpl in FORMATS:
         solved: list[tuple[int, int]] = []
         for a, b in PROBLEMS:
             input_ids, _ = _chat_input_ids(tokenizer, device, tmpl.format(a=a, b=b))
-            dec = tokenizer.decode(_next_token_id(model, input_ids))
-            if dec.strip() == str(a + b):
+            if tokenizer.decode(_next_token_id(model, input_ids)).strip() == str(a + b):
                 solved.append((a, b))
         out[name] = (len(solved) / len(PROBLEMS), solved, tmpl)
     return out
 
 
-def pick_best(evald) -> tuple[str, str, tuple[int, int] | None, float]:
+def pick_best(evald):
     """Highest-accuracy format (ties broken toward the simpler/earlier format)."""
-    best_acc, best_name, best_tmpl, best_solved = -1.0, "", "", []
+    best = (-1.0, "", "", [])
     for name, tmpl in FORMATS:
         acc, solved, _ = evald[name]
-        if acc > best_acc:
-            best_acc, best_name, best_tmpl, best_solved = acc, name, tmpl, solved
-    problem = best_solved[0] if best_solved else None
-    return best_name, best_tmpl, problem, best_acc
+        if acc > best[0]:
+            best = (acc, name, tmpl, solved)
+    acc, name, tmpl, solved = best
+    return name, tmpl, solved, acc
 
 
-def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> None:
-    """Build → prune → identify → ablate for the prompt ``tmpl.format(a, b)``."""
+def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> dict | None:
+    """Build → prune → label → identify → ablate for one problem; save + return entry."""
     device = next(model.parameters()).device
     prompt = tmpl.format(a=a, b=b)
     input_ids, n_bos = _chat_input_ids(tokenizer, device, prompt)
@@ -115,11 +109,9 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
     expected = str(a + b)
     answer_id = _next_token_id(model, input_ids)
     answer_str = tokenizer.decode(answer_id)
-    print(f"\nPrompt {prompt!r}  ->  predicts {answer_str!r}  (expected {expected!r})")
-    print(f"Tokens ({len(tokens)}): {tokens}")
+    correct = answer_str.strip() == expected
+    print(f"\n[{a}+{b}={expected}] predicts {answer_str!r} ({'correct' if correct else 'WRONG'})")
 
-    # --- 1. Build + prune -----------------------------------------------------
-    print("\nBuilding attribution graph ...")
     graph = build_attribution_graph(
         model,
         tc,
@@ -129,13 +121,13 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
         max_feature_targets=MAX_FEATURE_TARGETS,
         min_edge_weight=MIN_EDGE_WEIGHT,
     )
-    print(f"  raw graph: {len(graph.nodes)} nodes, {len(graph.edges)} edges")
     pruned = prune_graph(graph, node_threshold=NODE_THRESHOLD, edge_threshold=EDGE_THRESHOLD)
     pg = pruned.graph
-    print(f"  pruned graph: {len(pg.nodes)} nodes, {len(pg.edges)} edges")
+    print(
+        f"  graph: {len(graph.nodes)}→{len(pg.nodes)} nodes, {len(graph.edges)}→{len(pg.edges)} edges"
+    )
 
-    # Attach feature labels to every feature node so the HTML viz / info panel
-    # shows what each feature means (top logits), not just its index.
+    # Attach feature labels to every feature node (so the viz shows meaning).
     feat_by_layer: dict[int, list[int]] = {}
     for nd in pg.nodes:
         if nd.node_type == "feature":
@@ -147,18 +139,16 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
     for nd in pg.nodes:
         if nd.node_type == "feature":
             nd.label = label_lookup.get((nd.layer, nd.feature_idx))
-    print(f"  attached {len(label_lookup)} feature labels")
 
-    # --- 2. Identify features driving the answer logit ------------------------
+    # Identify features feeding the answer logit.
     logit_idxs = [i for i, n in enumerate(pg.nodes) if n.node_type == "logit"]
     answer_logit_idx = next(
         (i for i in logit_idxs if pg.nodes[i].token_id == answer_id),
         max(logit_idxs, key=lambda i: pg.nodes[i].activation) if logit_idxs else None,
     )
     if answer_logit_idx is None:
-        print("No logit node survived pruning; aborting feature identification.")
-        return
-
+        print("  no logit node survived pruning; skipping example")
+        return None
     direct = [
         (e.source, e.weight)
         for e in pg.edges
@@ -166,39 +156,33 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
     ]
     direct.sort(key=lambda t: abs(t[1]), reverse=True)
     top = direct[:N_TOP_FEATURES]
+    ablations = [
+        FeatureAblation(pg.nodes[i].layer, pg.nodes[i].feature_idx, position=pg.nodes[i].position)
+        for i, _ in top
+    ]
 
-    print(f"\nTop {len(top)} features feeding the {answer_str!r} logit:")
-    print(f"  {'L':>3} {'feat':>7} {'pos':>4} {'edge_w':>9}  top-logits")
-    candidate_ablations: list[FeatureAblation] = []
-    for src_idx, w in top:
-        nd = pg.nodes[src_idx]
-        top_logits = ", ".join(str(t) for t in (nd.label["top_logits"][:6] if nd.label else []))
-        print(f"  {nd.layer:>3} {nd.feature_idx:>7} {nd.position:>4} {w:>9.4f}  {top_logits}")
-        candidate_ablations.append(FeatureAblation(nd.layer, nd.feature_idx, position=nd.position))
+    def _top1(nd):
+        return nd.label["top_logits"][0] if (nd.label and nd.label["top_logits"]) else "?"
 
-    # --- 3. Validate by ablation ----------------------------------------------
-    print("\nValidating with feature ablation (local replacement model) ...")
-    if candidate_ablations:
-        single = run_feature_ablation(
-            model, tc, input_ids, [candidate_ablations[0]], n_bos_tokens=n_bos
-        )
+    top3 = "; ".join(
+        f"L{pg.nodes[i].layer} f{pg.nodes[i].feature_idx} ({_top1(pg.nodes[i])!s})"
+        for i, _ in top[:3]
+    )
+    print(f"  top features: {top3}")
+
+    # Ablate to validate.
+    eff = 0.0
+    if ablations:
+        single = run_feature_ablation(model, tc, input_ids, [ablations[0]], n_bos_tokens=n_bos)
         eff = ablation_logit_effect(single, [answer_id])[answer_id]
-        f0 = candidate_ablations[0]
-        print(
-            f"  ablate L{f0.layer} f{f0.feature_idx} (pos {f0.position}): "
-            f"Δlogit({answer_str!r}) = {eff:+.4f}"
-        )
-
-    joint = run_feature_ablation(model, tc, input_ids, candidate_ablations, n_bos_tokens=n_bos)
+    joint = run_feature_ablation(model, tc, input_ids, ablations, n_bos_tokens=n_bos)
     joint_eff = ablation_logit_effect(joint, [answer_id])[answer_id]
-    new_top = int(joint.ablated_logits[-1].argmax().item())
+    new_top = tokenizer.decode(int(joint.ablated_logits[-1].argmax().item()))
     print(
-        f"  ablate all {len(candidate_ablations)} features: "
-        f"Δlogit({answer_str!r}) = {joint_eff:+.4f}  | new top token = {tokenizer.decode(new_top)!r}"
+        f"  ablate top Δ={eff:+.2f}, all {len(ablations)} Δ={joint_eff:+.2f} (new top {new_top!r})"
     )
 
-    # --- Save artifacts -------------------------------------------------------
-    out_dir.mkdir(parents=True, exist_ok=True)
+    # Serialise + render this example.
     logit_token_strs = {
         str(n.token_id): tokenizer.decode(n.token_id) for n in pg.nodes if n.node_type == "logit"
     }
@@ -212,16 +196,54 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> N
         logit_token_strs=logit_token_strs,
         answer_token=answer_str,
         expected_answer=expected,
-        correct=(answer_str.strip() == expected),
+        correct=correct,
     )
-    stem = f"addition_graph_qwen3-{size}"
+    stem = f"addition_graph_qwen3-{size}_{a}plus{b}"
     (out_dir / f"{stem}.json").write_text(json.dumps(graph_dict, indent=2))
-    render_graph_html(
-        graph_dict,
-        out_dir / f"{stem}.html",
-        title=f"Addition {prompt!r} -> {answer_str!r} (qwen3-{size})",
+    graph_html = render_graph_html_str(graph_dict, title=f"{prompt} → {answer_str!r}")
+    (out_dir / f"{stem}.html").write_text(graph_html, encoding="utf-8")
+
+    mark = "✓" if correct else "✗"
+    summary = (
+        f"<b>{a}+{b}={expected}</b> → predicts '{answer_str}' {mark} &nbsp;|&nbsp; "
+        f"top features: {top3} &nbsp;|&nbsp; ablate top Δlogit={eff:+.2f}, "
+        f"all {len(ablations)} Δlogit={joint_eff:+.2f} (new top '{new_top}')"
     )
-    print(f"\nSaved graph + visualization to {out_dir} ({stem}.json / .html)")
+    return {
+        "label": f"{a}+{b}={expected} ({mark})",
+        "summary": summary,
+        "graph_html": graph_html,
+        "row": (f"{a}+{b}", expected, answer_str, mark, eff, joint_eff, new_top),
+    }
+
+
+def build_suite(model, tokenizer, tc, repo_id, size, tmpl, problems, out_dir) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    entries, rows = [], []
+    for a, b in problems:
+        res = build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir)
+        if res is not None:
+            entries.append({k: res[k] for k in ("label", "summary", "graph_html")})
+            rows.append(res["row"])
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if not entries:
+        print("No examples built; nothing to assemble.")
+        return
+
+    suite_path = out_dir / f"addition_suite_qwen3-{size}.html"
+    render_suite_html(entries, suite_path, title=f"Addition circuits — Qwen3-{size}")
+
+    print("\n" + "=" * 78)
+    print(f"Summary ({len(rows)} examples, Qwen3-{size})")
+    print("=" * 78)
+    print(f"  {'prob':>6} {'exp':>4} {'pred':>5} {'ok':>3} {'Δtop':>8} {'Δall':>8} {'new top':>8}")
+    for prob, exp, pred, mark, eff, joint_eff, new_top in rows:
+        print(
+            f"  {prob:>6} {exp:>4} {pred:>5} {mark:>3} {eff:>8.2f} {joint_eff:>8.2f} {new_top!r:>8}"
+        )
+    print(f"\nSaved suite viewer: {suite_path}")
 
 
 def main() -> None:
@@ -240,11 +262,13 @@ def main() -> None:
             acc, solved, _ = evald[name]
             print(f"  format {name:>9}: accuracy {acc * 100:5.1f}%  solved={solved}")
 
-        name, tmpl, problem, acc = pick_best(evald)
-        if problem is not None:
-            print(f"\n  -> Qwen3-{size}, format {name!r} (acc {acc * 100:.0f}%), problem {problem}")
+        name, tmpl, solved, acc = pick_best(evald)
+        if solved:
+            print(
+                f"\n  -> Qwen3-{size}, format {name!r} (acc {acc * 100:.0f}%), {len(solved)} solved"
+            )
             loaded = load_transcoder(f"qwen3-{size}", device=device, dtype=dtype)
-            chosen = (size, model, tokenizer, loaded.transcoder, loaded.repo_id, tmpl, problem)
+            chosen = (size, model, tokenizer, loaded.transcoder, loaded.repo_id, tmpl, solved)
             break
 
         print(f"  Qwen3-{size} solved nothing in any format; trying next model.")
@@ -256,8 +280,8 @@ def main() -> None:
         print("\nNo candidate model produced a correct addition; aborting.")
         return
 
-    size, model, tokenizer, tc, repo_id, tmpl, (a, b) = chosen
-    build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir)
+    size, model, tokenizer, tc, repo_id, tmpl, solved = chosen
+    build_suite(model, tokenizer, tc, repo_id, size, tmpl, solved[:N_EXAMPLES], out_dir)
 
 
 if __name__ == "__main__":

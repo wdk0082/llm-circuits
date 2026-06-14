@@ -603,6 +603,21 @@ def render_graph_html(
         The resolved output path.
     """
     output_path = Path(output_path)
+    html_str = render_graph_html_str(graph_dict, title=title, width=width, height=height)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(html_str, encoding="utf-8")
+    return output_path
+
+
+def render_graph_html_str(
+    graph_dict: dict,
+    *,
+    title: str | None = None,
+    width: int = 1200,
+    height: int = 800,
+) -> str:
+    """Return the self-contained HTML for *graph_dict* as a string (see
+    :func:`render_graph_html`, which writes it to disk)."""
     nodes = graph_dict.get("nodes", [])
     edges = graph_dict.get("edges", [])
     tokens: list[str] | None = graph_dict.get("tokens")
@@ -612,10 +627,76 @@ def render_graph_html(
         title = graph_dict.get("prompt", "Attribution Graph")
 
     layout, actual_width = _compute_layout(nodes, width, height)
-    html_str = _render_html(
-        nodes, edges, layout, tokens, logit_token_strs, title, actual_width, height
+    return _render_html(nodes, edges, layout, tokens, logit_token_strs, title, actual_width, height)
+
+
+def render_suite_html(
+    entries: list[dict],
+    output_path: str | Path,
+    *,
+    title: str = "Attribution graph suite",
+) -> Path:
+    """Render several graphs into one file with a dropdown to switch between them.
+
+    Each entry is ``{"label": str, "summary": str (HTML), "graph_html": str}``
+    where ``graph_html`` is a full document from :func:`render_graph_html_str`.
+    Each graph is embedded in an isolated ``<iframe srcdoc=...>`` so the per-graph
+    scripts/ids never collide, and the whole thing works offline (``file://``).
+    """
+    output_path = Path(output_path)
+    if not entries:
+        raise ValueError("render_suite_html requires at least one entry")
+
+    options = "".join(
+        f'<option value="{i}">{html.escape(e["label"])}</option>' for i, e in enumerate(entries)
     )
+    summaries = "".join(
+        f'<div class="gsum" data-idx="{i}" style="display:{"block" if i == 0 else "none"}">'
+        f"{e.get('summary', '')}</div>"
+        for i, e in enumerate(entries)
+    )
+    frames = "".join(
+        f'<iframe class="gframe" data-idx="{i}" '
+        f'style="display:{"block" if i == 0 else "none"}" '
+        f'srcdoc="{html.escape(e["graph_html"], quote=True)}"></iframe>'
+        for i, e in enumerate(entries)
+    )
+    title_esc = html.escape(title)
+    doc = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title_esc}</title>
+<style>
+  body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fafafa; }}
+  header {{ padding: 10px 16px; border-bottom: 1px solid #ddd; background: #fff; position: sticky; top: 0; z-index: 10; }}
+  h2 {{ display: inline-block; margin: 0 12px 0 0; font-size: 16px; color: #333; }}
+  select {{ font-size: 14px; padding: 3px 6px; }}
+  .gsum {{ margin: 6px 0 0; font-size: 13px; color: #444; }}
+  .gframe {{ width: 100%; height: 86vh; border: 0; }}
+</style>
+</head>
+<body>
+<header>
+  <h2>{title_esc}</h2>
+  <label>Example: <select id="pick">{options}</select></label>
+  {summaries}
+</header>
+{frames}
+<script>
+(function() {{
+  const pick = document.getElementById('pick');
+  function show(idx) {{
+    document.querySelectorAll('.gframe, .gsum').forEach(el => {{
+      el.style.display = (el.dataset.idx === String(idx)) ? 'block' : 'none';
+    }});
+  }}
+  pick.addEventListener('change', e => show(e.target.value));
+}})();
+</script>
+</body>
+</html>"""
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(html_str, encoding="utf-8")
+    output_path.write_text(doc, encoding="utf-8")
     return output_path

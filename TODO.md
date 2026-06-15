@@ -9,4 +9,4 @@
 
 ## Notes
 
-1. Lazy decoder loading can make things slow. Pay attention to it.
+1. Lazy decoder loading is slow for *repeated* forwards — each `decode` re-reads `W_dec` from disk. Fix: load with `lazy_decoder=False` to keep decoders resident; Qwen3-4B fits on the 80 GB A100 (~68/85 GB) and forwards get ~500x faster (the progressive/steering jobs dropped 43 min → 5 min). The intervention/steering example scripts auto-try eager loading with a lazy fallback on OOM.

@@ -8,7 +8,7 @@ preferring the smallest model and the simplest format. It then runs the full
 interpretability protocol on several correctly-solved problems:
 
   build attribution graph -> prune -> attach feature labels -> identify the
-  features driving the answer-digit logit -> **ablate** them to causally confirm.
+  features driving the answer-digit logit -> **negative-steer** them to causally confirm.
 
 Output: one self-contained ``addition_suite_qwen3-<size>.html`` with a dropdown
 to switch between examples (each an interactive graph), plus per-example
@@ -26,10 +26,10 @@ import torch
 from llm_circuits.circuits.attribution_graph import build_attribution_graph
 from llm_circuits.circuits.graph_pruning import graph_to_dict, prune_graph
 from llm_circuits.circuits.interventions import (
-    FeatureAblation,
     ablation_logit_effect,
     ablation_prob_effect,
-    run_feature_ablation,
+    negative_steer,
+    run_feature_intervention,
 )
 from llm_circuits.circuits.visualization import render_graph_html_str, render_suite_html
 from llm_circuits.instrumentation.chat import prepare_messages
@@ -59,7 +59,7 @@ MAX_FEATURE_TARGETS = 500
 MIN_EDGE_WEIGHT = 1e-4
 NODE_THRESHOLD = 0.7
 EDGE_THRESHOLD = 0.9
-N_TOP_FEATURES = 8  # features ablated per example
+N_TOP_FEATURES = 8  # features steered per example
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -102,7 +102,7 @@ def pick_best(evald):
 
 
 def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> dict | None:
-    """Build → prune → label → identify → ablate for one problem; save + return entry."""
+    """Build → prune → label → identify → negative-steer for one problem; save + return entry."""
     device = next(model.parameters()).device
     prompt = tmpl.format(a=a, b=b)
     input_ids, n_bos = _chat_input_ids(tokenizer, device, prompt)
@@ -157,8 +157,8 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
     ]
     direct.sort(key=lambda t: abs(t[1]), reverse=True)
     top = direct[:N_TOP_FEATURES]
-    ablations = [
-        FeatureAblation(pg.nodes[i].layer, pg.nodes[i].feature_idx, position=pg.nodes[i].position)
+    steers = [
+        negative_steer(pg.nodes[i].layer, pg.nodes[i].feature_idx, position=pg.nodes[i].position)
         for i, _ in top
     ]
 
@@ -171,23 +171,24 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
     )
     print(f"  top features: {top3}")
 
-    # Ablate to validate — report both the logit delta and the post-softmax
-    # probability transition (more intuitive: e.g. p 0.72 -> 0.08).
+    # Validate by negative steering (the paper's protocol): steer each feature to
+    # -1x its clean value via constrained patching, and report the logit delta +
+    # post-softmax probability transition for the answer token.
     eff = 0.0
     base_p = top_p = 0.0
-    if ablations:
-        single = run_feature_ablation(model, tc, input_ids, [ablations[0]], n_bos_tokens=n_bos)
+    if steers:
+        single = run_feature_intervention(model, tc, input_ids, [steers[0]], n_bos_tokens=n_bos)
         eff = ablation_logit_effect(single, [answer_id])[answer_id]
         base_p, top_p = ablation_prob_effect(single, [answer_id])[answer_id]
-    joint = run_feature_ablation(model, tc, input_ids, ablations, n_bos_tokens=n_bos)
+    joint = run_feature_intervention(model, tc, input_ids, steers, n_bos_tokens=n_bos)
     joint_eff = ablation_logit_effect(joint, [answer_id])[answer_id]
     jb_p, all_p = ablation_prob_effect(joint, [answer_id])[answer_id]
-    if not ablations:
+    if not steers:
         base_p = jb_p
     new_top = tokenizer.decode(int(joint.ablated_logits[-1].argmax().item()))
-    print(f"  ablate top:  Δlogit={eff:+.2f}  p({answer_str!r}) {base_p:.3f}→{top_p:.3f}")
+    print(f"  steer top:  Δlogit={eff:+.2f}  p({answer_str!r}) {base_p:.3f}→{top_p:.3f}")
     print(
-        f"  ablate all {len(ablations)}: Δlogit={joint_eff:+.2f}  "
+        f"  steer all {len(steers)}: Δlogit={joint_eff:+.2f}  "
         f"p {base_p:.3f}→{all_p:.3f}  new top {new_top!r}"
     )
 
@@ -206,25 +207,28 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
         answer_token=answer_str,
         expected_answer=expected,
         correct=correct,
-        ablation={
-            "n_ablated": len(ablations),
+        steering={
+            "method": "negative_steer_constrained",
+            "n_steered": len(steers),
             "top_logit_delta": eff,
             "all_logit_delta": joint_eff,
             "answer_prob_baseline": base_p,
-            "answer_prob_ablate_top": top_p,
-            "answer_prob_ablate_all": all_p,
-            "new_top_after_ablation": new_top,
+            "answer_prob_steer_top": top_p,
+            "answer_prob_steer_all": all_p,
+            "new_top_after_steering": new_top,
         },
     )
     stem = f"addition_graph_qwen3-{size}_{a}plus{b}"
     (out_dir / f"{stem}.json").write_text(json.dumps(graph_dict, indent=2))
+    # The per-example graph is embedded in the combined suite HTML below (and the
+    # JSON above is what downstream scripts read), so we don't write a standalone
+    # per-example .html — it would just duplicate the suite and clutter the dir.
     graph_html = render_graph_html_str(graph_dict, title=f"{prompt} → {answer_str!r}")
-    (out_dir / f"{stem}.html").write_text(graph_html, encoding="utf-8")
 
     mark = "✓" if correct else "✗"
     summary = (
         f"<b>{a}+{b}={expected}</b> → '{answer_str}' {mark} &nbsp;|&nbsp; "
-        f"p('{answer_str}'): {base_p:.2f} -> {top_p:.2f} (-top) -> {all_p:.2f} (-all {len(ablations)}) "
+        f"p('{answer_str}'): {base_p:.2f} -> {top_p:.2f} (-top) -> {all_p:.2f} (-all {len(steers)}) "
         f"&nbsp;|&nbsp; Δlogit {eff:+.1f} / {joint_eff:+.1f} &nbsp;|&nbsp; "
         f"top: {top3} &nbsp;|&nbsp; new top '{new_top}'"
     )

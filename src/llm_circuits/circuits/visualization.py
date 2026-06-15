@@ -700,3 +700,120 @@ def render_suite_html(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(doc, encoding="utf-8")
     return output_path
+
+
+def render_steering_explorer_html(
+    data: dict,
+    output_path: str | Path,
+    *,
+    title: str = "Steering explorer",
+) -> Path:
+    """Render a self-contained interactive steering explorer.
+
+    *data* is ``{"model": str, "examples": [{"label", "answer", "factors": [float],
+    "tokens": [str], "probs": [[float per token] per factor]}]}``.  A dropdown picks
+    the example; a slider sweeps the steering factor applied to the whole answer
+    supernode (``+1`` = clean, ``0`` = ablate, ``-1`` = negative steer), and a bar
+    chart shows the top tokens' probabilities — all pre-computed offline with
+    constrained patching, so the page is fully static.
+    """
+    output_path = Path(output_path)
+    data_json = json.dumps(data)
+    title_esc = html.escape(title)
+    doc = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title_esc}</title>
+<style>
+  body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: #fafafa; color: #222; }}
+  header {{ padding: 12px 18px; border-bottom: 1px solid #ddd; background: #fff; }}
+  h2 {{ margin: 0 0 8px; font-size: 16px; }}
+  .controls {{ font-size: 14px; }}
+  #slider {{ width: 360px; vertical-align: middle; }}
+  #readout {{ font-weight: bold; margin: 0 8px; }}
+  #hint {{ color: #888; font-size: 12px; }}
+  #bars {{ padding: 18px; max-width: 760px; }}
+  .row {{ display: flex; align-items: center; margin: 4px 0; }}
+  .tok {{ width: 120px; font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;
+          padding-right: 10px; }}
+  .barwrap {{ flex: 1; background: #eceff1; border-radius: 3px; height: 18px; }}
+  .bar {{ height: 18px; border-radius: 3px; min-width: 1px; transition: width 0.08s; }}
+  .pv {{ width: 56px; text-align: right; font-size: 12px; color: #555; }}
+</style>
+</head>
+<body>
+<header>
+  <h2>{title_esc}</h2>
+  <div class="controls">
+    Example: <select id="pick"></select>
+    <span id="readout"></span>
+    <input id="slider" type="range" min="0" max="0" value="0" step="1">
+    <span id="hint">+1 = clean · 0 = ablate · -1 = negative steer (green = answer token)</span>
+  </div>
+</header>
+<div id="bars"></div>
+<script>
+const DATA = {data_json};
+const pick = document.getElementById('pick');
+const slider = document.getElementById('slider');
+const bars = document.getElementById('bars');
+const readout = document.getElementById('readout');
+
+DATA.examples.forEach((e, i) => {{
+  const o = document.createElement('option');
+  o.value = i;
+  o.textContent = e.label;
+  pick.appendChild(o);
+}});
+
+function order(e) {{
+  return e.tokens.map((_, i) => i).sort((a, b) => e.probs[0][b] - e.probs[0][a]);
+}}
+
+function render() {{
+  const e = DATA.examples[+pick.value];
+  slider.max = e.factors.length - 1;
+  if (+slider.value > slider.max) slider.value = 0;
+  const fi = +slider.value;
+  readout.textContent = 'M = ' + e.factors[fi].toFixed(2);
+  const probs = e.probs[fi];
+  bars.innerHTML = '';
+  order(e).forEach(ti => {{
+    const p = probs[ti];
+    const tok = e.tokens[ti];
+    const isAns = tok === e.answer;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const tl = document.createElement('div');
+    tl.className = 'tok';
+    tl.textContent = JSON.stringify(tok).slice(1, -1);
+    const bw = document.createElement('div');
+    bw.className = 'barwrap';
+    const b = document.createElement('div');
+    b.className = 'bar';
+    b.style.width = (p * 100).toFixed(1) + '%';
+    b.style.background = isAns ? '#2e7d32' : '#90a4ae';
+    bw.appendChild(b);
+    const pv = document.createElement('div');
+    pv.className = 'pv';
+    pv.textContent = p.toFixed(3);
+    row.appendChild(tl);
+    row.appendChild(bw);
+    row.appendChild(pv);
+    bars.appendChild(row);
+  }});
+}}
+
+pick.addEventListener('change', () => {{ slider.value = 0; render(); }});
+slider.addEventListener('input', render);
+render();
+</script>
+</body>
+</html>"""
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(doc, encoding="utf-8")
+    return output_path

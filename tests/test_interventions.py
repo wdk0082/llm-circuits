@@ -7,9 +7,11 @@ import torch
 from llm_circuits.circuits.interventions import (
     AblationResult,
     FeatureAblation,
+    FeatureIntervention,
     ablation_logit_effect,
     ablation_prob_effect,
     ablations_to_dict,
+    negative_steer,
 )
 from llm_circuits.circuits.local_replacement_model import _apply_ablations
 
@@ -109,3 +111,24 @@ class TestAblationProbEffect:
         for bp, ap in effects.values():
             assert 0.0 <= bp <= 1.0
             assert 0.0 <= ap <= 1.0
+
+
+class TestFeatureIntervention:
+    def test_ablation_target_is_zero(self):
+        # No value/factor -> ablation (target 0 regardless of clean activation).
+        assert FeatureIntervention(3, 100).target(5.0) == 0.0
+
+    def test_explicit_value(self):
+        assert FeatureIntervention(3, 100, value=2.5).target(5.0) == 2.5
+
+    def test_multiplicative_factor(self):
+        assert FeatureIntervention(3, 100, factor=-1.0).target(5.0) == -5.0
+        assert FeatureIntervention(3, 100, factor=2.0).target(4.0) == 8.0
+
+    def test_value_takes_precedence_over_factor(self):
+        assert FeatureIntervention(3, 100, value=1.0, factor=-1.0).target(5.0) == 1.0
+
+    def test_negative_steer_helper(self):
+        iv = negative_steer(7, 9, position=2)
+        assert iv == FeatureIntervention(7, 9, position=2, factor=-1.0)
+        assert iv.target(3.0) == -3.0  # opposite of the clean value

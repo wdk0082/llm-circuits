@@ -272,23 +272,30 @@ def _make_frozen_attn_forward(attn_mod: nn.Module, frozen_weights: Tensor) -> An
 
 def _apply_ablations(
     features: Tensor,
-    layer_ablations: list[tuple[int | None, int]] | None,
+    layer_ablations: list[tuple] | None,
 ) -> Tensor:
-    """Return *features* with the specified ``(position, feature_idx)`` entries zeroed.
+    """Return *features* with the specified entries clamped to a target value.
 
-    ``features`` has shape ``(..., seq, d_transcoder)``.  A ``position`` of ``None``
-    zeroes that feature at every sequence position.  Implemented by multiplying
-    with a mask (not in-place) so it is safe inside the autograd graph.
+    Each spec is either ``(position, feature_idx)`` — clamp to 0 (ablation) — or
+    ``(position, feature_idx, value)`` — clamp to ``value`` (used for *iterative*
+    steering, e.g. negative steering sets ``value = -clean_activation``).
+    ``features`` has shape ``(..., seq, d_transcoder)``; ``position=None`` applies
+    at every sequence position.  Returns a fresh tensor (input is not modified).
     """
     if not layer_ablations:
         return features
-    mask = torch.ones_like(features)
-    for pos, fidx in layer_ablations:
-        if pos is None:
-            mask[..., fidx] = 0.0
+    features = features.clone()
+    for spec in layer_ablations:
+        if len(spec) == 3:
+            pos, fidx, value = spec
         else:
-            mask[..., pos, fidx] = 0.0
-    return features * mask
+            pos, fidx = spec
+            value = 0.0
+        if pos is None:
+            features[..., fidx] = value
+        else:
+            features[..., pos, fidx] = value
+    return features
 
 
 # ---------------------------------------------------------------------------
@@ -498,8 +505,9 @@ class LocalReplacementModel:
         layernorm_templates: list[str] | None = None,
         final_norm_name: str = "model.norm",
         capture_pre_activations: bool = False,
-        ablations: dict[int, list[tuple[int | None, int]]] | None = None,
+        ablations: dict[int, list[tuple]] | None = None,
         frozen_errors: dict[int, Tensor] | None = None,
+        freeze_layernorm: bool = True,
     ) -> None:
         self._model = model
         self._transcoder = transcoder
@@ -508,6 +516,7 @@ class LocalReplacementModel:
         self._n_bos_tokens = n_bos_tokens
         self._ablations = ablations or {}
         self._frozen_errors = frozen_errors or {}
+        self._freeze_layernorm = freeze_layernorm
         self._mlp_name_template = mlp_name_template
         self._output_module_template = output_module_template
         self._attn_name_template = attn_name_template
@@ -549,22 +558,24 @@ class LocalReplacementModel:
             self._frozen_params.append((p, p.requires_grad))
             p.requires_grad_(False)
 
-        # --- Frozen RMSNorm hooks ---
-        for tmpl in self._layernorm_templates:
-            for i in range(self._n_layers):
-                name = tmpl.format(layer=i)
-                mod = self._model.get_submodule(name)
-                self._handles.append(
-                    mod.register_forward_hook(
-                        _make_frozen_rmsnorm_hook(name, self._caps.rmsnorm_scales)
+        # --- Frozen RMSNorm hooks (skipped when freeze_layernorm=False, i.e. the
+        #     paper's "iterative" patching, where LayerNorm denominators recompute) ---
+        if self._freeze_layernorm:
+            for tmpl in self._layernorm_templates:
+                for i in range(self._n_layers):
+                    name = tmpl.format(layer=i)
+                    mod = self._model.get_submodule(name)
+                    self._handles.append(
+                        mod.register_forward_hook(
+                            _make_frozen_rmsnorm_hook(name, self._caps.rmsnorm_scales)
+                        )
                     )
+            final_mod = self._model.get_submodule(self._final_norm_name)
+            self._handles.append(
+                final_mod.register_forward_hook(
+                    _make_frozen_rmsnorm_hook(self._final_norm_name, self._caps.rmsnorm_scales)
                 )
-        final_mod = self._model.get_submodule(self._final_norm_name)
-        self._handles.append(
-            final_mod.register_forward_hook(
-                _make_frozen_rmsnorm_hook(self._final_norm_name, self._caps.rmsnorm_scales)
             )
-        )
 
         # --- Frozen attention ---
         for i in range(self._n_layers):

@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Progressive feature ablation curves for the addition circuits.
+"""Progressive negative-steering curves for the addition circuits.
 
-Reuses the per-example attribution graphs saved by ``addition_circuit.py``
-(``addition_graph_qwen3-<size>_<a>plus<b>.json``): for each, rank the features
-feeding the answer logit by |edge weight|, then ablate the top-1, top-2, … of
-them cumulatively and record the answer token's probability and logit at each
-step.  This produces the intuitive ``p: 1.0 → … → 0.0`` decay curve, showing how
-many features hold each answer and where it breaks — which the single-shot
-ablation can't show when the model is saturated at p≈1.
+Reuses the per-example attribution graphs saved by ``addition_circuit.py``: for
+each, rank the answer-driving features by graph influence, then apply the paper's
+**negative steering** (factor -1) to the top-1, top-2, … of them cumulatively via
+**constrained patching** (freeze attention + LayerNorm + error nodes; inject the
+change as a residual delta at the last steered layer), recording the answer
+token's probability and logit at each step.
 
-No graph rebuild needed (it only runs ablation forward passes), so it is cheap.
+Negative steering is the paper's primary perturbation — a stronger, directional
+test than ablation (which the paper argues is too weak and confounded by
+reconstruction error). No graph rebuild needed (only intervention forwards).
 
 Usage:
-    uv run python examples/progressive_ablation.py
+    uv run python examples/progressive_steering.py
 """
 
 from __future__ import annotations
@@ -26,7 +27,11 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import torch
 
-from llm_circuits.circuits.interventions import FeatureAblation, run_progressive_ablation
+from llm_circuits.circuits.interventions import (
+    FeatureIntervention,
+    negative_steer,
+    run_progressive_intervention,
+)
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import artifacts_dir, default_device
@@ -52,14 +57,14 @@ def _answer_logit_index(d: dict) -> int | None:
     return max(logit_idxs, key=lambda i: nodes[i]["activation"])
 
 
-def _ordered_answer_features(d: dict) -> tuple[list[FeatureAblation], int | None]:
-    """Feature nodes ranked by graph **influence** (top MAX_FEATURES).
+def _ordered_answer_features(d: dict) -> tuple[list[FeatureIntervention], int | None]:
+    """Negative-steer interventions for answer features, ranked by graph influence.
 
     Influence is the power-iteration score propagated backward from the logits
     (concentrated on the predicted answer), so it ranks features by their effect
     on the answer through *all* paths — including indirect feature→feature→logit
-    ones — not just direct feature→logit edges. Ablating these collapses the
-    answer with fewer features, giving cleaner decay curves.
+    ones — not just direct feature→logit edges. Steering these (factor -1) breaks
+    the answer with fewer features, giving cleaner decay curves.
     """
     ans_idx = _answer_logit_index(d)
     if ans_idx is None:
@@ -68,11 +73,11 @@ def _ordered_answer_features(d: dict) -> tuple[list[FeatureAblation], int | None
     answer_token_id = nodes[ans_idx]["token_id"]
     feats = [n for n in nodes if n["node_type"] == "feature"]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
-    abls = [
-        FeatureAblation(n["layer"], n["feature_idx"], position=n["position"])
+    steers = [
+        negative_steer(n["layer"], n["feature_idx"], position=n["position"])
         for n in feats[:MAX_FEATURES]
     ]
-    return abls, answer_token_id
+    return steers, answer_token_id
 
 
 def main() -> None:
@@ -133,9 +138,9 @@ def main() -> None:
         ).to(device)
 
         label = f"{prompt.split('?')[0].replace('What is ', '').strip()}={answer}"
-        print(f"  {label}: ablating up to {len(feats)} features ...", flush=True)
+        print(f"  {label}: negative-steering up to {len(feats)} features ...", flush=True)
         t0 = time.time()
-        res = run_progressive_ablation(
+        res = run_progressive_intervention(
             model, tc, input_ids, feats, answer_token_id, n_bos_tokens=n_bos
         )
         dt = time.time() - t0
@@ -157,15 +162,15 @@ def main() -> None:
         ax_l.plot(ks, logits, marker="o", markersize=3, label=label)
     ax_p.set_ylabel("p(answer)")
     ax_p.set_ylim(-0.02, 1.02)
-    ax_p.set_title(f"Progressive ablation by influence (Qwen3-{MODEL_SIZE})")
+    ax_p.set_title(f"Progressive negative steering by influence (Qwen3-{MODEL_SIZE})")
     ax_p.grid(alpha=0.3)
     ax_p.legend(fontsize=8, ncol=2)
     ax_l.set_ylabel("logit(answer)")
-    ax_l.set_xlabel("# top answer-features ablated (cumulative)")
+    ax_l.set_xlabel("# top answer-features negatively steered (cumulative)")
     ax_l.grid(alpha=0.3)
     fig.tight_layout()
 
-    png = out_dir / f"progressive_ablation_qwen3-{MODEL_SIZE}.png"
+    png = out_dir / f"progressive_steering_qwen3-{MODEL_SIZE}.png"
     fig.savefig(png, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
@@ -173,7 +178,7 @@ def main() -> None:
         {"label": label, "n_ablated": ks, "probs": probs, "logits": logits}
         for label, ks, probs, logits in curves
     ]
-    (out_dir / f"progressive_ablation_qwen3-{MODEL_SIZE}.json").write_text(
+    (out_dir / f"progressive_steering_qwen3-{MODEL_SIZE}.json").write_text(
         json.dumps(data, indent=2)
     )
     print(f"\nSaved curve plot to {png}")

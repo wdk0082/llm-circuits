@@ -232,3 +232,107 @@ def ablation_prob_effect(
     base = result.baseline_logits[position].softmax(dim=-1)
     abl = result.ablated_logits[position].softmax(dim=-1)
     return {int(t): (base[t].item(), abl[t].item()) for t in token_ids}
+
+
+# ---------------------------------------------------------------------------
+# Progressive (cumulative) ablation
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ProgressiveAblationResult:
+    """Cumulative-ablation curve for one target token.
+
+    ``n_ablated[k]`` features removed → target ``logits[k]`` / ``probs[k]``.
+    ``k = 0`` is the clean baseline.
+    """
+
+    n_ablated: list[int]
+    logits: list[float]
+    probs: list[float]
+    token_id: int
+    position: int
+
+
+def run_progressive_ablation(
+    model: nn.Module,
+    transcoder: TranscoderSet | CrossLayerTranscoder,
+    input_ids: Tensor,
+    ordered_ablations: list[FeatureAblation],
+    token_id: int,
+    *,
+    n_bos_tokens: int = 1,
+    position: int = -1,
+    mlp_name_template: str = "model.layers.{layer}.mlp",
+    output_module_template: str | None = None,
+    attn_name_template: str = "model.layers.{layer}.self_attn",
+    layernorm_templates: list[str] | None = None,
+    final_norm_name: str = "model.norm",
+) -> ProgressiveAblationResult:
+    """Ablate the first ``k`` of *ordered_ablations* for ``k = 0 … len``, recording
+    the *token_id* logit and probability at *position* after each step.
+
+    Constants are captured once and the clean-run errors are frozen, so every step
+    is a single forward.  The resulting curve shows how the target collapses as its
+    top features are removed in order — the intuitive companion to the single-shot
+    :func:`run_feature_ablation`.
+    """
+    if input_ids.dim() == 1:
+        input_ids = input_ids.unsqueeze(0)
+    if layernorm_templates is None:
+        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
+
+    is_set = _is_transcoder_set(transcoder)
+    n_layers = len(transcoder) if is_set else transcoder.n_layers
+
+    caps = capture_constants(
+        model,
+        input_ids,
+        n_layers=n_layers,
+        mlp_name_template=mlp_name_template,
+        attn_name_template=attn_name_template,
+        layernorm_templates=layernorm_templates,
+        final_norm_name=final_norm_name,
+    )
+    common = dict(
+        include_error=True,
+        n_bos_tokens=n_bos_tokens,
+        mlp_name_template=mlp_name_template,
+        output_module_template=output_module_template,
+        attn_name_template=attn_name_template,
+        layernorm_templates=layernorm_templates,
+        final_norm_name=final_norm_name,
+    )
+
+    logits_out: list[float] = []
+    probs_out: list[float] = []
+
+    def _record(ctx) -> None:
+        row = ctx.logits[position]
+        logits_out.append(row[token_id].item())
+        probs_out.append(row.softmax(dim=-1)[token_id].item())
+
+    # k = 0: clean baseline (also yields the errors we freeze for later steps).
+    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
+        base = lm.forward(input_ids)
+    frozen = base.errors
+    _record(base)
+
+    # k = 1 … K: ablate the first k features, reusing the clean errors.
+    for k in range(1, len(ordered_ablations) + 1):
+        abl = ablations_to_dict(ordered_ablations[:k])
+        with (
+            torch.no_grad(),
+            LocalReplacementModel(
+                model, transcoder, caps, ablations=abl, frozen_errors=frozen, **common
+            ) as lm,
+        ):
+            _record(lm.forward(input_ids))
+
+    return ProgressiveAblationResult(
+        n_ablated=list(range(len(ordered_ablations) + 1)),
+        logits=logits_out,
+        probs=probs_out,
+        token_id=token_id,
+        position=position,
+    )

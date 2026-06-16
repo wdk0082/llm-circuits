@@ -125,7 +125,21 @@ class TestRenderGraphExplorer:
                     "label": {
                         "top_logits": ["five"],
                         "bottom_logits": ["x"],
-                        "examples": [{"tokens": [" Nov", " 5"], "acts": [0.0, 9.0]}],
+                        "activation_frequency": 0.0012,
+                        "act_min": 0.01,
+                        "act_max": 41.0,
+                        "histogram": [9, 4, 2, 1],
+                        "quantile_values": [0.01, 1.0, 10.0, 41.0],
+                        "examples": [
+                            {
+                                "quantile": "Top",
+                                "items": [{"tokens": [" Nov", " 5"], "acts": [0.0, 9.0]}],
+                            },
+                            {
+                                "quantile": "Subsample interval 1",
+                                "items": [{"tokens": [" on", " 5"], "acts": [0.0, 3.0]}],
+                            },
+                        ],
                     },
                 },
                 {
@@ -149,3 +163,64 @@ class TestRenderGraphExplorer:
         assert 'id="mk"' in t  # manual-grouping button
         assert "const D =" in t
         assert "five" in t and "Nov" in t  # label + activation examples embedded
+
+        import json
+        import re
+
+        data = json.loads(re.search(r"const D = (\{.*?\});\nconst EX", t, re.S).group(1))
+        feat = next(n for n in data["examples"][0]["nodes"] if n["t"] == "feature")
+        # quantile-grouped activation examples (request 2)
+        assert [q["quantile"] for q in feat["ex"]] == ["Top", "Subsample interval 1"]
+        # richer feature stats surfaced (request 3)
+        assert feat["freq"] == 0.0012 and feat["amax"] == 41.0
+        assert feat["hist"] == [9, 4, 2, 1]
+        # node fill = group color, member-clickable subgraph, clickable detail rows
+        assert "function nodeFill" in t and "function selectNode" in t
+        assert "frow nav" in t
+        # activation examples colored by SIGN (green positive / red negative)
+        assert "46,125,50" in t and "198,40,40" in t
+        # draggable supernodes in the subgraph
+        assert "subDrag" in t and "supernode" in t and "subUnitsPerPx" in t
+        # ungrouped nodes are hollow; type encoded by shape (incl. legend)
+        assert 'class="legend"' in t and "logit" in t
+        # the full-size SVG rule must be scoped to the graph svgs, not match the
+        # inline legend/histogram svgs (regression: bare `svg {width:100%}` blanked the graph)
+        assert "#g, #sg {" in t and "svg { display:block" not in t
+        # axis labels: layer ticks (emb/output) on y, token ticks on x (rotated)
+        ex = data["examples"][0]
+        assert {"emb", "output"} <= {q["label"] for q in ex["yticks"]}
+        assert {"a", "b"} <= {q["label"] for q in ex["xticks"]}
+        assert "function drawAxes" in t and "rotate(-45" in t
+
+    def test_explorer_multi_graph_dropdown(self, tmp_path):
+        import json
+        import re
+
+        from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
+
+        def _g(prompt, ans, tok_id):
+            return {
+                "prompt": prompt,
+                "answer_token": ans,
+                "tokens": ["a", "b"],
+                "logit_token_strs": {str(tok_id): ans},
+                "nodes": [
+                    {"node_type": "embedding", "layer": -1, "position": 0, "activation": 1.0},
+                    {
+                        "node_type": "logit",
+                        "layer": 2,
+                        "position": 1,
+                        "token_id": tok_id,
+                        "activation": 3.0,
+                    },
+                ],
+                "edges": [{"source": 0, "target": 1, "weight": 1.0}],
+            }
+
+        graphs = [_g("What is 1+2?", "3", 3), _g("What is 4+4?", "8", 8)]
+        out = render_graph_explorer_html(graphs, tmp_path / "ge_multi.html", title="T")
+        t = out.read_text()
+        assert 'id="pick"' in t and "function loadExample" in t  # dropdown + switcher
+        data = json.loads(re.search(r"const D = (\{.*?\});\nconst EX", t, re.S).group(1))
+        assert len(data["examples"]) == 2  # both graphs embedded
+        assert [e["label"] for e in data["examples"]] == ["1+2=3", "4+4=8"]  # derived labels

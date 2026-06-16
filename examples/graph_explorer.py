@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Render the interactive attribution-graph explorer for one saved addition graph.
+"""Render the interactive attribution-graph explorer for all saved addition graphs.
 
-Reuses a pruned graph saved by ``addition_circuit.py``, enriches its feature nodes
-with max-activating dataset examples (read from the transcoder feature data — CPU
-only, no model), and writes a single self-contained HTML reproducing the paper's
+Reuses the pruned graphs saved by ``addition_circuit.py``, enriches their feature
+nodes with max-activating dataset examples (read from the transcoder feature data --
+CPU only, no model), and writes a single self-contained HTML reproducing the paper's
 viewer: attribution graph + node detail (input/output features, token predictions,
-activation examples) + manual node grouping into a collapsible supergraph.
+activation examples) + manual node grouping into a collapsible supergraph, with an
+**example dropdown** to switch between graphs.
 
-Runs on CPU (saved graph + cached feature files), so it's fine on a login node.
+Runs on CPU (saved graphs + cached feature files), so it's fine on a login node.
 
 Usage:
     uv run python examples/graph_explorer.py
@@ -22,34 +23,25 @@ from llm_circuits.settings import artifacts_dir
 from llm_circuits.transcoders.feature_labels import load_feature_examples
 from llm_circuits.transcoders.registry import get_spec
 
-# ── Config ───────────────────────────────────────────────────────────────────
+# -- Config -------------------------------------------------------------------
 MODEL_SIZE = "4b"
-EXAMPLE = "2plus3"  # which saved graph to explore (e.g. 1plus2, 2plus3, 4plus4)
-N_EXAMPLES = 3  # activation examples shown per feature
-# ─────────────────────────────────────────────────────────────────────────────
+N_PER_QUANTILE = 5  # activation examples shown per quantile (Top, subsamples, Bottom)
+WINDOW = 10  # tokens kept on each side of the peak-activation token
+# -----------------------------------------------------------------------------
 
 
-def main() -> None:
-    out_dir = artifacts_dir() / "addition_circuit"
-    gf = out_dir / f"addition_graph_qwen3-{MODEL_SIZE}_{EXAMPLE}.json"
-    if not gf.exists():
-        cands = sorted(out_dir.glob(f"addition_graph_qwen3-{MODEL_SIZE}_*plus*.json"))
-        if not cands:
-            print(f"No saved graphs in {out_dir}. Run examples/addition_circuit.py first.")
-            return
-        gf = cands[0]
-    print(f"Loading graph: {gf.name}")
-    d = json.loads(gf.read_text())
-    repo = get_spec(d["model"]).transcoder_repo
-
-    # Enrich feature nodes with activation examples (CPU; reads cached feature blobs).
+def _enrich(d: dict, repo: str) -> int:
+    """Attach quantile-grouped activation examples to feature nodes; return count."""
     by_layer: dict[int, list[int]] = {}
     for n in d["nodes"]:
         if n["node_type"] == "feature":
             by_layer.setdefault(n["layer"], []).append(n["feature_idx"])
     ex_lookup: dict[tuple[int, int], list] = {}
     for layer, idxs in by_layer.items():
-        for fid, exs in load_feature_examples(repo, layer, idxs, n_examples=N_EXAMPLES).items():
+        loaded = load_feature_examples(
+            repo, layer, idxs, n_per_quantile=N_PER_QUANTILE, window=WINDOW
+        )
+        for fid, exs in loaded.items():
             ex_lookup[(layer, fid)] = exs
 
     n_with = 0
@@ -60,14 +52,30 @@ def main() -> None:
             n["label"] = lab
             if lab["examples"]:
                 n_with += 1
+    return n_with
 
-    title = f"Attribution graph: {d.get('prompt', '?')} → {d.get('answer_token', '?')!r}"
+
+def main() -> None:
+    out_dir = artifacts_dir() / "addition_circuit"
+    graph_files = sorted(out_dir.glob(f"addition_graph_qwen3-{MODEL_SIZE}_*plus*.json"))
+    if not graph_files:
+        print(f"No saved graphs in {out_dir}. Run examples/addition_circuit.py first.")
+        return
+
+    graphs: list[dict] = []
+    for gf in graph_files:
+        d = json.loads(gf.read_text())
+        repo = get_spec(d["model"]).transcoder_repo
+        n_with = _enrich(d, repo)
+        nfeat = sum(1 for n in d["nodes"] if n["node_type"] == "feature")
+        print(f"  {gf.name}: {nfeat} feature nodes ({n_with} with activation examples)")
+        graphs.append(d)
+
+    title = f"Addition attribution graphs (Qwen3-{MODEL_SIZE})"
     out = render_graph_explorer_html(
-        d, out_dir / f"graph_explorer_qwen3-{MODEL_SIZE}.html", title=title
+        graphs, out_dir / f"graph_explorer_qwen3-{MODEL_SIZE}.html", title=title
     )
-    nfeat = sum(1 for n in d["nodes"] if n["node_type"] == "feature")
-    print(f"Feature nodes: {nfeat} ({n_with} with activation examples)")
-    print(f"Saved explorer to {out}")
+    print(f"Loaded {len(graphs)} graphs; saved explorer to {out}")
 
 
 if __name__ == "__main__":

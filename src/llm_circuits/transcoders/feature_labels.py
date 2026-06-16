@@ -153,18 +153,36 @@ def load_feature_labels(
     return labels
 
 
+def _window_example(tokens: list, acts: list, window: int) -> dict:
+    """Trim an example to a context window around its peak-activation token."""
+    acts_f = [float(a) for a in acts]
+    if not acts_f:
+        return {"tokens": list(tokens), "acts": []}
+    peak = max(range(len(acts_f)), key=lambda j: acts_f[j])
+    lo = max(0, peak - window)
+    hi = min(len(tokens), peak + window + 1)
+    return {
+        "tokens": list(tokens[lo:hi]),
+        "acts": [round(a, 3) for a in acts_f[lo:hi]],
+    }
+
+
 def load_feature_examples(
     repo_id: str,
     layer: int,
     feature_indices: list[int],
     *,
-    n_examples: int = 3,
+    n_per_quantile: int = 5,
+    window: int = 14,
 ) -> dict[int, list[dict]]:
-    """Load top max-activating dataset examples for features in a layer.
+    """Load max-activating dataset examples for features, grouped by quantile.
 
-    Returns ``{feature_idx: [{"tokens": [str], "acts": [float]}, ...]}`` — up to
-    *n_examples* from the highest-activation ("Top") quantile, suitable for the
-    token-highlighting panel in the graph explorer.
+    Returns ``{feature_idx: [{"quantile": name, "items": [{"tokens", "acts"}]}]}``
+    covering **every** quantile the transcoder provides (``Top``, the subsample
+    intervals, ``Bottom``) -- not just the top one -- so the explorer can show the
+    full activation-example spectrum.  Each example is trimmed to a *window* of
+    tokens on either side of its peak-activation token (``window`` each side) and
+    capped to *n_per_quantile* examples per quantile.
     """
     index = _get_index(repo_id)
     layer_key = str(layer)
@@ -180,15 +198,14 @@ def load_feature_examples(
             blob = _read_feature_blob(bin_path, offsets, feat_idx)
         except (IndexError, ValueError):
             continue
-        quantiles = blob.get("examples_quantiles", [])
-        top = next(
-            (q for q in quantiles if str(q.get("quantile_name", "")).lower().startswith("top")),
-            quantiles[0] if quantiles else None,
-        )
-        examples: list[dict] = []
-        for ex in top.get("examples", [])[:n_examples] if top else []:
-            tokens = ex.get("tokens", [])
-            acts = [round(float(a), 3) for a in ex.get("tokens_acts_list", [])]
-            examples.append({"tokens": tokens, "acts": acts})
-        out[feat_idx] = examples
+        grouped: list[dict] = []
+        for q in blob.get("examples_quantiles", []):
+            name = str(q.get("quantile_name", "?"))
+            items = [
+                _window_example(ex.get("tokens", []), ex.get("tokens_acts_list", []), window)
+                for ex in q.get("examples", [])[:n_per_quantile]
+            ]
+            if items:
+                grouped.append({"quantile": name, "items": items})
+        out[feat_idx] = grouped
     return out

@@ -1,6 +1,6 @@
 """Interactive attribution-graph explorer (self-contained HTML).
 
-Renders a pruned :class:`AttributionGraph` (as a JSON dict) into a single static
+Renders one or more pruned :class:`AttributionGraph` dicts into a single static
 HTML page that reproduces the components of Anthropic's circuit viewer:
 
 * the **attribution graph** (position x layer), pan/zoom, click to inspect;
@@ -8,9 +8,10 @@ HTML page that reproduces the components of Anthropic's circuit viewer:
   and max-activating **activation examples** (token highlighting);
 * **manual grouping**: shift-click nodes, name a group, and the **subgraph**
   collapses your groups into a supergraph (with summed edges).  Groups can be
-  renamed / removed and **exported** to JSON.
+  renamed / removed and **exported** to JSON.  Grouping is kept per graph.
+* an **example dropdown** to switch between graphs.
 
-Everything is embedded; no server or model is needed.  The graph dict should
+Everything is embedded; no server or model is needed.  Each graph dict should
 carry per-feature ``label`` with ``top_logits`` / ``bottom_logits`` and (optional)
 ``examples`` (from :func:`llm_circuits.transcoders.feature_labels.load_feature_examples`).
 """
@@ -44,24 +45,20 @@ def _raw_short_label(nd: dict, tokens, logit_token_strs) -> str:
     return t
 
 
-def render_graph_explorer_html(
-    graph_dict: dict,
-    output_path: str | Path,
-    *,
-    title: str | None = None,
-    width: int = 1100,
-    height: int = 620,
-) -> Path:
-    """Render *graph_dict* into a self-contained interactive explorer HTML file."""
-    nodes = graph_dict.get("nodes", [])
-    edges = graph_dict.get("edges", [])
-    tokens = graph_dict.get("tokens")
-    lts = graph_dict.get("logit_token_strs")
-    if title is None:
-        title = graph_dict.get("prompt", "Attribution graph explorer")
+def _derive_label(gd: dict, gi: int) -> str:
+    prompt = gd.get("prompt") or f"example {gi + 1}"
+    ans = gd.get("answer_token", "")
+    core = prompt.split("?")[0].replace("What is", "").strip()
+    label = f"{core}={ans}".strip()
+    return label if label not in ("", "=") else (prompt[:24] or f"example {gi + 1}")
 
+
+def _graph_payload(gd: dict, label: str, width: int, height: int) -> dict:
+    nodes = gd.get("nodes", [])
+    edges = gd.get("edges", [])
+    tokens = gd.get("tokens")
+    lts = gd.get("logit_token_strs")
     layout, actual_w = _compute_layout(nodes, width, height)
-
     payload_nodes = []
     for nd in nodes:
         lab = nd.get("label") or {}
@@ -74,20 +71,86 @@ def render_graph_explorer_html(
                 "tok": nd.get("token_id"),
                 "act": nd.get("activation", 0.0),
                 "short": _raw_short_label(nd, tokens, lts),
-                "top": (lab.get("top_logits") or [])[:8],
-                "bot": (lab.get("bottom_logits") or [])[:6],
+                "top": (lab.get("top_logits") or [])[:10],
+                "bot": (lab.get("bottom_logits") or [])[:10],
                 "ex": lab.get("examples") or [],
+                "freq": lab.get("activation_frequency"),
+                "amin": lab.get("act_min"),
+                "amax": lab.get("act_max"),
+                "hist": lab.get("histogram") or [],
+                "qv": lab.get("quantile_values") or [],
             }
         )
-
-    payload = {
-        "title": title,
+    return {
+        "label": label,
         "nodes": payload_nodes,
         "edges": [[e["source"], e["target"], round(e["weight"], 5)] for e in edges],
         "pos": [[round(layout[i]["x"], 1), round(layout[i]["y"], 1)] for i in range(len(nodes))],
         "w": actual_w,
         "h": height,
+        "yticks": _y_ticks(nodes, layout),
+        "xticks": _x_ticks(nodes, layout, tokens),
     }
+
+
+def _y_ticks(nodes: list[dict], layout: list[dict]) -> list[dict]:
+    """One label per layer (subset): ``emb`` (input), ``output`` (logits), then L0/L5/...."""
+    layer_y: dict[int, float] = {}
+    logit_layers = {nd["layer"] for nd in nodes if nd["node_type"] == "logit"}
+    other_layers = {nd["layer"] for nd in nodes if nd["node_type"] != "logit"}
+    for i, nd in enumerate(nodes):
+        layer_y.setdefault(nd["layer"], layout[i]["y"])
+    ticks = []
+    for layer in sorted(layer_y):
+        if layer == -1:
+            lab = "emb"
+        elif layer in logit_layers and layer not in other_layers:
+            lab = "output"
+        elif layer % 5 == 0:
+            lab = f"L{layer}"
+        else:
+            continue
+        ticks.append({"y": round(layer_y[layer], 1), "label": lab})
+    return ticks
+
+
+def _x_ticks(nodes: list[dict], layout: list[dict], tokens) -> list[dict]:
+    """One label per sequence position present in the graph: the input token string."""
+    pos_x: dict[int, list[float]] = {}
+    for i, nd in enumerate(nodes):
+        x = layout[i]["x"]
+        rng = pos_x.setdefault(nd["position"], [x, x])
+        rng[0], rng[1] = min(rng[0], x), max(rng[1], x)
+    ticks = []
+    for pos in sorted(pos_x):
+        mn, mx = pos_x[pos]
+        tok = tokens[pos] if (tokens and 0 <= pos < len(tokens)) else f"p{pos}"
+        ticks.append({"x": round((mn + mx) / 2, 1), "label": _make_visible(tok)[:14]})
+    return ticks
+
+
+def render_graph_explorer_html(
+    graphs: dict | list[dict],
+    output_path: str | Path,
+    *,
+    labels: list[str] | None = None,
+    title: str = "Attribution graph explorer",
+    width: int = 1100,
+    height: int = 620,
+) -> Path:
+    """Render one or more graph dicts into a self-contained interactive explorer.
+
+    *graphs* may be a single graph dict or a list of them; a dropdown switches
+    between them and each keeps its own manual grouping.  *labels* optionally
+    overrides the per-graph dropdown labels (else derived from ``prompt``).
+    """
+    if isinstance(graphs, dict):
+        graphs = [graphs]
+    examples = [
+        _graph_payload(gd, (labels[i] if labels else None) or _derive_label(gd, i), width, height)
+        for i, gd in enumerate(graphs)
+    ]
+    payload = {"title": title, "examples": examples}
     data_js = json.dumps(payload).replace("</", "<\\/")  # safe to embed in <script>
     doc = _TEMPLATE.replace("__TITLE__", html.escape(title)).replace("__DATA__", data_js)
 
@@ -108,22 +171,30 @@ _TEMPLATE = """<!DOCTYPE html>
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
          background:#fafafa; color:#222; font-size:13px; }
   header { padding:8px 14px; border-bottom:1px solid #ddd; background:#fff; }
-  h2 { display:inline-block; margin:0 14px 0 0; font-size:15px; }
+  h2 { display:inline-block; margin:0 12px 0 0; font-size:15px; }
   #toolbar { font-size:12px; color:#555; }
   #toolbar input { font-size:12px; padding:2px 6px; width:140px; }
+  #pick { font-size:13px; padding:2px 6px; margin-right:10px; }
   button { font-size:12px; padding:2px 9px; cursor:pointer; }
   #main { display:flex; height:calc(100vh - 46px); }
   #left { flex:1; display:flex; flex-direction:column; min-width:0; border-right:1px solid #ddd; }
   #right { width:380px; overflow:auto; padding:8px 12px; }
   .ptitle { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin:4px 10px 0; }
+  .legend { text-transform:none; letter-spacing:0; color:#888; margin-left:6px; }
+  .legend svg { vertical-align:middle; margin:0 2px 0 9px; }
   #graphwrap { flex:1.6; overflow:hidden; }
   #subwrap { flex:1; overflow:hidden; border-top:1px solid #eee; }
-  svg { display:block; background:#fff; width:100%; height:100%; cursor:grab; }
-  svg:active { cursor:grabbing; }
+  #g, #sg { display:block; background:#fff; width:100%; height:100%; cursor:grab; }
+  #g { background:rgb(235,212,178); }
+  #g:active, #sg:active { cursor:grabbing; }
   .node.dim { opacity:.15; }
-  .frow { display:flex; justify-content:space-between; gap:8px; padding:1px 0; white-space:nowrap; }
+  .frow { display:flex; justify-content:space-between; gap:8px; padding:1px 3px; white-space:nowrap; }
   .frow .nm { overflow:hidden; text-overflow:ellipsis; }
+  .frow.nav { cursor:pointer; border-radius:3px; }
+  .frow.nav:hover { background:#eef4ff; }
   .pos { color:#2e7d32; } .neg { color:#c62828; }
+  .qgrp { margin:2px 0 8px; }
+  .qname { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#9a6a00; margin-top:6px; font-weight:600; }
   h3 { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#666;
        margin:14px 0 4px; border-bottom:1px solid #eee; padding-bottom:3px; }
   .ex { font-family:ui-monospace,Menlo,monospace; font-size:11px; line-height:1.8; margin:3px 0; }
@@ -141,6 +212,7 @@ _TEMPLATE = """<!DOCTYPE html>
 <header>
   <h2>__TITLE__</h2>
   <span id="toolbar">
+    <label>example <select id="pick"></select></label>
     <span id="hint">click = inspect &nbsp;·&nbsp; shift-click = add to group</span> &nbsp;
     <input id="gname" type="text" placeholder="group name">
     <button id="mk">Group selected (<span id="seln">0</span>)</button>
@@ -150,84 +222,121 @@ _TEMPLATE = """<!DOCTYPE html>
 </header>
 <div id="main">
   <div id="left">
-    <div class="ptitle">Attribution graph &mdash; position (x) &times; layer (y)</div>
+    <div class="ptitle">Attribution graph &mdash; position (x) &times; layer (y)
+      <span class="legend">
+        <svg width="13" height="13"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="#333"/></svg>feature
+        <svg width="13" height="13"><rect x="3" y="3" width="7" height="7" fill="none" stroke="#333" transform="rotate(45 6.5 6.5)"/></svg>error
+        <svg width="13" height="13"><rect x="2.5" y="2.5" width="8" height="8" fill="none" stroke="#333"/></svg>embed
+        <svg width="13" height="13"><polygon points="6.5,2 11,11 2,11" fill="none" stroke="#333"/></svg>logit
+        &middot; fill = group</span></div>
     <div id="graphwrap"><svg id="g"></svg></div>
-    <div class="ptitle">Subgraph &mdash; your groups collapsed</div>
+    <div class="ptitle">Subgraph &mdash; your groups collapsed (drag a box to move &middot; click a member to inspect)</div>
     <div id="subwrap"><svg id="sg"></svg></div>
   </div>
   <div id="right">
-    <div id="detail"><em>Click a node to inspect its inputs, outputs, token predictions,
-      and activation examples.</em></div>
+    <div id="detail"></div>
     <h3>Groups</h3>
     <div id="groups"></div>
   </div>
 </div>
 <script>
 const D = __DATA__;
-const N = D.nodes, E = D.edges, POS = D.pos;
+const EX = D.examples;
 const SVGNS = "http://www.w3.org/2000/svg";
-const COL = {embedding:"#4CAF50", feature:"#2196F3", error:"#9E9E9E", logit:"#FF9800"};
+// Node TYPE is encoded purely by SHAPE (no fill); fill is reserved for GROUP color.
 const PAL = ["#8e24aa","#00897b","#f4511e","#3949ab","#c0ca33","#6d4c41","#00acc1","#d81b60"];
+const PLACEHOLDER = "<em>Click a node to inspect its inputs, outputs, token predictions, and activation examples.</em>";
 
+let cur = 0, N, E, POS, W, H, XT, YT, amin, amax, arange, MAXW;
+const allGroups = EX.map(() => []);
+let groups = allGroups[0];
 let selected = null;
 const selecting = new Set();
-let groups = [];   // {name, members:[idx], color}
+let nodeEls = [];
+let subDrag = null;  // active subgraph supernode drag: {k, px, py, cx, cy}
 
-// activation range for node sizing
-const acts = N.map(n => Math.abs(n.act || 0));
-const amin = Math.min(...acts), amax = Math.max(...acts), arange = (amax - amin) || 1;
 function radius(a) { return 4 + 8 * ((Math.abs(a) - amin) / arange); }
-function maxAbsW() { let m=0; for (const e of E) m = Math.max(m, Math.abs(e[2])); return m || 1; }
-const MAXW = maxAbsW();
 function edgeColor(w) { const a = 0.15 + 0.6*(Math.abs(w)/MAXW);
   return w>=0 ? `rgba(46,125,50,${Math.min(a,.8)})` : `rgba(198,40,40,${Math.min(a,.8)})`; }
 function edgeWidth(w) { return 0.4 + 3.2*(Math.abs(w)/MAXW); }
 function esc(s){ const d=document.createElement("div"); d.textContent = s==null?"":String(s); return d.innerHTML; }
 
-// ---------- main graph ----------
-const g = document.getElementById("g");
-g.setAttribute("viewBox", `0 0 ${D.w} ${D.h}`);
+const g = document.getElementById("g"), sg = document.getElementById("sg");
+const axesG = document.createElementNS(SVGNS,"g"); g.appendChild(axesG);  // behind edges/nodes
 const edgesG = document.createElementNS(SVGNS,"g"); g.appendChild(edgesG);
 const nodesG = document.createElementNS(SVGNS,"g"); g.appendChild(nodesG);
-const nodeEls = [];
 
-function glyph(n, x, y, r) {
-  const c = COL[n.t] || "#888";
-  let el;
-  if (n.t === "feature") { el = document.createElementNS(SVGNS,"circle");
-    el.setAttribute("cx",x); el.setAttribute("cy",y); el.setAttribute("r",r); }
-  else if (n.t === "error") { el = document.createElementNS(SVGNS,"rect");
-    const s=r*1.6; el.setAttribute("x",x-s/2); el.setAttribute("y",y-s/2);
-    el.setAttribute("width",s); el.setAttribute("height",s);
-    el.setAttribute("transform",`rotate(45 ${x} ${y})`); }
-  else { el = document.createElementNS(SVGNS,"rect"); const s=r*1.8;
-    el.setAttribute("x",x-s/2); el.setAttribute("y",y-s/2);
-    el.setAttribute("width",s); el.setAttribute("height",s); }
-  el.setAttribute("fill",c); el.setAttribute("stroke","#333"); el.setAttribute("stroke-width","1");
-  return el;
-}
-
-N.forEach((n,i) => {
-  const [x,y] = POS[i], r = radius(n.act);
-  const grp = document.createElementNS(SVGNS,"g");
-  grp.setAttribute("class","node"); grp.dataset.idx = i;
-  const el = glyph(n, x, y, r); grp.appendChild(el);
-  grp.addEventListener("click", ev => {
-    ev.stopPropagation();
-    if (ev.shiftKey) { selecting.has(i) ? selecting.delete(i) : selecting.add(i); paintSelecting(); }
-    else { selected = i; showDetail(i); showEdges(i); }
+// Axis labels: layer number on the y-axis (emb at the bottom, output at the top),
+// input token on the x-axis (rotated 45 deg). Drawn in graph coords (pan/zoom with the plot).
+function drawAxes() {
+  while (axesG.firstChild) axesG.removeChild(axesG.firstChild);
+  const bottomY = (YT && YT.length) ? Math.max(...YT.map(t=>t.y)) : H;
+  (YT||[]).forEach(t => {
+    const ln = document.createElementNS(SVGNS,"line");
+    ln.setAttribute("x1",0); ln.setAttribute("y1",t.y); ln.setAttribute("x2",W); ln.setAttribute("y2",t.y);
+    ln.setAttribute("stroke","#eee"); ln.setAttribute("stroke-width","1"); axesG.appendChild(ln);
+    const tx = document.createElementNS(SVGNS,"text");
+    tx.setAttribute("x",4); tx.setAttribute("y",t.y-2); tx.setAttribute("font-size","11");
+    tx.setAttribute("fill","#999"); tx.setAttribute("font-weight","600"); tx.textContent=t.label;
+    axesG.appendChild(tx);
   });
-  grp.addEventListener("mouseenter", () => { tip.innerHTML = esc(n.short); tip.style.display="block"; });
-  grp.addEventListener("mousemove", ev => { tip.style.left=(ev.clientX+12)+"px"; tip.style.top=(ev.clientY+12)+"px"; });
-  grp.addEventListener("mouseleave", () => { tip.style.display="none"; });
-  nodesG.appendChild(grp); nodeEls.push(grp);
-});
+  const ty = bottomY + 14;
+  (XT||[]).forEach(t => {
+    const tx = document.createElementNS(SVGNS,"text");
+    tx.setAttribute("x",t.x); tx.setAttribute("y",ty); tx.setAttribute("font-size","11");
+    tx.setAttribute("fill","#666"); tx.setAttribute("text-anchor","end");
+    tx.setAttribute("transform",`rotate(-45 ${t.x} ${ty})`);
+    tx.textContent=t.label; axesG.appendChild(tx);
+  });
+}
 
 const tip = document.createElement("div");
 tip.style.cssText = "display:none;position:fixed;padding:4px 8px;background:rgba(30,30,30,.92);color:#eee;border-radius:5px;font-size:12px;pointer-events:none;z-index:100;";
 document.body.appendChild(tip);
 
+// Distinct SHAPE per node type: feature=circle, error=diamond, embedding=square,
+// logit=triangle. Fill defaults to white (hollow); group color is applied by repaintNodes.
+function glyph(n, x, y, r) {
+  let el;
+  if (n.t === "feature") { el = document.createElementNS(SVGNS,"circle");
+    el.setAttribute("cx",x); el.setAttribute("cy",y); el.setAttribute("r",r); }
+  else if (n.t === "error") { el = document.createElementNS(SVGNS,"rect");
+    const s=r*1.6; el.setAttribute("x",x-s/2); el.setAttribute("y",y-s/2);
+    el.setAttribute("width",s); el.setAttribute("height",s); el.setAttribute("transform",`rotate(45 ${x} ${y})`); }
+  else if (n.t === "logit") { el = document.createElementNS(SVGNS,"polygon");
+    const s=r*1.15; el.setAttribute("points",`${x},${y-s} ${x-s},${y+s*0.85} ${x+s},${y+s*0.85}`); }
+  else { el = document.createElementNS(SVGNS,"rect"); const s=r*1.7;  // embedding
+    el.setAttribute("x",x-s/2); el.setAttribute("y",y-s/2); el.setAttribute("width",s); el.setAttribute("height",s); }
+  el.setAttribute("class","glyph");
+  el.setAttribute("fill","#fff"); el.setAttribute("stroke","#333"); el.setAttribute("stroke-width","1");
+  return el;
+}
+// Fill encodes GROUP membership only (shape already encodes type); ungrouped = hollow (white).
+function groupIdxOf(i){ for(let k=0;k<groups.length;k++) if(groups[k].members.includes(i)) return k; return -1; }
+function nodeFill(i){ const k=groupIdxOf(i); return k>=0 ? groups[k].color : "#fff"; }
+
 function clearEdges(){ while(edgesG.firstChild) edgesG.removeChild(edgesG.firstChild); }
+
+function buildMain() {
+  while (nodesG.firstChild) nodesG.removeChild(nodesG.firstChild);
+  clearEdges(); drawAxes(); nodeEls = [];
+  N.forEach((n,i) => {
+    const [x,y] = POS[i], r = radius(n.act);
+    const grp = document.createElementNS(SVGNS,"g");
+    grp.setAttribute("class","node"); grp.dataset.idx = i;
+    grp.appendChild(glyph(n, x, y, r));
+    grp.addEventListener("click", ev => {
+      ev.stopPropagation();
+      if (ev.shiftKey) { selecting.has(i) ? selecting.delete(i) : selecting.add(i); repaintNodes(); }
+      else selectNode(i);
+    });
+    grp.addEventListener("mouseenter", () => { tip.innerHTML = esc(n.short); tip.style.display="block"; });
+    grp.addEventListener("mousemove", ev => { tip.style.left=(ev.clientX+12)+"px"; tip.style.top=(ev.clientY+12)+"px"; });
+    grp.addEventListener("mouseleave", () => { tip.style.display="none"; });
+    nodesG.appendChild(grp); nodeEls.push(grp);
+  });
+}
+
 function showEdges(idx) {
   clearEdges();
   const conn = new Set([idx]);
@@ -240,118 +349,187 @@ function showEdges(idx) {
     edgesG.appendChild(ln); conn.add(s); conn.add(t);
   });
   nodeEls.forEach((el,i) => el.classList.toggle("dim", !conn.has(i)));
-  paintSelecting();
+  repaintNodes();
 }
 
-function paintSelecting() {
+// Repaint node fills (group color) + selection/selecting rings.
+function repaintNodes() {
   document.getElementById("seln").textContent = selecting.size;
   nodeEls.forEach((el,i) => {
-    let ring = el.querySelector(".ring");
-    let color = null;
+    const shape = el.querySelector(".glyph"); if (shape) shape.setAttribute("fill", nodeFill(i));
+    let ring = el.querySelector(".ring"), color = null;
     if (selecting.has(i)) color = "#ff9800";
-    else { for (let k=0;k<groups.length;k++) if (groups[k].members.includes(i)) { color = groups[k].color; break; } }
     if (i === selected) color = "#e91e63";
     if (color) {
       if (!ring) { ring = document.createElementNS(SVGNS,"circle"); ring.setAttribute("class","ring");
-        ring.setAttribute("cx",POS[i][0]); ring.setAttribute("cy",POS[i][1]);
-        ring.setAttribute("r",radius(N[i].act)+3); ring.setAttribute("fill","none"); ring.setAttribute("stroke-width","2.2");
-        el.appendChild(ring); }
+        ring.setAttribute("cx",POS[i][0]); ring.setAttribute("cy",POS[i][1]); ring.setAttribute("r",radius(N[i].act)+3);
+        ring.setAttribute("fill","none"); ring.setAttribute("stroke-width","2.4"); el.appendChild(ring); }
       ring.setAttribute("stroke",color);
     } else if (ring) ring.remove();
   });
 }
 
-// ---------- detail panel ----------
 function featRows(idx, incoming) {
   const rows = E.filter(e => incoming ? e[1]===idx : e[0]===idx)
                 .map(e => ({other: incoming ? e[0] : e[1], w: e[2]}))
                 .sort((a,b)=>Math.abs(b.w)-Math.abs(a.w)).slice(0,15);
   if (!rows.length) return "<div style='color:#999'>none</div>";
-  return rows.map(r => `<div class="frow"><span class="nm">${esc(N[r.other].short)}</span>`
+  return rows.map(r => `<div class="frow nav" data-idx="${r.other}" title="click to select">`
+    + `<span class="nm">${esc(N[r.other].short)}</span>`
     + `<span class="${r.w>=0?'pos':'neg'}">${r.w>=0?'+':''}${r.w.toFixed(3)}</span></div>`).join("");
 }
 function chips(arr, bot) {
   if (!arr || !arr.length) return "<span style='color:#999'>n/a</span>";
   return arr.map(t => `<span class="chip${bot?' bot':''}">${esc(t)}</span>`).join("");
 }
+function exLine(ex, scale) {
+  // Highlight by SIGNED activation: green = positive, red = negative; intensity = |value|/scale.
+  const spans = ex.tokens.map((tk,j) => {
+    const v = ex.acts[j]||0, mag = Math.abs(v)/scale;
+    let bg = "";
+    if (mag > 0.02) { const al = Math.min(0.15+0.85*mag,1).toFixed(2);
+      bg = `background:rgba(${v>=0?'46,125,50':'198,40,40'},${al})`; }
+    return `<span class="tk" style="${bg}">${esc(tk)}</span>`;
+  }).join("");
+  return `<div class="ex">${spans}</div>`;
+}
 function examplesHtml(n) {
   if (!n.ex || !n.ex.length) return "<div style='color:#999'>no activation examples</div>";
-  return n.ex.map(ex => {
-    const mx = Math.max(...ex.acts, 1e-6);
-    const spans = ex.tokens.map((tk,j) => {
-      const a = (ex.acts[j]||0)/mx;
-      const bg = a>0.02 ? `background:rgba(255,140,0,${(0.15+0.85*a).toFixed(2)})` : "";
-      return `<span class="tk" style="${bg}">${esc(tk)}</span>`;
-    }).join("");
-    return `<div class="ex">${spans}</div>`;
+  // n.ex is quantile-grouped: [{quantile, items:[{tokens,acts}]}]; scale by max |act|.
+  return n.ex.map(q => {
+    const scale = Math.max(...q.items.flatMap(it => it.acts.map(a => Math.abs(a))), 1e-6);
+    const lines = q.items.map(it => exLine(it, scale)).join("");
+    return `<div class="qgrp"><div class="qname">${esc(q.quantile)}</div>${lines}</div>`;
   }).join("");
+}
+// Compact inline activation histogram (counts over the act range, sqrt-scaled bars).
+function histHtml(n) {
+  const h = n.hist; if (!h || !h.length) return "";
+  const w = 240, ht = 38, bw = w / h.length, mx = Math.sqrt(Math.max(...h, 1));
+  const bars = h.map((c,j) => {
+    const bh = (Math.sqrt(Math.max(c,0)) / mx) * ht;
+    return `<rect x="${(j*bw).toFixed(2)}" y="${(ht-bh).toFixed(2)}" width="${Math.max(bw-0.3,0.4).toFixed(2)}" height="${bh.toFixed(2)}" fill="#2196F3"/>`;
+  }).join("");
+  const lo = n.amin!=null ? (+n.amin).toFixed(2) : "", hi = n.amax!=null ? (+n.amax).toFixed(2) : "";
+  return `<svg width="${w}" height="${ht}" style="display:block">${bars}</svg>`
+    + `<div style="display:flex;justify-content:space-between;color:#999;font-size:10px">`
+    + `<span>act ${lo}</span><span>${hi}</span></div>`;
 }
 function showDetail(idx) {
   const n = N[idx];
   let head;
-  if (n.t === "feature") head = `<b>F${n.f}</b> &nbsp; L${n.layer} · pos ${n.pos} &nbsp; <span style="color:#888">${esc((n.top[0]||""))}</span>`;
+  if (n.t === "feature") head = `<b>F${n.f}</b> &nbsp; L${n.layer} · pos ${n.pos} &nbsp; <span style="color:#888">${esc(n.top[0]||"")}</span>`;
   else if (n.t === "logit") head = `<b>logit</b> ${esc(n.short)} &nbsp;(act ${n.act.toFixed(3)})`;
   else if (n.t === "embedding") head = `<b>embedding</b> ${esc(n.short)}`;
   else head = `<b>error</b> L${n.layer} · pos ${n.pos}`;
   let h = `<div style="font-size:13px;margin-bottom:2px">${head}</div>`;
+  if (n.t === "feature") {
+    const stats = [];
+    if (n.freq != null) stats.push(`activation freq <b>${(n.freq*100).toPrecision(3)}%</b>`);
+    if (n.amax != null) stats.push(`act range <b>${(+n.amin).toFixed(2)}&ndash;${(+n.amax).toFixed(2)}</b>`);
+    stats.push(`peak act <b>${n.act.toFixed(3)}</b> (this token)`);
+    h += `<div style="color:#555;font-size:11px;margin:2px 0">${stats.join(" &nbsp;·&nbsp; ")}</div>`;
+  }
   h += `<h3>Input features (&rarr; this node)</h3>${featRows(idx,true)}`;
   h += `<h3>Output features (this node &rarr;)</h3>${featRows(idx,false)}`;
   if (n.t === "feature") {
     h += `<h3>Token predictions</h3><div><b style="font-size:11px">top</b> ${chips(n.top,false)}</div>`;
     h += `<div style="margin-top:3px"><b style="font-size:11px">bottom</b> ${chips(n.bot,true)}</div>`;
+    const hh = histHtml(n);
+    if (hh) h += `<h3>Activation distribution</h3>${hh}`;
     h += `<h3>Activation examples</h3>${examplesHtml(n)}`;
   }
   document.getElementById("detail").innerHTML = h;
-  paintSelecting();
+  repaintNodes();
 }
 
-// ---------- subgraph (collapse groups) ----------
-const sg = document.getElementById("sg");
-sg.setAttribute("viewBox", `0 0 ${D.w} ${D.h}`);
-function superOf(idx){ for(let k=0;k<groups.length;k++) if(groups[k].members.includes(idx)) return "g"+k; return "n"+idx; }
-function drawSub() {
+// Subgraph: ONLY the user's groups, each a box containing its member glyphs.
+// Ungrouped nodes are hidden. Members are clickable (select + inspect in main).
+// Group<->group edges are summed. fit=true refits the viewBox (structural change).
+function drawSub(fit) {
   while (sg.firstChild) sg.removeChild(sg.firstChild);
+  if (!groups.length) {
+    const t=document.createElementNS(SVGNS,"text"); t.setAttribute("x",20); t.setAttribute("y",30);
+    t.setAttribute("fill","#bbb"); t.setAttribute("font-size","12");
+    t.textContent="Shift-click nodes above and 'Group selected' to build the subgraph.";
+    sg.appendChild(t); if (fit) resetSub(600,200,0,0); return;
+  }
   const eG = document.createElementNS(SVGNS,"g"), nG = document.createElementNS(SVGNS,"g");
   sg.appendChild(eG); sg.appendChild(nG);
-  // super-node positions
-  const sup = {};
-  N.forEach((n,i) => { const s=superOf(i);
-    if(!sup[s]) sup[s]={xs:0,ys:0,c:0};
-    sup[s].xs+=POS[i][0]; sup[s].ys+=POS[i][1]; sup[s].c++; });
-  for (const s in sup){ sup[s].x=sup[s].xs/sup[s].c; sup[s].y=sup[s].ys/sup[s].c; }
-  // aggregate edges
+
+  // Each group box centered on its manual position (if dragged) else the average
+  // position of its members (which preserves layer/x).
+  const GAP=22, PAD=10, RG=6, BH=26;
+  const boxes = groups.map(gr => {
+    let cx, cy;
+    if (gr.pos) { cx=gr.pos.x; cy=gr.pos.y; }
+    else { let xs=0, ys=0; gr.members.forEach(i => { xs+=POS[i][0]; ys+=POS[i][1]; });
+      cx=xs/gr.members.length; cy=ys/gr.members.length; }
+    const bw=Math.max(gr.members.length*GAP + 2*PAD, 46);
+    return {cx, cy, bw, left:cx-bw/2};
+  });
+
+  // Group<->group aggregated edges (skip edges that touch ungrouped nodes).
   const agg = {};
-  E.forEach(([s,t,w]) => { const a=superOf(s), b=superOf(t); if(a===b) return;
-    agg[a+"|"+b] = (agg[a+"|"+b]||0) + w; });
+  E.forEach(([s,t,w]) => { const a=groupIdxOf(s), b=groupIdxOf(t);
+    if (a<0 || b<0 || a===b) return; const k=a+"|"+b; agg[k]=(agg[k]||0)+w; });
   let mw=1; for(const k in agg) mw=Math.max(mw,Math.abs(agg[k]));
-  for (const k in agg){ const [a,b]=k.split("|"); const w=agg[k];
+  for (const k in agg){ const [a,b]=k.split("|").map(Number), w=agg[k];
     const ln=document.createElementNS(SVGNS,"line");
-    ln.setAttribute("x1",sup[a].x); ln.setAttribute("y1",sup[a].y);
-    ln.setAttribute("x2",sup[b].x); ln.setAttribute("y2",sup[b].y);
-    const al=0.15+0.6*(Math.abs(w)/mw);
+    ln.setAttribute("x1",boxes[a].cx); ln.setAttribute("y1",boxes[a].cy);
+    ln.setAttribute("x2",boxes[b].cx); ln.setAttribute("y2",boxes[b].cy);
+    const al=0.2+0.6*(Math.abs(w)/mw);
     ln.setAttribute("stroke", w>=0?`rgba(46,125,50,${al.toFixed(2)})`:`rgba(198,40,40,${al.toFixed(2)})`);
-    ln.setAttribute("stroke-width",(0.5+3*(Math.abs(w)/mw)).toFixed(2)); eG.appendChild(ln); }
-  // nodes
-  for (const s in sup){
-    if (s[0]==="g"){ const k=+s.slice(1), gr=groups[k];
-      const box=document.createElementNS(SVGNS,"rect"); box.setAttribute("x",sup[s].x-32);
-      box.setAttribute("y",sup[s].y-11); box.setAttribute("width",64); box.setAttribute("height",22);
-      box.setAttribute("rx",5); box.setAttribute("fill",gr.color); box.setAttribute("opacity","0.85"); nG.appendChild(box);
-      const tx=document.createElementNS(SVGNS,"text"); tx.setAttribute("x",sup[s].x); tx.setAttribute("y",sup[s].y+4);
-      tx.setAttribute("text-anchor","middle"); tx.setAttribute("font-size","9"); tx.setAttribute("fill","#fff");
-      tx.textContent = gr.name.slice(0,12); nG.appendChild(tx);
-    } else { const i=+s.slice(1), n=N[i];
-      nG.appendChild(glyph(n, sup[s].x, sup[s].y, radius(n.act))); }
+    ln.setAttribute("stroke-width",(0.6+3.4*(Math.abs(w)/mw)).toFixed(2)); eG.appendChild(ln); }
+
+  // Draw boxes + member glyphs (clickable) + labels. Box/label = drag handle (move the
+  // supernode); member glyphs stay clickable (select). See subDrag wiring below.
+  groups.forEach((gr,k) => {
+    const b=boxes[k];
+    const node=document.createElementNS(SVGNS,"g"); node.setAttribute("class","supernode");
+    const box=document.createElementNS(SVGNS,"rect");
+    box.setAttribute("x",b.left); box.setAttribute("y",b.cy-BH/2);
+    box.setAttribute("width",b.bw); box.setAttribute("height",BH); box.setAttribute("rx",6);
+    box.setAttribute("fill","#fff"); box.setAttribute("stroke",gr.color); box.setAttribute("stroke-width","2.2");
+    box.style.cursor="move"; node.appendChild(box);
+    gr.members.forEach((i,j) => {
+      const gx=b.left+PAD+(j+0.5)*GAP;
+      const el=glyph(N[i], gx, b.cy, RG);
+      el.setAttribute("fill", gr.color); el.style.cursor="pointer";
+      if (i===selected) { el.setAttribute("stroke","#e91e63"); el.setAttribute("stroke-width","2.4"); }
+      el.addEventListener("click", ev => { ev.stopPropagation(); selectNode(i); });
+      el.addEventListener("mouseenter", () => { tip.innerHTML=esc(N[i].short); tip.style.display="block"; });
+      el.addEventListener("mousemove", ev => { tip.style.left=(ev.clientX+12)+"px"; tip.style.top=(ev.clientY+12)+"px"; });
+      el.addEventListener("mouseleave", () => { tip.style.display="none"; });
+      node.appendChild(el);
+    });
+    const tx=document.createElementNS(SVGNS,"text"); tx.setAttribute("x",b.cx); tx.setAttribute("y",b.cy+BH/2+13);
+    tx.setAttribute("text-anchor","middle"); tx.setAttribute("font-size","11"); tx.setAttribute("fill",gr.color);
+    tx.setAttribute("font-weight","600"); tx.style.cursor="move"; tx.textContent=gr.name.slice(0,22);
+    node.appendChild(tx);
+    // Drag the box/label (not member glyphs) to reposition this supernode.
+    node.addEventListener("mousedown", ev => {
+      if (ev.target.classList && ev.target.classList.contains("glyph")) return;  // member -> click/select
+      ev.stopPropagation();
+      subDrag = {k, px:ev.clientX, py:ev.clientY, cx:b.cx, cy:b.cy};
+    });
+    nG.appendChild(node);
+  });
+
+  if (fit) {
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    boxes.forEach(b => { x0=Math.min(x0,b.left); x1=Math.max(x1,b.left+b.bw);
+      y0=Math.min(y0,b.cy-BH/2); y1=Math.max(y1,b.cy+BH/2+18); });
+    const m=40; resetSub((x1-x0)+2*m, (y1-y0)+2*m, x0-m, y0-m);
   }
 }
 
-// ---------- groups ----------
 function makeGroup() {
   if (!selecting.size) return;
   const name = (document.getElementById("gname").value || ("group "+(groups.length+1))).trim();
   groups.push({name, members:[...selecting], color: PAL[groups.length % PAL.length]});
   selecting.clear(); document.getElementById("gname").value="";
-  renderGroups(); drawSub(); paintSelecting();
+  renderGroups(); drawSub(true); repaintNodes();
 }
 function renderGroups() {
   const box = document.getElementById("groups");
@@ -362,24 +540,21 @@ function renderGroups() {
     row.innerHTML = `<span class="sw" style="background:${gr.color}"></span>`
       + `<input class="nm" value="${esc(gr.name)}" style="font-size:12px">`
       + `<span style="color:#888">${gr.members.length}</span> <button>x</button>`;
-    row.querySelector("input").addEventListener("change", e => { gr.name=e.target.value; drawSub(); });
-    row.querySelector("button").addEventListener("click", () => { groups.splice(k,1); renderGroups(); drawSub(); paintSelecting(); });
+    row.querySelector("input").addEventListener("change", e => { gr.name=e.target.value; drawSub(false); });
+    row.querySelector("button").addEventListener("click", () => { groups.splice(k,1); renderGroups(); drawSub(true); repaintNodes(); });
     box.appendChild(row);
   });
 }
 function exportGroups() {
-  const out = groups.map(gr => ({name: gr.name,
-    nodes: gr.members.map(i => ({label:N[i].short, layer:N[i].layer, position:N[i].pos, feature_idx:N[i].f}))}));
+  const out = {example: EX[cur].label, groups: groups.map(gr => ({name: gr.name,
+    nodes: gr.members.map(i => ({label:N[i].short, layer:N[i].layer, position:N[i].pos, feature_idx:N[i].f}))}))};
   const blob = new Blob([JSON.stringify(out,null,2)], {type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "groups.json"; a.click();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "groups_" + EX[cur].label.replace(/[^A-Za-z0-9]+/g,"_") + ".json"; a.click();
 }
-document.getElementById("mk").addEventListener("click", makeGroup);
-document.getElementById("clr").addEventListener("click", () => { selecting.clear(); paintSelecting(); });
-document.getElementById("exp").addEventListener("click", exportGroups);
 
-// ---------- pan / zoom ----------
 function panzoom(svg) {
-  let vb={x:0,y:0,w:D.w,h:D.h}, pan=false, sx=0, sy=0;
+  let vb={x:0,y:0,w:1,h:1}, pan=false, sx=0, sy=0;
   function set(){ svg.setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
   svg.addEventListener("wheel", e => { e.preventDefault(); const k=e.deltaY>0?1.1:0.9;
     const r=svg.getBoundingClientRect(); const mx=(e.clientX-r.left)/r.width, my=(e.clientY-r.top)/r.height;
@@ -388,11 +563,53 @@ function panzoom(svg) {
   window.addEventListener("mousemove", e => { if(!pan) return; const r=svg.getBoundingClientRect();
     vb.x-=(e.clientX-sx)*(vb.w/r.width); vb.y-=(e.clientY-sy)*(vb.h/r.height); sx=e.clientX; sy=e.clientY; set(); });
   window.addEventListener("mouseup", () => pan=false);
+  return function reset(w,h,x,y){ vb={x:x||0,y:y||0,w:w,h:h}; set(); };
 }
-panzoom(g); panzoom(sg);
-g.addEventListener("click", () => { selected=null; clearEdges(); nodeEls.forEach(el=>el.classList.remove("dim")); paintSelecting(); });
+const resetMain = panzoom(g), resetSub = panzoom(sg);
 
-renderGroups(); drawSub();
+// --- Subgraph supernode dragging ---------------------------------------------
+// SVG units per screen pixel for the sub svg (xMidYMid meet => uniform scale).
+function subUnitsPerPx(){ const v=sg.getAttribute("viewBox"); if(!v) return 1;
+  const p=v.trim().split(/ +/).map(Number), r=sg.getBoundingClientRect();
+  return Math.max(p[2]/(r.width||1), p[3]/(r.height||1)); }
+window.addEventListener("mousemove", e => {
+  if (!subDrag) return;
+  const s=subUnitsPerPx();
+  groups[subDrag.k].pos = {x: subDrag.cx + (e.clientX-subDrag.px)*s, y: subDrag.cy + (e.clientY-subDrag.py)*s};
+  drawSub(false);  // redraw at the new position (no refit, so the user's zoom is kept)
+});
+window.addEventListener("mouseup", () => { subDrag = null; });
+
+// Select a node from anywhere (main graph, subgraph member, or a detail row).
+function selectNode(i){ selected=i; showDetail(i); showEdges(i); drawSub(false); }
+g.addEventListener("click", () => { selected=null; clearEdges(); nodeEls.forEach(el=>el.classList.remove("dim")); repaintNodes(); drawSub(false); });
+// Click an input/output feature row to navigate to that node.
+document.getElementById("detail").addEventListener("click", ev => {
+  const row = ev.target.closest(".frow.nav"); if (row) selectNode(+row.dataset.idx);
+});
+
+function loadExample(i) {
+  cur = i; const ex = EX[i];
+  N = ex.nodes; E = ex.edges; POS = ex.pos; W = ex.w; H = ex.h;
+  XT = ex.xticks; YT = ex.yticks;
+  groups = allGroups[i]; selected = null; selecting.clear();
+  const aa = N.map(n => Math.abs(n.act||0));
+  amin = Math.min(...aa); amax = Math.max(...aa); arange = (amax - amin) || 1;
+  MAXW = 1; for (const e of E) MAXW = Math.max(MAXW, Math.abs(e[2]));
+  // extra bottom room (rotated x-labels) + small left pad so y-labels aren't clipped
+  buildMain(); repaintNodes(); resetMain(W+12, H+80, -12, 0);
+  document.getElementById("detail").innerHTML = PLACEHOLDER;
+  renderGroups(); drawSub(true);
+}
+
+const pick = document.getElementById("pick");
+EX.forEach((ex,i) => { const o=document.createElement("option"); o.value=i; o.textContent=ex.label; pick.appendChild(o); });
+pick.addEventListener("change", e => loadExample(+e.target.value));
+document.getElementById("mk").addEventListener("click", makeGroup);
+document.getElementById("clr").addEventListener("click", () => { selecting.clear(); repaintNodes(); });
+document.getElementById("exp").addEventListener("click", exportGroups);
+
+loadExample(0);
 </script>
 </body>
 </html>"""

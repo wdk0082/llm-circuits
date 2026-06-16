@@ -151,3 +151,44 @@ def load_feature_labels(
             log.warning("Failed to load label for layer %d feature %d: %s", layer, feat_idx, exc)
 
     return labels
+
+
+def load_feature_examples(
+    repo_id: str,
+    layer: int,
+    feature_indices: list[int],
+    *,
+    n_examples: int = 3,
+) -> dict[int, list[dict]]:
+    """Load top max-activating dataset examples for features in a layer.
+
+    Returns ``{feature_idx: [{"tokens": [str], "acts": [float]}, ...]}`` — up to
+    *n_examples* from the highest-activation ("Top") quantile, suitable for the
+    token-highlighting panel in the graph explorer.
+    """
+    index = _get_index(repo_id)
+    layer_key = str(layer)
+    if layer_key not in index:
+        return {}
+
+    offsets = index[layer_key]["offsets"]
+    bin_path = _get_bin_path(repo_id, layer, index)
+
+    out: dict[int, list[dict]] = {}
+    for feat_idx in feature_indices:
+        try:
+            blob = _read_feature_blob(bin_path, offsets, feat_idx)
+        except (IndexError, ValueError):
+            continue
+        quantiles = blob.get("examples_quantiles", [])
+        top = next(
+            (q for q in quantiles if str(q.get("quantile_name", "")).lower().startswith("top")),
+            quantiles[0] if quantiles else None,
+        )
+        examples: list[dict] = []
+        for ex in top.get("examples", [])[:n_examples] if top else []:
+            tokens = ex.get("tokens", [])
+            acts = [round(float(a), 3) for a in ex.get("tokens_acts_list", [])]
+            examples.append({"tokens": tokens, "acts": acts})
+        out[feat_idx] = examples
+    return out

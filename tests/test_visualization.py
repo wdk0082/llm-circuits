@@ -97,3 +97,55 @@ class TestRenderSteeringExplorer:
         assert "const DATA" in t
         assert "function render" in t
         assert "2+3=5" in t
+
+
+class TestRenderGraphExplorer:
+    def test_explorer_html(self, tmp_path):
+        from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
+
+        gd = {
+            "prompt": "2+3=",
+            "answer_token": "5",
+            "tokens": ["a", "b"],
+            "logit_token_strs": {"5": "5"},
+            "nodes": [
+                {
+                    "node_type": "embedding",
+                    "layer": -1,
+                    "position": 0,
+                    "activation": 1.0,
+                    "label": None,
+                },
+                {
+                    "node_type": "feature",
+                    "layer": 1,
+                    "position": 1,
+                    "feature_idx": 7,
+                    "activation": 2.0,
+                    "label": {
+                        "top_logits": ["five"],
+                        "bottom_logits": ["x"],
+                        "examples": [{"tokens": [" Nov", " 5"], "acts": [0.0, 9.0]}],
+                    },
+                },
+                {
+                    "node_type": "logit",
+                    "layer": 2,
+                    "position": 1,
+                    "token_id": 5,
+                    "activation": 3.0,
+                    "label": None,
+                },
+            ],
+            "edges": [
+                {"source": 0, "target": 1, "weight": 1.0},
+                {"source": 1, "target": 2, "weight": 2.0},
+            ],
+        }
+        out = render_graph_explorer_html(gd, tmp_path / "ge.html", title="T")
+        t = out.read_text()
+        assert "__DATA__" not in t and "__TITLE__" not in t  # placeholders substituted
+        assert 'id="g"' in t and 'id="sg"' in t and 'id="detail"' in t  # graph, subgraph, detail
+        assert 'id="mk"' in t  # manual-grouping button
+        assert "const D =" in t
+        assert "five" in t and "Nov" in t  # label + activation examples embedded

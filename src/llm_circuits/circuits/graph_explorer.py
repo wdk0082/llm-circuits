@@ -402,18 +402,41 @@ function examplesHtml(n) {
     return `<div class="qgrp"><div class="qname">${esc(q.quantile)}</div>${lines}</div>`;
   }).join("");
 }
-// Compact inline activation histogram (counts over the act range, sqrt-scaled bars).
+// Activation histogram on a LOG activation-value x-axis, using the real (non-uniform)
+// bin edges in n.qv (quantile_values): bar width = log-spaced bin width, height = sqrt(count).
+// Falls back to equal-width bars only if bin edges are unavailable.
 function histHtml(n) {
   const h = n.hist; if (!h || !h.length) return "";
-  const w = 240, ht = 38, bw = w / h.length, mx = Math.sqrt(Math.max(...h, 1));
-  const bars = h.map((c,j) => {
-    const bh = (Math.sqrt(Math.max(c,0)) / mx) * ht;
-    return `<rect x="${(j*bw).toFixed(2)}" y="${(ht-bh).toFixed(2)}" width="${Math.max(bw-0.3,0.4).toFixed(2)}" height="${bh.toFixed(2)}" fill="#2196F3"/>`;
+  const w = 248, ht = 40, mxH = Math.sqrt(Math.max(...h, 1));
+  const bh = c => (Math.sqrt(Math.max(c,0)) / mxH) * ht;
+  const qv = n.qv;
+  if (!qv || qv.length !== h.length + 1) {  // no bin edges -> plain equal-width fallback
+    const bw = w / h.length;
+    const bars = h.map((c,j) =>
+      `<rect x="${(j*bw).toFixed(2)}" y="${(ht-bh(c)).toFixed(2)}" width="${Math.max(bw-0.3,0.4).toFixed(2)}" height="${bh(c).toFixed(2)}" fill="#2196F3"/>`).join("");
+    return `<svg width="${w}" height="${ht}" style="display:block">${bars}</svg>`;
+  }
+  const hi = qv[qv.length-1];
+  let posMin = Infinity; for (const v of qv) if (v>0 && v<posMin) posMin = v;
+  if (!isFinite(posMin)) posMin = Math.max(hi,1e-6)*1e-3;
+  const hiL = Math.log10(Math.max(hi, posMin*1.0001));
+  // cap the axis at ~4 decades so a tiny act_min can't blow up the lowest bin;
+  // values below 10^loL clamp to the left edge ("near zero").
+  const loL = Math.max(Math.log10(posMin) - 0.3, hiL - 4);
+  const span = (hiL - loL) || 1;
+  const X = v => ((Math.min(Math.max(v>0?Math.log10(v):loL, loL), hiL) - loL) / span) * w;
+  const bars = h.map((c,i) => {
+    const x0 = X(qv[i]);
+    return `<rect x="${x0.toFixed(2)}" y="${(ht-bh(c)).toFixed(2)}" width="${Math.max(X(qv[i+1])-x0,0.5).toFixed(2)}" height="${bh(c).toFixed(2)}" fill="#2196F3"/>`;
   }).join("");
-  const lo = n.amin!=null ? (+n.amin).toFixed(2) : "", hi = n.amax!=null ? (+n.amax).toFixed(2) : "";
-  return `<svg width="${w}" height="${ht}" style="display:block">${bars}</svg>`
-    + `<div style="display:flex;justify-content:space-between;color:#999;font-size:10px">`
-    + `<span>act ${lo}</span><span>${hi}</span></div>`;
+  let grid = "", labels = "";
+  for (let d=Math.ceil(loL); d<=Math.floor(hiL); d++) {
+    const x = X(Math.pow(10,d)).toFixed(1);
+    grid += `<line x1="${x}" y1="0" x2="${x}" y2="${ht}" stroke="#cfd8dc" stroke-width="0.6"/>`;
+    labels += `<text x="${x}" y="${ht+10}" font-size="9" fill="#999" text-anchor="middle">${Math.pow(10,d)}</text>`;
+  }
+  return `<svg width="${w}" height="${ht+13}" style="display:block">${grid}${bars}${labels}</svg>`
+    + `<div style="color:#999;font-size:10px;text-align:center">activation value (log scale)</div>`;
 }
 function showDetail(idx) {
   const n = N[idx];

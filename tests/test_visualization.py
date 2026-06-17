@@ -129,7 +129,7 @@ class TestRenderGraphExplorer:
                         "act_min": 0.01,
                         "act_max": 41.0,
                         "histogram": [9, 4, 2, 1],
-                        "quantile_values": [0.01, 1.0, 10.0, 41.0],
+                        "quantile_values": [0.0, 0.1, 1.0, 10.0, 41.0],
                         "examples": [
                             {
                                 "quantile": "Top",
@@ -174,6 +174,9 @@ class TestRenderGraphExplorer:
         # richer feature stats surfaced (request 3)
         assert feat["freq"] == 0.0012 and feat["amax"] == 41.0
         assert feat["hist"] == [9, 4, 2, 1]
+        # histogram bin edges (quantile_values) carried + rendered on a log activation axis
+        assert feat["qv"] == [0.0, 0.1, 1.0, 10.0, 41.0]
+        assert "activation value (log scale)" in t and "Math.log10" in t
         # node fill = group color, member-clickable subgraph, clickable detail rows
         assert "function nodeFill" in t and "function selectNode" in t
         assert "frow nav" in t

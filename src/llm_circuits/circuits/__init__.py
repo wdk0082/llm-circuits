@@ -37,6 +37,9 @@ from llm_circuits.circuits.interventions import (
     FeatureIntervention as FeatureIntervention,
 )
 from llm_circuits.circuits.interventions import (
+    LayerSweepResult as LayerSweepResult,
+)
+from llm_circuits.circuits.interventions import (
     ProgressiveAblationResult as ProgressiveAblationResult,
 )
 from llm_circuits.circuits.interventions import (
@@ -62,6 +65,9 @@ from llm_circuits.circuits.interventions import (
 )
 from llm_circuits.circuits.interventions import (
     run_progressive_intervention as run_progressive_intervention,
+)
+from llm_circuits.circuits.interventions import (
+    sweep_patch_end_layer as sweep_patch_end_layer,
 )
 from llm_circuits.circuits.local_replacement_model import (
     CapturedConstants as CapturedConstants,

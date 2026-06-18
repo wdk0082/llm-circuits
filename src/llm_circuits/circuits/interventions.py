@@ -245,6 +245,7 @@ def run_feature_intervention(
     interventions: list[FeatureIntervention],
     *,
     mode: str = "constrained",
+    patch_end_layer: int | None = None,
     n_bos_tokens: int = 1,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
@@ -262,6 +263,14 @@ def run_feature_intervention(
     and only layers *after* the range respond.  The change for feature ``f`` is
     ``W_dec[f] * (target_f - clean_act_f)``; with :func:`negative_steer`
     (``factor=-1``) the target is ``-clean_act_f``, so its contribution flips sign.
+
+    ``patch_end_layer`` is the paper's layer-range knob (the *end* of the patching
+    range): the delta is injected at that layer's output instead of the last steered
+    layer, freezing every layer up to it (no second-order effects in range) and
+    letting only layers *above* it recompute.  Must be ``>= max(intervention layers)``
+    and ``< n_layers``; defaults to the last steered layer (maximum downstream
+    recompute).  :func:`sweep_patch_end_layer` sweeps this and picks the most
+    suppressive end layer.
 
     ``mode="iterative"`` (the paper's appendix alternative): freeze attention and
     error nodes but let **LayerNorm recompute**, and clamp each feature to its
@@ -348,9 +357,15 @@ def run_feature_intervention(
     if mode != "constrained":
         raise ValueError(f"mode must be 'constrained' or 'iterative', got {mode!r}")
 
-    # Constrained patching: build the residual delta to inject at the last
-    # intervened layer's output.
+    # Constrained patching: build the residual delta to inject at the patch end
+    # layer's output (defaults to the last intervened layer).
     l_max = max(iv.layer for iv in interventions)
+    inject_layer = l_max if patch_end_layer is None else patch_end_layer
+    if not (l_max <= inject_layer < n_layers):
+        raise ValueError(
+            f"patch_end_layer must be in [{l_max}, {n_layers - 1}] "
+            f"(>= last steered layer, < n_layers), got {patch_end_layer}"
+        )
     delta: Tensor | None = None
     for iv in interventions:
         feats = base.features[iv.layer]
@@ -368,7 +383,7 @@ def run_feature_intervention(
             clean_act = feats[p, iv.feature_idx].float().item()
             delta[p] += dec * (iv.target(clean_act) - clean_act)
 
-    dec_layer = model.get_submodule(decoder_layer_template.format(layer=l_max))
+    dec_layer = model.get_submodule(decoder_layer_template.format(layer=inject_layer))
 
     def _inject(_m: nn.Module, _i: Any, output: Any) -> Any:
         res = output[0] if isinstance(output, tuple) else output
@@ -642,6 +657,168 @@ def run_progressive_intervention(
         n_ablated=list(range(len(ordered_interventions) + 1)),
         logits=logits_out,
         probs=probs_out,
+        token_id=token_id,
+        position=position,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Layer-range (patch end-layer) sweep
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class LayerSweepResult:
+    """Constrained-patching target logit/prob as a function of the patch END layer.
+
+    ``end_layers[i]`` -> ``logits[i]`` / ``probs[i]`` for ``token_id`` at ``position``.
+    ``end_layers[0]`` is the last steered layer (maximum downstream recompute); higher
+    end layers freeze more of the model, so fewer layers recompute.  This is the curve
+    the paper sweeps to choose the most-suppressive patching range.
+    """
+
+    end_layers: list[int]
+    logits: list[float]
+    probs: list[float]
+    baseline_logit: float
+    baseline_prob: float
+    token_id: int
+    position: int
+
+    @property
+    def delta_logits(self) -> list[float]:
+        """``logit(end) - baseline_logit`` per end layer (negative = suppression)."""
+        return [lg - self.baseline_logit for lg in self.logits]
+
+    @property
+    def delta_probs(self) -> list[float]:
+        """``prob(end) - baseline_prob`` per end layer."""
+        return [p - self.baseline_prob for p in self.probs]
+
+    @property
+    def best_end_layer(self) -> int:
+        """The end layer with the largest logit *suppression* (most negative delta)."""
+        i = min(range(len(self.logits)), key=lambda j: self.logits[j])
+        return self.end_layers[i]
+
+
+def sweep_patch_end_layer(
+    model: nn.Module,
+    transcoder: TranscoderSet | CrossLayerTranscoder,
+    input_ids: Tensor,
+    interventions: list[FeatureIntervention],
+    token_id: int,
+    *,
+    n_bos_tokens: int = 1,
+    position: int = -1,
+    mlp_name_template: str = "model.layers.{layer}.mlp",
+    output_module_template: str | None = None,
+    attn_name_template: str = "model.layers.{layer}.self_attn",
+    layernorm_templates: list[str] | None = None,
+    final_norm_name: str = "model.norm",
+    decoder_layer_template: str = "model.layers.{layer}",
+) -> LayerSweepResult:
+    """Sweep the constrained-patching **end layer** (the paper's layer-range knob).
+
+    Steers *interventions* (constrained mode) and injects the resulting residual
+    delta at each candidate end layer, from the last steered layer up to the final
+    layer, recording the *token_id* logit and probability at *position* each time.
+    A higher end layer freezes more of the model (fewer layers recompute); the paper
+    picks the end layer that suppresses the target logit the most
+    (:attr:`LayerSweepResult.best_end_layer`).
+
+    Constants and the clean baseline are captured once and the residual delta is built
+    once (it is constant across end layers, by residual-stream additivity under
+    constrained patching), so the whole sweep is one capture + ``n_layers - l_max``
+    frozen forwards.  Per-layer transcoders only (Qwen3).
+    """
+    if input_ids.dim() == 1:
+        input_ids = input_ids.unsqueeze(0)
+    if layernorm_templates is None:
+        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
+    if not _is_transcoder_set(transcoder):
+        raise NotImplementedError(
+            "patch-end-layer sweep is implemented for per-layer transcoders only"
+        )
+    if not interventions:
+        raise ValueError("sweep_patch_end_layer requires at least one intervention")
+    n_layers = len(transcoder)
+
+    caps = capture_constants(
+        model,
+        input_ids,
+        n_layers=n_layers,
+        mlp_name_template=mlp_name_template,
+        attn_name_template=attn_name_template,
+        layernorm_templates=layernorm_templates,
+        final_norm_name=final_norm_name,
+    )
+    common = dict(
+        include_error=True,
+        n_bos_tokens=n_bos_tokens,
+        mlp_name_template=mlp_name_template,
+        output_module_template=output_module_template,
+        attn_name_template=attn_name_template,
+        layernorm_templates=layernorm_templates,
+        final_norm_name=final_norm_name,
+        freeze_layernorm=True,
+    )
+
+    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
+        base = lm.forward(input_ids)
+
+    device = input_ids.device
+    seq = input_ids.shape[1]
+
+    # Residual delta is constant across end layers (decoder vectors + clean acts fixed).
+    l_max = max(iv.layer for iv in interventions)
+    delta: Tensor | None = None
+    for iv in interventions:
+        feats = base.features[iv.layer]
+        if feats.dim() == 3:
+            feats = feats[0]
+        dec = (
+            transcoder.transcoders[iv.layer]
+            ._get_decoder_vectors(torch.tensor([iv.feature_idx], device=device))[0]
+            .float()
+        )
+        if delta is None:
+            delta = torch.zeros(seq, dec.shape[0], device=device, dtype=torch.float32)
+        positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
+        for p in positions:
+            clean_act = feats[p, iv.feature_idx].float().item()
+            delta[p] += dec * (iv.target(clean_act) - clean_act)
+
+    def _inject(_m: nn.Module, _i: Any, output: Any) -> Any:
+        res = output[0] if isinstance(output, tuple) else output
+        new = res + delta.to(res.dtype)
+        return (new, *output[1:]) if isinstance(output, tuple) else new
+
+    end_layers = list(range(l_max, n_layers))
+    logits_out: list[float] = []
+    probs_out: list[float] = []
+    with (
+        torch.no_grad(),
+        LocalReplacementModel(model, transcoder, caps, frozen_errors=base.errors, **common) as lm,
+    ):
+        for end in end_layers:
+            dec_layer = model.get_submodule(decoder_layer_template.format(layer=end))
+            handle = dec_layer.register_forward_hook(_inject)
+            try:
+                out = lm.forward(input_ids)
+            finally:
+                handle.remove()
+            row = out.logits[position]
+            logits_out.append(row[token_id].item())
+            probs_out.append(row.softmax(dim=-1)[token_id].item())
+
+    base_row = base.logits[position]
+    return LayerSweepResult(
+        end_layers=end_layers,
+        logits=logits_out,
+        probs=probs_out,
+        baseline_logit=base_row[token_id].item(),
+        baseline_prob=base_row.softmax(dim=-1)[token_id].item(),
         token_id=token_id,
         position=position,
     )

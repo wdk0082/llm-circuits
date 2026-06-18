@@ -8,6 +8,7 @@ from llm_circuits.circuits.interventions import (
     AblationResult,
     FeatureAblation,
     FeatureIntervention,
+    LayerSweepResult,
     ablation_logit_effect,
     ablation_prob_effect,
     ablations_to_dict,
@@ -132,3 +133,28 @@ class TestFeatureIntervention:
         iv = negative_steer(7, 9, position=2)
         assert iv == FeatureIntervention(7, 9, position=2, factor=-1.0)
         assert iv.target(3.0) == -3.0  # opposite of the clean value
+
+
+class TestLayerSweepResult:
+    def _res(self):
+        # baseline logit 5.0; end layers 20..23 with decreasing logits then a rebound
+        return LayerSweepResult(
+            end_layers=[20, 21, 22, 23],
+            logits=[2.0, -1.0, -3.0, 0.5],
+            probs=[0.40, 0.20, 0.05, 0.30],
+            baseline_logit=5.0,
+            baseline_prob=0.80,
+            token_id=42,
+            position=-1,
+        )
+
+    def test_delta_logits_and_probs(self):
+        import pytest
+
+        r = self._res()
+        assert r.delta_logits == pytest.approx([-3.0, -6.0, -8.0, -4.5])
+        assert r.delta_probs == pytest.approx([-0.40, -0.60, -0.75, -0.50])
+
+    def test_best_end_layer_is_max_suppression(self):
+        # layer 22 has the lowest logit (-3.0) -> largest suppression
+        assert self._res().best_end_layer == 22

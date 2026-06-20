@@ -4,7 +4,6 @@ from typing import Any
 
 _BOS_COUNTS: dict[str, int] = {
     "qwen3": 1,
-    "gemma2": 1,
 }
 
 
@@ -22,7 +21,7 @@ def prepare_messages(
     prompt:
         The user's plain text prompt.
     family:
-        Model family string (``"qwen3"`` or ``"gemma2"``).
+        Model family string (currently ``"qwen3"``).
     system:
         Optional system message prepended to the conversation.
     enable_thinking:

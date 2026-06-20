@@ -39,7 +39,9 @@ from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 
 # ── Config ───────────────────────────────────────────────────────────────────
-MODEL_CANDIDATES: list[tuple[str, str]] = [("0.6b", "fp32"), ("4b", "bf16")]
+# Qwen3-0.6B cannot reliably add (verified: 0% across formats), so go straight to 4B.
+# We still search prompt formats to pick the cleanest one the model actually solves.
+MODEL_CANDIDATES: list[tuple[str, str]] = [("4b", "bf16")]
 
 # Single-digit sums (answer is a single token); chosen to span distinct sums.
 PROBLEMS: list[tuple[int, int]] = [(1, 2), (2, 2), (2, 3), (2, 4), (3, 4), (4, 4), (4, 5)]

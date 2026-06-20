@@ -49,26 +49,6 @@ _REGISTRY: dict[str, ModelSpec] = {
         transcoder_repo="mwhanna/qwen3-14b-transcoders-lowl0",
         family="qwen3",
     ),
-    "gemma2-2b": ModelSpec(
-        size="2b",
-        hf_model_id="google/gemma-2-2b",
-        transcoder_repo="mwhanna/gemma-scope-transcoders",
-        family="gemma2",
-    ),
-    "gemma2-2b-cross-layer-426k": ModelSpec(
-        size="2b",
-        hf_model_id="google/gemma-2-2b",
-        transcoder_repo="mntss/clt-gemma-2-2b-426k",
-        family="gemma2",
-        transcoder_type="cross-layer",
-    ),
-    "gemma2-2b-cross-layer-2.5m": ModelSpec(
-        size="2b",
-        hf_model_id="google/gemma-2-2b",
-        transcoder_repo="mntss/clt-gemma-2-2b-2.5M",
-        family="gemma2",
-        transcoder_type="cross-layer",
-    ),
 }
 
 # Backward-compat aliases: bare size keys resolve to Qwen3 entries.
@@ -78,7 +58,7 @@ for _key, _spec in list(_REGISTRY.items()):
 
 
 def get_spec(key: str) -> ModelSpec:
-    """Look up a ``ModelSpec`` by registry key (e.g. ``"qwen3-0.6b"``, ``"gemma2-2b"``).
+    """Look up a ``ModelSpec`` by registry key (e.g. ``"qwen3-0.6b"``, ``"qwen3-4b"``).
 
     Bare size keys like ``"0.6b"`` still work and resolve to the Qwen3 entry
     for backward compatibility.

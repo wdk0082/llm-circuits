@@ -49,10 +49,6 @@ class TestGetSpec:
             ("4b", "Qwen/Qwen3-4B"),
             ("8b", "Qwen/Qwen3-8B"),
             ("14b", "Qwen/Qwen3-14B"),
-            # Gemma2 keys
-            ("gemma2-2b", "google/gemma-2-2b"),
-            ("gemma2-2b-cross-layer-426k", "google/gemma-2-2b"),
-            ("gemma2-2b-cross-layer-2.5m", "google/gemma-2-2b"),
         ],
     )
     def test_valid_keys(self, key: str, expected_model_id: str):
@@ -84,7 +80,7 @@ class TestListSpecs:
     def test_returns_list(self):
         specs = list_specs()
         assert isinstance(specs, list)
-        assert len(specs) == 8
+        assert len(specs) == 5
 
     def test_all_model_spec(self):
         for spec in list_specs():
@@ -92,7 +88,7 @@ class TestListSpecs:
 
     def test_contains_expected_sizes(self):
         sizes = {s.size for s in list_specs()}
-        assert sizes == {"0.6b", "1.7b", "4b", "8b", "14b", "2b"}
+        assert sizes == {"0.6b", "1.7b", "4b", "8b", "14b"}
 
     def test_transcoder_repos_are_populated(self):
         for spec in list_specs():
@@ -104,11 +100,6 @@ class TestListSpecs:
         assert len(specs) == 5
         assert all(s.family == "qwen3" for s in specs)
 
-    def test_filter_by_family_gemma2(self):
-        specs = list_specs(family="gemma2")
-        assert len(specs) == 3
-        assert all(s.family == "gemma2" for s in specs)
-
     def test_filter_by_family_case_insensitive(self):
         assert list_specs(family="Qwen3") == list_specs(family="qwen3")
 
@@ -116,13 +107,13 @@ class TestListSpecs:
 class TestListFamilies:
     def test_returns_sorted(self):
         families = list_families()
-        assert families == ["gemma2", "qwen3"]
+        assert families == ["qwen3"]
 
 
 class TestListRegistry:
     def test_returns_canonical_keys(self):
         entries = list_registry()
-        assert len(entries) == 8
+        assert len(entries) == 5
         keys = [k for k, _ in entries]
         # No bare-size aliases
         for key in keys:

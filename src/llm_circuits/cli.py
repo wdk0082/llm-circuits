@@ -44,7 +44,7 @@ def info():
 
 @app.command("transcoder-inspect")
 def transcoder_inspect(
-    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"),
+    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'qwen3-4b'"),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
 ):
     """Inspect a transcoder's config (lightweight -- does not download weights)."""
@@ -89,7 +89,7 @@ def transcoder_inspect(
 
 @app.command("transcoder-load")
 def transcoder_load(
-    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'gemma2-2b'"),
+    size: str | None = typer.Option(None, help="Registry key, e.g. 'qwen3-0.6b' or 'qwen3-4b'"),
     repo: str | None = typer.Option(None, help="Direct HF transcoder repo id"),
     device: str | None = typer.Option(None, help="Device, e.g. 'cpu', 'cuda'"),
     cache_dir: str | None = typer.Option(None, help="Local cache directory for transcoders"),
@@ -137,7 +137,7 @@ def generate(
         "qwen3-0.6b",
         "--key",
         "--size",
-        help="Registry key (e.g. 'qwen3-0.6b', 'gemma2-2b') or bare size for Qwen3 (e.g. '0.6b')",
+        help="Registry key (e.g. 'qwen3-0.6b', 'qwen3-4b') or bare size for Qwen3 (e.g. '0.6b')",
     ),
     prompt: str = typer.Option("Hello, world!", help="Prompt text"),
     max_new_tokens: int = typer.Option(64, help="Max tokens to generate"),

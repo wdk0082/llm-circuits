@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>llm-circuits interactive</title>
+<style>
+  :root { --tan: rgb(235,212,178); }
+  * { box-sizing: border-box; }
+  html, body { height:100%; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         color:#222; font-size:13px; background:#fafafa; display:flex; flex-direction:column; }
+  header { padding:8px 12px; border-bottom:1px solid #ddd; background:#fff; display:flex;
+           flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  header h1 { font-size:15px; margin:0 8px 0 0; }
+  #knobs { padding:5px 12px; border-bottom:1px solid #eee; background:#f7f7f7; display:flex;
+           flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:12px; }
+  #knobs b { color:#555; text-transform:uppercase; font-size:10px; letter-spacing:.04em; }
+  #knobs input[type=number] { font-size:12px; padding:2px 5px; }
+  #knobs input[type=range] { vertical-align:middle; width:120px; }
+  select, input[type=text], input[type=number], button { font-size:13px; padding:3px 7px; }
+  #sentence { width:360px; }
+  button { cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .muted { color:#888; font-size:12px; }
+  #main { display:flex; flex:1; min-height:0; }
+  #left { flex:1; min-width:200px; }
+  #frame { width:100%; height:100%; border:0; background:var(--tan); }
+  #splitter { flex:0 0 6px; cursor:col-resize; background:#e0e0e0; }
+  #splitter:hover, #splitter.drag { background:#aaa; }
+  #right { flex:0 0 auto; width:380px; padding:10px 12px; overflow:auto; background:#fff; }
+  h3 { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#666;
+       margin:16px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; }
+  .row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .row label { color:#555; }
+  #slider { flex:1; }
+  .bar { display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
+  .bar .tk { flex:0 0 70px; width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             font-family:ui-monospace,Menlo,monospace; }
+  .track { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .barline { height:6px; background:#f0f0f0; border-radius:2px; overflow:hidden; }
+  .barline > i { display:block; height:100%; border-radius:2px; }
+  .barline.base > i { background:#9e9e9e; }
+  .barline.steer > i { background:#c62828; }
+  .pct { flex:0 0 64px; width:64px; text-align:right; color:#777; font-size:11px;
+         font-variant-numeric:tabular-nums; }
+  #status, #buildstatus { font-size:12px; }
+  .err { color:#c62828; }
+  .ok { color:#2e7d32; }
+</style>
+</head>
+<body>
+<header>
+  <h1>llm-circuits</h1>
+  <span class="muted" id="mockbadge"></span>
+  <label>model
+    <select id="model"></select>
+  </label>
+  <button id="loadbtn">Load</button>
+  <span id="status" class="muted">no model loaded</span>
+  &nbsp;|&nbsp;
+  <input id="sentence" type="text" placeholder="type a sentence (next-token prediction)"
+         value="The capital of France is">
+  <label class="muted"><input type="checkbox" id="usechat"> chat</label>
+  <button id="buildbtn" disabled>Build graph</button>
+  <span id="buildstatus" class="muted"></span>
+</header>
+<div id="knobs">
+  <b>prune (fast)</b>
+  <label title="keep nodes up to this fraction of influence (higher = more nodes)">node&theta;
+    <input id="nodethr" type="range" min="0.5" max="1" step="0.01" value="0.8">
+    <span id="nodethrv">0.80</span></label>
+  <label title="keep edges up to this fraction of influence">edge&theta;
+    <input id="edgethr" type="number" min="0.8" max="1" step="0.005" value="0.98" style="width:62px"></label>
+  <button id="reprunebtn" disabled>Reprune</button>
+  <span id="reprunestatus" class="muted"></span>
+  <span style="color:#ccc">|</span>
+  <b title="changing these needs a full Build">build caps (slow)</b>
+  <label title="feature nodes that get incoming edges computed">targets
+    <input id="targets" type="number" min="16" step="32" value="256" style="width:68px"></label>
+  <label title="max active-feature nodes kept (by |activation|) before pruning">feat-nodes
+    <input id="featnodes" type="number" min="200" step="500" value="4000" style="width:74px"></label>
+</div>
+<div id="main">
+  <div id="left"><iframe id="frame" title="attribution graph"></iframe></div>
+  <div id="splitter" title="drag to resize"></div>
+  <div id="right">
+    <h3>Steer a supernode</h3>
+    <div class="muted">Shift-click nodes in the graph &rarr; <em>Group selected</em> to make a
+      supernode, then read it here.</div>
+    <div class="row">
+      <button id="readgroups">&#8635; Read groups</button>
+      <select id="grp" style="flex:1"></select>
+    </div>
+    <div class="row">
+      <label>M</label>
+      <input id="slider" type="range" min="-10" max="10" step="0.5" value="-1">
+      <span id="mval" style="width:34px;text-align:right">-1.0</span>
+    </div>
+    <div class="row">
+      <label>mode</label>
+      <select id="mode"><option value="constrained">constrained</option>
+        <option value="iterative">iterative</option></select>
+      <label title="patch end layer (blank = last steered layer)">end L</label>
+      <input id="endlayer" type="number" style="width:64px" placeholder="auto">
+    </div>
+    <div class="row">
+      <button id="steerbtn" disabled>Steer</button>
+      <button id="sweepbtn" disabled>Layer sweep</button>
+    </div>
+    <div id="steerout"></div>
+    <h3 id="sweephdr" style="display:none">Layer-range sweep</h3>
+    <div id="sweepout"></div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const frame = $("frame");
+let groups = [];
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"},
+                                      body:JSON.stringify(body)} : undefined);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+function esc(s){ const d=document.createElement("div"); d.textContent=s==null?"":String(s); return d.innerHTML; }
+
+async function refreshModels() {
+  const m = await api("/api/models");
+  $("model").innerHTML = m.sizes.map(s => `<option value="${s}">Qwen3-${s}</option>`).join("");
+  $("mockbadge").textContent = m.mock ? "[mock]" : "";
+  if (m.loaded) { $("model").value = m.loaded; setLoaded(m); }
+}
+function setLoaded(m) {
+  $("status").innerHTML = `<span class="ok">loaded Qwen3-${m.loaded}</span> (${m.n_layers} layers)`;
+  $("buildbtn").disabled = false;
+}
+
+$("loadbtn").addEventListener("click", async () => {
+  const size = $("model").value;
+  $("status").textContent = `loading Qwen3-${size}… (first load can take a minute)`;
+  $("buildbtn").disabled = true;
+  try { setLoaded(await api("/api/load", {size})); }
+  catch (e) { $("status").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+});
+
+function clearGraphState() {
+  groups = []; $("grp").innerHTML = ""; $("steerout").innerHTML = "";
+  $("steerbtn").disabled = $("sweepbtn").disabled = true;
+}
+function pruneVals() {
+  return { node_threshold: +$("nodethr").value, edge_threshold: +$("edgethr").value };
+}
+
+$("buildbtn").addEventListener("click", async () => {
+  const text = $("sentence").value.trim();
+  if (!text) return;
+  $("buildstatus").textContent = "building attribution graph…";
+  clearGraphState();
+  try {
+    const t0 = performance.now();
+    const b = await api("/api/build", {
+      text, use_chat: $("usechat").checked, ...pruneVals(),
+      max_feature_targets: +$("targets").value, max_feature_nodes: +$("featnodes").value,
+    });
+    frame.srcdoc = b.html;
+    const dt = ((performance.now()-t0)/1000).toFixed(1);
+    $("buildstatus").innerHTML =
+      `<span class="ok">${b.n_nodes} nodes, ${b.n_feature_nodes} features</span> (${dt}s)`;
+    $("reprunebtn").disabled = false;
+  } catch (e) { $("buildstatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+});
+
+// Fast re-prune of the cached graph at new thresholds (no model forward).
+async function reprune() {
+  $("reprunestatus").textContent = "re-pruning…";
+  clearGraphState();
+  try {
+    const t0 = performance.now();
+    const b = await api("/api/reprune", pruneVals());
+    frame.srcdoc = b.html;
+    const dt = ((performance.now()-t0)/1000).toFixed(1);
+    $("reprunestatus").innerHTML =
+      `<span class="ok">${b.n_nodes} nodes, ${b.n_feature_nodes} feat</span> (${dt}s)`;
+  } catch (e) { $("reprunestatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+$("nodethr").addEventListener("input", () => $("nodethrv").textContent = (+$("nodethr").value).toFixed(2));
+$("nodethr").addEventListener("change", () => { if (!$("reprunebtn").disabled) reprune(); });
+$("edgethr").addEventListener("change", () => { if (!$("reprunebtn").disabled) reprune(); });
+$("reprunebtn").addEventListener("click", reprune);
+
+$("readgroups").addEventListener("click", () => {
+  const fn = frame.contentWindow && frame.contentWindow.getGroupsForSteering;
+  if (!fn) { $("grp").innerHTML = "<option>build a graph first</option>"; return; }
+  groups = fn();
+  if (!groups.length) { $("grp").innerHTML = "<option>no groups yet — group nodes in the graph</option>";
+    $("steerbtn").disabled = $("sweepbtn").disabled = true; return; }
+  $("grp").innerHTML = groups.map((g,i) =>
+    `<option value="${i}">${esc(g.name)} (${g.nodes.length})</option>`).join("");
+  $("steerbtn").disabled = $("sweepbtn").disabled = false;
+});
+
+$("slider").addEventListener("input", () => $("mval").textContent = (+$("slider").value).toFixed(1));
+
+function curNodes() {
+  const g = groups[+$("grp").value];
+  return g ? g.nodes : [];
+}
+function steerBody() {
+  const end = $("endlayer").value;
+  return { nodes: curNodes(), factor: +$("slider").value, mode: $("mode").value,
+           patch_end_layer: end === "" ? null : +end };
+}
+
+function barChart(baseline, steered) {
+  const bp = {}, sp = {};
+  baseline.forEach(t => bp[t.token] = t.prob);
+  steered.forEach(t => sp[t.token] = t.prob);
+  const toks = Array.from(new Set([...baseline.map(t=>t.token), ...steered.map(t=>t.token)]));
+  toks.sort((a,b) => Math.max(bp[b]||0,sp[b]||0) - Math.max(bp[a]||0,sp[a]||0));
+  // one row per token: grey baseline bar over red steered bar, with "base->steer %"
+  return toks.slice(0,12).map(tk => {
+    const b=(bp[tk]||0), s=(sp[tk]||0);
+    return `<div class="bar"><span class="tk" title="${esc(tk)}">${esc(tk)}</span>`
+      + `<span class="track">`
+      +   `<span class="barline base"><i style="width:${(b*100).toFixed(1)}%"></i></span>`
+      +   `<span class="barline steer"><i style="width:${(s*100).toFixed(1)}%"></i></span>`
+      + `</span>`
+      + `<span class="pct">${(b*100).toFixed(0)}&rarr;${(s*100).toFixed(0)}%</span></div>`;
+  }).join("");
+}
+
+$("steerbtn").addEventListener("click", async () => {
+  if (!curNodes().length) return;
+  $("steerout").innerHTML = "<span class='muted'>steering…</span>";
+  try {
+    const s = await api("/api/steer", steerBody());
+    $("steerout").innerHTML =
+      `<div style="margin:6px 0">target <b>${esc(s.target_token)}</b> &nbsp; `
+      + `&Delta;logit <b class="${s.target_delta_logit<0?'err':'ok'}">${s.target_delta_logit.toFixed(2)}</b></div>`
+      + `<div class="muted" style="margin:4px 0">grey = baseline &middot; red = steered (M=${(+$("slider").value).toFixed(2)})</div>`
+      + barChart(s.baseline, s.steered);
+  } catch (e) { $("steerout").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+});
+
+$("sweepbtn").addEventListener("click", async () => {
+  if (!curNodes().length) return;
+  $("sweephdr").style.display = "block";
+  $("sweepout").innerHTML = "<span class='muted'>sweeping…</span>";
+  try {
+    const w = await api("/api/sweep", {nodes: curNodes(), factor: +$("slider").value});
+    $("sweepout").innerHTML = sweepPlot(w);
+  } catch (e) { $("sweepout").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+});
+
+function sweepPlot(w) {
+  const ends = w.end_layers, dl = w.delta_logits;
+  if (!ends.length) return "<span class='muted'>no range</span>";
+  const W=340, H=110, pad=24;
+  const lo=Math.min(0,...dl), hi=Math.max(0,...dl), span=(hi-lo)||1;
+  const x = i => pad + (ends.length<2?0:i*(W-2*pad)/(ends.length-1));
+  const y = v => pad + (hi-v)/span*(H-2*pad);
+  const pts = dl.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const bi = dl.indexOf(Math.min(...dl));
+  return `<svg width="${W}" height="${H}" style="display:block">`
+    + `<line x1="${pad}" y1="${y(0).toFixed(1)}" x2="${W-pad}" y2="${y(0).toFixed(1)}" stroke="#ccc"/>`
+    + `<polyline points="${pts}" fill="none" stroke="#c62828" stroke-width="1.5"/>`
+    + `<circle cx="${x(bi)}" cy="${y(dl[bi])}" r="4" fill="none" stroke="#c62828" stroke-width="2"/>`
+    + `<text x="${pad}" y="${H-6}" font-size="9" fill="#999">end L${ends[0]}</text>`
+    + `<text x="${W-pad}" y="${H-6}" font-size="9" fill="#999" text-anchor="end">L${ends[ends.length-1]}</text>`
+    + `</svg>`
+    + `<div class="muted">&Delta;logit vs patch end layer &middot; best = <b>L${w.best_end_layer}</b> `
+    + `(target ${esc(w.target_token)})</div>`;
+}
+
+// Draggable splitter between the graph and the steer panel. Disable iframe pointer
+// events while dragging so the mouse-move keeps reaching the host window.
+(function () {
+  const sp = $("splitter");
+  let dragging = false;
+  sp.addEventListener("mousedown", e => {
+    dragging = true; sp.classList.add("drag");
+    frame.style.pointerEvents = "none"; document.body.style.userSelect = "none"; e.preventDefault();
+  });
+  window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const total = document.body.clientWidth;
+    const w = Math.max(240, Math.min(total - e.clientX, total - 260));
+    $("right").style.width = w + "px";
+  });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false; sp.classList.remove("drag");
+    frame.style.pointerEvents = ""; document.body.style.userSelect = "";
+  });
+})();
+
+refreshModels();
+</script>
+</body>
+</html>

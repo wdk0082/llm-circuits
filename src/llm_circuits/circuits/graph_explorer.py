@@ -129,6 +129,41 @@ def _x_ticks(nodes: list[dict], layout: list[dict], tokens) -> list[dict]:
     return ticks
 
 
+def build_explorer_payload(
+    graph: dict, *, label: str | None = None, width: int = 1100, height: int = 620
+) -> dict:
+    """Return the per-graph payload the explorer JS consumes (nodes/edges/pos/ticks).
+
+    Public wrapper around the same builder the static exporter uses, so the
+    interactive server can render graphs identically without duplicating the
+    layout/axis logic in JS.
+    """
+    return _graph_payload(graph, label or _derive_label(graph, 0), width, height)
+
+
+def render_graph_explorer_html_str(
+    graphs: dict | list[dict],
+    *,
+    labels: list[str] | None = None,
+    title: str = "Attribution graph explorer",
+    width: int = 1100,
+    height: int = 620,
+) -> str:
+    """Return the self-contained explorer HTML as a string (see :func:`render_graph_explorer_html`).
+
+    Used by the interactive server, which embeds it in an ``<iframe srcdoc=...>``.
+    """
+    if isinstance(graphs, dict):
+        graphs = [graphs]
+    examples = [
+        _graph_payload(gd, (labels[i] if labels else None) or _derive_label(gd, i), width, height)
+        for i, gd in enumerate(graphs)
+    ]
+    payload = {"title": title, "examples": examples}
+    data_js = json.dumps(payload).replace("</", "<\\/")  # safe to embed in <script>
+    return _TEMPLATE.replace("__TITLE__", html.escape(title)).replace("__DATA__", data_js)
+
+
 def render_graph_explorer_html(
     graphs: dict | list[dict],
     output_path: str | Path,
@@ -144,16 +179,9 @@ def render_graph_explorer_html(
     between them and each keeps its own manual grouping.  *labels* optionally
     overrides the per-graph dropdown labels (else derived from ``prompt``).
     """
-    if isinstance(graphs, dict):
-        graphs = [graphs]
-    examples = [
-        _graph_payload(gd, (labels[i] if labels else None) or _derive_label(gd, i), width, height)
-        for i, gd in enumerate(graphs)
-    ]
-    payload = {"title": title, "examples": examples}
-    data_js = json.dumps(payload).replace("</", "<\\/")  # safe to embed in <script>
-    doc = _TEMPLATE.replace("__TITLE__", html.escape(title)).replace("__DATA__", data_js)
-
+    doc = render_graph_explorer_html_str(
+        graphs, labels=labels, title=title, width=width, height=height
+    )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(doc, encoding="utf-8")
@@ -177,8 +205,12 @@ _TEMPLATE = """<!DOCTYPE html>
   #pick { font-size:13px; padding:2px 6px; margin-right:10px; }
   button { font-size:12px; padding:2px 9px; cursor:pointer; }
   #main { display:flex; height:calc(100vh - 46px); }
-  #left { flex:1; display:flex; flex-direction:column; min-width:0; border-right:1px solid #ddd; }
-  #right { width:380px; overflow:auto; padding:8px 12px; }
+  #left { flex:1; display:flex; flex-direction:column; min-width:200px; }
+  #hsplit { flex:0 0 5px; cursor:col-resize; background:#e6e6e6; }
+  #vsplit { flex:0 0 5px; cursor:row-resize; background:#eee; }
+  #hsplit:hover, #hsplit.drag { background:#aaa; }
+  #vsplit:hover, #vsplit.drag { background:#bbb; }
+  #right { flex:0 0 auto; width:380px; overflow:auto; padding:8px 12px; }
   .ptitle { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin:4px 10px 0; }
   .legend { text-transform:none; letter-spacing:0; color:#888; margin-left:6px; }
   .legend svg { vertical-align:middle; margin:0 2px 0 9px; }
@@ -230,9 +262,11 @@ _TEMPLATE = """<!DOCTYPE html>
         <svg width="13" height="13"><polygon points="6.5,2 11,11 2,11" fill="none" stroke="#333"/></svg>logit
         &middot; fill = group</span></div>
     <div id="graphwrap"><svg id="g"></svg></div>
+    <div id="vsplit" title="drag to resize"></div>
     <div class="ptitle">Subgraph &mdash; your groups collapsed (drag a box to move &middot; click a member to inspect)</div>
     <div id="subwrap"><svg id="sg"></svg></div>
   </div>
+  <div id="hsplit" title="drag to resize"></div>
   <div id="right">
     <div id="detail"></div>
     <h3>Groups</h3>
@@ -576,6 +610,16 @@ function exportGroups() {
   a.download = "groups_" + EX[cur].label.replace(/[^A-Za-z0-9]+/g,"_") + ".json"; a.click();
 }
 
+// Exposed for the interactive host page (parent reads the user's supernodes to steer
+// them). Returns named groups with their FEATURE node refs (only features are steerable).
+window.getGroupsForSteering = function() {
+  return groups.map(gr => ({
+    name: gr.name,
+    nodes: gr.members.map(i => N[i]).filter(n => n.t === "feature")
+      .map(n => ({layer: n.layer, feature_idx: n.f, position: n.pos})),
+  })).filter(g => g.nodes.length);
+};
+
 function panzoom(svg) {
   let vb={x:0,y:0,w:1,h:1}, pan=false, sx=0, sy=0;
   function set(){ svg.setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
@@ -631,6 +675,26 @@ pick.addEventListener("change", e => loadExample(+e.target.value));
 document.getElementById("mk").addEventListener("click", makeGroup);
 document.getElementById("clr").addEventListener("click", () => { selecting.clear(); repaintNodes(); });
 document.getElementById("exp").addEventListener("click", exportGroups);
+
+// Draggable panel splitters: #hsplit (graph area | detail) and #vsplit (graph | subgraph).
+(function () {
+  const main = document.getElementById("main"), left = document.getElementById("left");
+  const right = document.getElementById("right"), gw = document.getElementById("graphwrap");
+  const hs = document.getElementById("hsplit"), vs = document.getElementById("vsplit");
+  let mode = null;
+  hs.addEventListener("mousedown", e => { mode = "h"; hs.classList.add("drag"); e.preventDefault(); });
+  vs.addEventListener("mousedown", e => { mode = "v"; vs.classList.add("drag"); e.preventDefault(); });
+  window.addEventListener("mousemove", e => {
+    if (mode === "h") {
+      const r = main.getBoundingClientRect();
+      right.style.width = Math.max(220, Math.min(r.right - e.clientX, r.width - 260)) + "px";
+    } else if (mode === "v") {
+      const top = gw.getBoundingClientRect().top;
+      gw.style.flex = "0 0 " + Math.max(120, Math.min(e.clientY - top, left.clientHeight - 160)) + "px";
+    }
+  });
+  window.addEventListener("mouseup", () => { mode = null; hs.classList.remove("drag"); vs.classList.remove("drag"); });
+})();
 
 loadExample(0);
 </script>

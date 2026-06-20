@@ -98,3 +98,43 @@ class TestPruneGraph:
         for e in result.graph.edges:
             assert 0 <= e.source < n
             assert 0 <= e.target < n
+
+
+class TestInfluenceFaithfulToCircuitTracer:
+    """Lock node-influence to circuit-tracer's reference implementation."""
+
+    def test_matches_circuit_tracer(self):
+        import numpy as np
+        import pytest
+
+        ct = pytest.importorskip("circuit_tracer.graph")
+        import torch
+
+        from llm_circuits.circuits.graph_pruning import (
+            _build_adjacency_matrix,
+            _compute_influence,
+            _normalize_matrix,
+        )
+
+        # nodes [features, errors, tokens, logits] (circuit-tracer order); edges (src, tgt, w)
+        e = [(3, 0, 1.0), (0, 1, 2.0), (1, 4, 3.0), (2, 4, 0.5), (3, 4, 0.1)]
+        n = 5
+        nodes = [
+            AttributionNode("feature", layer=0, position=0),
+            AttributionNode("feature", layer=1, position=0),
+            AttributionNode("error", layer=0, position=0),
+            AttributionNode("embedding", layer=-1, position=0),
+            AttributionNode("logit", layer=2, position=0, token_id=9),
+        ]
+        edges = [AttributionEdge(source=s, target=t, weight=w) for s, t, w in e]
+        lw = np.zeros(n)
+        lw[4] = 1.0
+
+        ours = _compute_influence(_normalize_matrix(_build_adjacency_matrix(nodes, edges)), lw)
+
+        a_ct = torch.zeros(n, n, dtype=torch.float64)
+        for s, t, w in e:
+            a_ct[t, s] += w
+        theirs = ct.compute_node_influence(a_ct, torch.from_numpy(lw)).numpy()
+
+        assert np.abs(ours - theirs).max() < 1e-6

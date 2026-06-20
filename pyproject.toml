@@ -36,6 +36,11 @@ notebook = [
     "jupyterlab",
     "ipykernel",
 ]
+serve = [
+    "fastapi>=0.137.2",
+    "httpx>=0.28.1",
+    "uvicorn>=0.49.0",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true

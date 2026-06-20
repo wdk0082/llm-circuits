@@ -127,6 +127,7 @@ def build_attribution_graph(
     n_bos_tokens: int = 1,
     top_k_logits: int = 3,
     max_feature_targets: int | None = None,
+    max_feature_nodes: int | None = None,
     min_edge_weight: float = 0.0,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
@@ -266,24 +267,33 @@ def build_attribution_graph(
             )
         )
 
-    # Feature nodes: non-zero activations per (layer, position)
+    # Feature nodes: non-zero activations per (layer, position).  Optionally cap to the
+    # top-`max_feature_nodes` by |activation| so dense inputs (which can fire ~1M+
+    # features) stay bounded for edge computation and the prune adjacency matrix.
+    # Default None keeps every non-zero feature (unchanged for the existing pipelines).
+    feat_candidates: list[tuple[int, int, int, float]] = []  # (layer, position, feat, act)
     for layer in sorted(features.keys()):
         feat_tensor = features[layer]  # (seq, d_transcoder)
         for p in range(n_bos_tokens, seq_len):
-            nonzero_feats = feat_tensor[p].nonzero(as_tuple=True)[0]
-            for f_idx in nonzero_feats:
-                f = f_idx.item()
-                idx = len(graph.nodes)
-                node_index[("feature", layer, p, f)] = idx
-                graph.nodes.append(
-                    AttributionNode(
-                        node_type="feature",
-                        layer=layer,
-                        position=p,
-                        feature_idx=f,
-                        activation=feat_tensor[p, f].item(),
-                    )
-                )
+            row = feat_tensor[p]
+            nz = row.nonzero(as_tuple=True)[0]
+            if nz.numel() == 0:
+                continue
+            # vectorised read (avoids a GPU->CPU sync per feature)
+            for f, act in zip(nz.tolist(), row[nz].tolist(), strict=True):
+                feat_candidates.append((layer, p, f, act))
+    if max_feature_nodes is not None and len(feat_candidates) > max_feature_nodes:
+        feat_candidates.sort(key=lambda c: abs(c[3]), reverse=True)
+        feat_candidates = feat_candidates[:max_feature_nodes]
+    feat_candidates.sort(key=lambda c: (c[0], c[1], c[2]))  # stable node ordering
+    for layer, p, f, act in feat_candidates:
+        idx = len(graph.nodes)
+        node_index[("feature", layer, p, f)] = idx
+        graph.nodes.append(
+            AttributionNode(
+                node_type="feature", layer=layer, position=p, feature_idx=f, activation=act
+            )
+        )
 
     # Error nodes: one per (layer, position)
     for layer in sorted(errors.keys()):

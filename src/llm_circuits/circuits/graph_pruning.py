@@ -51,13 +51,14 @@ def _build_adjacency_matrix(
 ) -> np.ndarray:
     """Build a dense ``(N, N)`` adjacency matrix from *edges*.
 
-    ``A[source, target] = weight``.  Multiple edges between the same pair
-    are summed.
+    ``A[target, source] = weight`` (circuit-tracer's convention), so row-normalising
+    distributes each target's *incoming* edges and ``logit_weights @ A`` propagates
+    influence backward from the logits.  Multiple edges between the same pair are summed.
     """
     n = len(nodes)
     A = np.zeros((n, n), dtype=np.float64)
     for e in edges:
-        A[e.source, e.target] += e.weight
+        A[e.target, e.source] += e.weight
     return A
 
 
@@ -92,19 +93,18 @@ def _compute_influence(
     *,
     max_iter: int = 1000,
 ) -> np.ndarray:
-    """Compute per-node influence via power iteration.
+    """Per-node influence via power iteration (mirrors circuit-tracer ``compute_influence``).
 
-    Iterates ``influence = w @ A + w @ A^2 + ...`` until convergence.
-    Uses the *transposed* normalised adjacency so that influence flows
-    backward from logits to upstream nodes.
+    With ``A_norm[target, source]`` row-normalised over sources, the total influence is
+    ``logit_weights @ (A + A^2 + ...)``, accumulated incrementally until it converges
+    (the graph is a DAG, so ``A^k`` is nilpotent).
     """
-    At = A_norm.T  # influence propagates backward
-    current = logit_weights @ At
+    current = logit_weights @ A_norm
     influence = current.copy()
     for _ in range(max_iter):
-        if not np.any(current > 0):
+        if not np.any(current):
             break
-        current = current @ At
+        current = current @ A_norm
         influence += current
     return influence
 
@@ -269,18 +269,18 @@ def prune_graph(
     pruned_A[~kept_nodes, :] = 0.0
     pruned_A[:, ~kept_nodes] = 0.0
 
-    # Step 4: edge threshold — compute per-edge influence scores
-    # Following circuit-tracer: edge_score[i,j] = normalized_A[i,j] * influence[i]
-    # where influence includes the logit weights themselves.
+    # Step 4: edge threshold — compute per-edge influence scores.
+    # circuit-tracer: edge_score[target, source] = normalized_A[target, source] *
+    # (influence[target] + logit_weight[target]).
     A_norm_pruned = _normalize_matrix(pruned_A)
     pruned_influence = _compute_influence(A_norm_pruned, logit_weights) + logit_weights
     edge_scores_matrix = A_norm_pruned * pruned_influence[:, None]
 
-    # Flatten edge scores to per-edge list
+    # Flatten edge scores to per-edge list (A indexed [target, source])
     kept_edges = np.zeros(len(edges), dtype=bool)
     edge_score_vals = np.zeros(len(edges), dtype=np.float64)
     for i, e in enumerate(edges):
-        edge_score_vals[i] = edge_scores_matrix[e.source, e.target]
+        edge_score_vals[i] = edge_scores_matrix[e.target, e.source]
 
     edge_cutoff = _find_threshold(edge_score_vals, edge_threshold)
     kept_edges = edge_score_vals >= edge_cutoff

@@ -43,6 +43,32 @@ def test_load_then_build_returns_explorer_html(client):
     assert body["n_nodes"] >= 1 and body["n_feature_nodes"] >= 0
 
 
+def test_build_accepts_influence_node_selection(client):
+    # circuit-tracer-aligned cap criterion + no-cap are accepted by the API contract
+    client.post("/api/load", json={"size": "4b"})
+    r = client.post(
+        "/api/build",
+        json={"text": "hi", "node_selection": "influence", "max_feature_nodes": None},
+    )
+    assert r.status_code == 200
+
+
+def test_build_too_dense_maps_to_400(client, monkeypatch):
+    # The too-dense-prompt guard raises ValueError -> the route must surface it as an
+    # actionable 400 (not a bare 500) so the user sees the "set a feat-nodes cap" hint.
+    import llm_circuits.serve.app as app_mod
+
+    client.post("/api/load", json={"size": "4b"})
+
+    def boom(_req):
+        raise ValueError("too many active feature nodes; set a feat-nodes cap")
+
+    monkeypatch.setattr(app_mod._engine, "build", boom)
+    r = client.post("/api/build", json={"text": "x", "max_feature_nodes": None})
+    assert r.status_code == 400
+    assert "feat-nodes cap" in r.json()["detail"]
+
+
 def test_load_unknown_size_400(client):
     r = client.post("/api/load", json={"size": "999b"})
     assert r.status_code == 400

@@ -297,6 +297,48 @@ def prune_graph(
     return _reindex_graph(graph, kept_nodes, kept_edges, influence)
 
 
+def cap_features_by_influence(
+    graph: AttributionGraph,
+    max_feature_nodes: int | None,
+) -> AttributionGraph:
+    """Keep only the top-``max_feature_nodes`` feature nodes by influence on the logits.
+
+    This is circuit-tracer's node-selection *criterion* (influence, not activation): it
+    scores each node with the same power-iteration influence :func:`prune_graph` uses and
+    drops all but the most influential feature nodes (and their edges).  Embedding, error
+    and logit nodes are always kept.
+
+    Unlike the activation cap applied during graph construction, this needs the full edge
+    matrix (build with ``max_feature_targets=None``) because influence depends on edges.
+    Use it to bound a graph the way circuit-tracer does *before* :func:`prune_graph`.
+    Returns *graph* unchanged when ``max_feature_nodes`` is ``None`` or not exceeded.
+    """
+    nodes = graph.nodes
+    feat_idx = [i for i, n in enumerate(nodes) if n.node_type == "feature"]
+    if max_feature_nodes is None or len(feat_idx) <= max_feature_nodes:
+        return graph
+
+    A = _build_adjacency_matrix(nodes, graph.edges)
+    influence = _compute_influence(_normalize_matrix(A), _compute_logit_weights(nodes))
+
+    feat_idx.sort(key=lambda i: influence[i], reverse=True)
+    keep_feat = set(feat_idx[:max_feature_nodes])
+    keep = np.array([n.node_type != "feature" or i in keep_feat for i, n in enumerate(nodes)])
+
+    old_to_new: dict[int, int] = {}
+    new_nodes: list[AttributionNode] = []
+    for old, node in enumerate(nodes):
+        if keep[old]:
+            old_to_new[old] = len(new_nodes)
+            new_nodes.append(node)
+    new_edges = [
+        AttributionEdge(old_to_new[e.source], old_to_new[e.target], e.weight)
+        for e in graph.edges
+        if keep[e.source] and keep[e.target]
+    ]
+    return AttributionGraph(nodes=new_nodes, edges=new_edges)
+
+
 # ---------------------------------------------------------------------------
 # Public API — JSON round-trip
 # ---------------------------------------------------------------------------

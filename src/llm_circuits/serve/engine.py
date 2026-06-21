@@ -161,6 +161,11 @@ class MockEngine(BaseEngine):
 class RealEngine(BaseEngine):
     """Model-backed engine (GPU). Validated on an A100 node."""
 
+    # Refuse builds whose full edge matrix would exceed this many feature targets: the
+    # dense N*N prune/influence matrix grows as N^2, so ~40k is the practical ceiling on
+    # an 80GB GPU + ~1TB host (243k wedged the GPU). no-cap/influence work below this.
+    MAX_TARGETS_GUARD = 40_000
+
     def __init__(self) -> None:
         super().__init__()
         self.model = None
@@ -168,6 +173,7 @@ class RealEngine(BaseEngine):
         self.tc = None
         self._ctx: dict | None = None  # cached build context (input_ids, n_bos, tokens)
         self._load_lock = threading.Lock()  # serialize loads (no concurrent stacking)
+        self._build_lock = threading.Lock()  # serialize builds (one model, no concurrency)
 
     def _free(self) -> None:
         """Release the resident model/transcoder so a reload doesn't stack GPU memory."""
@@ -243,38 +249,63 @@ class RealEngine(BaseEngine):
 
         from llm_circuits.circuits.attribution_graph import build_attribution_graph
 
-        input_ids, n_bos = self._tokenize(req.text, req.use_chat)
-        tokens = [self.tokenizer.decode(t) for t in input_ids[0]]
-        with torch.no_grad():
-            answer_id = int(self.model(input_ids).logits[0, -1].argmax().item())
+        # One model, no concurrency: reject overlapping builds cleanly instead of running
+        # two autograd passes on the same graph (which corrupts state / strands GPU memory).
+        if not self._build_lock.acquire(blocking=False):
+            raise RuntimeError("a build is already in progress; wait for it to finish")
+        try:
+            input_ids, n_bos = self._tokenize(req.text, req.use_chat)
+            tokens = [self.tokenizer.decode(t) for t in input_ids[0]]
+            with torch.no_grad():
+                answer_id = int(self.model(input_ids).logits[0, -1].argmax().item())
 
-        # build_attribution_graph uses torch.autograd.grad internally -> NOT no_grad.
-        graph = build_attribution_graph(
-            self.model,
-            self.tc,
-            input_ids,
-            n_bos_tokens=n_bos,
-            max_feature_targets=req.max_feature_targets,
-            max_feature_nodes=req.max_feature_nodes,
-        )
-        logit_token_strs = {
-            str(n.token_id): self.tokenizer.decode(n.token_id)
-            for n in graph.nodes
-            if n.node_type == "logit"
-        }
-        self._ctx = {
-            "input_ids": input_ids,
-            "n_bos": n_bos,
-            "tokens": tokens,
-            "raw_graph": graph,  # cached for fast re-pruning
-            "answer_str": self.tokenizer.decode(answer_id),
-            "logit_token_strs": logit_token_strs,
-            "prompt": req.text,
-            "repo": get_spec(f"qwen3-{self.loaded_size}").transcoder_repo,
-            "label_cache": {},  # (layer, feature_idx) -> label dict, reused across reprunes
-            "ex_cache": {},
-        }
-        return self._prune_and_render(req.node_threshold, req.edge_threshold)
+            # build_attribution_graph uses torch.autograd.grad internally -> NOT no_grad.
+            influence_cap = getattr(req, "node_selection", "activation") == "influence"
+            # "influence" mode mirrors circuit-tracer: keep ALL active features + the FULL
+            # edge matrix during construction, then drop all but the top-N by influence.
+            # "activation" mode caps cheaply by |activation| before edges are computed.
+            graph = build_attribution_graph(
+                self.model,
+                self.tc,
+                input_ids,
+                n_bos_tokens=n_bos,
+                max_feature_targets=None if influence_cap else req.max_feature_targets,
+                max_feature_nodes=None if influence_cap else req.max_feature_nodes,
+                # Safety backstop: a no-cap / influence build on a very dense prompt produces
+                # 100k+ feature nodes -> the full edge matrix and the dense N*N prune matrix
+                # would OOM the GPU/host. Fail fast (-> 409 with a helpful message) instead.
+                max_targets_guard=self.MAX_TARGETS_GUARD,
+            )
+            if influence_cap and req.max_feature_nodes is not None:
+                from llm_circuits.circuits.graph_pruning import cap_features_by_influence
+
+                graph = cap_features_by_influence(graph, req.max_feature_nodes)
+            logit_token_strs = {
+                str(n.token_id): self.tokenizer.decode(n.token_id)
+                for n in graph.nodes
+                if n.node_type == "logit"
+            }
+            self._ctx = {
+                "input_ids": input_ids,
+                "n_bos": n_bos,
+                "tokens": tokens,
+                "raw_graph": graph,  # cached for fast re-pruning
+                "answer_str": self.tokenizer.decode(answer_id),
+                "logit_token_strs": logit_token_strs,
+                "prompt": req.text,
+                "repo": get_spec(f"qwen3-{self.loaded_size}").transcoder_repo,
+                "label_cache": {},  # (layer, feature_idx) -> label, reused across reprunes
+                "ex_cache": {},
+            }
+            return self._prune_and_render(req.node_threshold, req.edge_threshold)
+        except Exception:
+            # Free GPU memory stranded by an aborted/failed build (guard, OOM, ...) so the
+            # next build/load starts clean rather than on a near-full device.
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            raise
+        finally:
+            self._build_lock.release()
 
     def reprune(self, req) -> dict:
         """Cheap step: re-prune the cached raw graph at new thresholds (no model)."""

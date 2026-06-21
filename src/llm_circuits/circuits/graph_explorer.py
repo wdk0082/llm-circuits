@@ -201,7 +201,8 @@ _TEMPLATE = """<!DOCTYPE html>
   header { padding:8px 14px; border-bottom:1px solid #ddd; background:#fff; }
   h2 { display:inline-block; margin:0 12px 0 0; font-size:15px; }
   #toolbar { font-size:12px; color:#555; }
-  #toolbar input { font-size:12px; padding:2px 6px; width:140px; }
+  #toolbar input[type="text"] { font-size:12px; padding:2px 6px; width:140px; }
+  #toolbar label { white-space:nowrap; }
   #pick { font-size:13px; padding:2px 6px; margin-right:10px; }
   button { font-size:12px; padding:2px 9px; cursor:pointer; }
   #main { display:flex; height:calc(100vh - 46px); }
@@ -474,8 +475,17 @@ function histHtml(n) {
     grid += `<line x1="${x}" y1="0" x2="${x}" y2="${ht}" stroke="#cfd8dc" stroke-width="0.6"/>`;
     labels += `<text x="${x}" y="${ht+10}" font-size="9" fill="#999" text-anchor="middle">${Math.pow(10,d)}</text>`;
   }
-  return `<svg width="${w}" height="${ht+13}" style="display:block">${grid}${bars}${labels}</svg>`
-    + `<div style="color:#999;font-size:10px;text-align:center">activation value (log scale)</div>`;
+  // red marker: where THIS node's activation falls in the feature's distribution
+  let marker = "", note = "";
+  if (n.act != null && isFinite(n.act)) {
+    const xa = X(n.act).toFixed(1);
+    marker = `<line x1="${xa}" y1="-1" x2="${xa}" y2="${ht}" stroke="#e53935" stroke-width="1.6"/>`
+      + `<polygon points="${xa},-1 ${(+xa-3).toFixed(1)},-6 ${(+xa+3).toFixed(1)},-6" fill="#e53935"/>`;
+    note = ` &middot; <span style="color:#e53935">this token = ${(+n.act).toFixed(2)}</span>`;
+  }
+  return `<svg width="${w}" height="${ht+13}" viewBox="0 -7 ${w} ${ht+20}" style="display:block;overflow:visible">`
+    + `${grid}${bars}${marker}${labels}</svg>`
+    + `<div style="color:#999;font-size:10px;text-align:center">activation value (log scale)${note}</div>`;
 }
 function showDetail(idx) {
   const n = N[idx];

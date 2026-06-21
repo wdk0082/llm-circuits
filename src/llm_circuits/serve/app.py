@@ -71,8 +71,12 @@ def api_load(req: LoadRequest) -> ModelsResponse:
 def api_build(req: BuildRequest) -> BuildResponse:
     try:
         return BuildResponse(**_engine.build(req))
-    except RuntimeError as exc:
+    except ValueError as exc:  # too-dense prompt guard -> actionable message
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:  # not loaded / build in progress / CUDA OOM
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:  # readable message instead of a bare 500
+        raise HTTPException(status_code=500, detail=f"build failed: {exc}") from exc
 
 
 @app.post("/api/reprune", response_model=BuildResponse)

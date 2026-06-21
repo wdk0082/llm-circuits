@@ -145,6 +145,7 @@ def build_attribution_graph(
     top_k_logits: int = 3,
     max_feature_targets: int | None = None,
     max_feature_nodes: int | None = None,
+    max_targets_guard: int | None = None,
     edge_batch_size: int = 128,
     min_edge_weight: float = 0.0,
     mlp_name_template: str = "model.layers.{layer}.mlp",
@@ -498,6 +499,16 @@ def build_attribution_graph(
         feature_targets.sort(key=lambda t: abs(t[1].activation), reverse=True)
         feature_targets = feature_targets[:max_feature_targets]
     n_feat = len(feature_targets)
+    if max_targets_guard is not None and n_feat > max_targets_guard:
+        # The full edge matrix + the dense N*N pruning matrix scale with n_feat^2, so a
+        # very dense prompt (with no activation cap) would OOM the GPU/host. Fail fast with
+        # a clear message instead of wedging the device.
+        raise ValueError(
+            f"This prompt has {n_feat} active feature nodes; computing the full edge "
+            f"matrix / influence over them would exhaust memory (guard={max_targets_guard}). "
+            f"Set a feature-node cap (e.g. feat-nodes=8000 with cap-by=activation), or use a "
+            f"shorter prompt for no-cap / influence mode."
+        )
     log.info(
         "Computing edges for %d feature targets (batched, chunk=%d) ...", n_feat, edge_batch_size
     )

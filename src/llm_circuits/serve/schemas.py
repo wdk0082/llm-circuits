@@ -23,6 +23,11 @@ class BuildRequest(BaseModel):
     # edge backward is batched); pruning then selects by influence. Set an int to cap.
     max_feature_targets: int | None = None
     max_feature_nodes: int | None = 4000  # cap active-feature nodes (dense inputs fire ~1M+)
+    # How max_feature_nodes selects which features to keep:
+    #   "activation" — cheap pre-edge cap by |activation| (fast; the default).
+    #   "influence"  — circuit-tracer's criterion: build the full edge matrix over ALL
+    #                  active features, then keep the top-N by influence (slower, faithful).
+    node_selection: str = "activation"
     node_threshold: float = 0.8
     edge_threshold: float = 0.98
 

@@ -77,8 +77,13 @@
   <b title="changing these needs a full Build">build caps (slow)</b>
   <label title="feature nodes that get incoming edges (blank = full matrix over kept nodes)">targets
     <input id="targets" type="number" min="16" step="32" value="" placeholder="full" style="width:60px"></label>
-  <label title="max active-feature nodes kept (by |activation|) before pruning">feat-nodes
-    <input id="featnodes" type="number" min="200" step="500" value="4000" style="width:74px"></label>
+  <label title="max active-feature nodes kept before pruning (blank = no cap: keep ALL active features — slow, the most faithful)">feat-nodes
+    <input id="featnodes" type="number" min="200" step="500" value="4000" placeholder="no cap" style="width:74px"></label>
+  <label title="how feat-nodes selects which features to keep. activation = cheap pre-edge cap by |activation|. influence = circuit-tracer's criterion: build the full edge matrix over ALL features, then keep top-N by influence (slow, faithful).">cap by
+    <select id="capby" style="width:92px">
+      <option value="activation" selected>activation</option>
+      <option value="influence">influence</option>
+    </select></label>
 </div>
 <div id="main">
   <div id="left"><iframe id="frame" title="attribution graph"></iframe></div>
@@ -161,9 +166,12 @@ $("buildbtn").addEventListener("click", async () => {
   try {
     const t0 = performance.now();
     const tgt = $("targets").value.trim();
+    const fn = $("featnodes").value.trim();
     const b = await api("/api/build", {
       text, use_chat: $("usechat").checked, ...pruneVals(),
-      max_feature_targets: tgt === "" ? null : +tgt, max_feature_nodes: +$("featnodes").value,
+      max_feature_targets: tgt === "" ? null : +tgt,
+      max_feature_nodes: fn === "" ? null : +fn,
+      node_selection: $("capby").value,
     });
     frame.srcdoc = b.html;
     const dt = ((performance.now()-t0)/1000).toFixed(1);

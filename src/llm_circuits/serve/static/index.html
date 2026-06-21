@@ -79,7 +79,7 @@
     <input id="targets" type="number" min="16" step="32" value="" placeholder="full" style="width:60px"></label>
   <label title="max active-feature nodes kept before pruning (blank = no cap: keep ALL active features — slow, the most faithful)">feat-nodes
     <input id="featnodes" type="number" min="200" step="500" value="4000" placeholder="no cap" style="width:74px"></label>
-  <label title="how feat-nodes selects which features to keep. activation = cheap pre-edge cap by |activation|. influence = circuit-tracer's criterion: build the full edge matrix over ALL features, then keep top-N by influence (slow, faithful).">cap by
+  <label title="how feat-nodes selects which features to keep. activation = cheap pre-edge cap by |activation|. influence = circuit-tracer's dynamic selection: attribute features in influence order (never builds the full matrix) and keep the most influential feat-nodes. Influence mode is faithful but needs a feat-nodes cap (it can't run uncapped on a dense model).">cap by
     <select id="capby" style="width:92px">
       <option value="activation" selected>activation</option>
       <option value="influence">influence</option>
@@ -161,7 +161,10 @@ function pruneVals() {
 $("buildbtn").addEventListener("click", async () => {
   const text = $("sentence").value.trim();
   if (!text) return;
-  $("buildstatus").textContent = "building attribution graph…";
+  // Disable while a build is in flight so a second click can't fire an overlapping build
+  // (the server would reject it with 409). Sequential rebuilds after each finish are fine.
+  $("buildbtn").disabled = true;
+  $("buildstatus").textContent = "building attribution graph… (this can take a while)";
   clearGraphState();
   try {
     const t0 = performance.now();
@@ -178,7 +181,11 @@ $("buildbtn").addEventListener("click", async () => {
     $("buildstatus").innerHTML =
       `<span class="ok">${b.n_nodes} nodes, ${b.n_feature_nodes} features</span> (${dt}s)`;
     $("reprunebtn").disabled = false;
-  } catch (e) { $("buildstatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  } catch (e) {
+    $("buildstatus").innerHTML = `<span class="err">${esc(e.message)}</span>`;
+  } finally {
+    $("buildbtn").disabled = false;  // re-enable for the next rebuild (same or new prompt)
+  }
 });
 
 // Fast re-prune of the cached graph at new thresholds (no model forward).

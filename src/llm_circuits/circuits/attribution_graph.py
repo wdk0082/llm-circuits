@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import torch
 from torch import Tensor, nn
 
@@ -126,9 +127,102 @@ def _batched_edge_weights_multi(
     ``(n_src, d_model)``.  Returns ``(B_targets, n_src)`` where
     ``w[b, s] = <grad_3d[b, positions[s]], contrib_mat[s]>`` — the multi-target
     generalisation of :func:`_batched_edge_weights`.
+
+    Sources are grouped by position so each group is a single ``(B, d) @ (d, n_p)``
+    matmul — this avoids materialising the ``(B, n_src, d_model)`` intermediate, which
+    would OOM when ``n_src`` is large (e.g. influence mode, where *every* feature is a
+    potential source).  ``seq`` is small, so the per-position loop is cheap.
     """
-    g = grad_3d.index_select(1, positions).to(contrib_mat.dtype)  # (B, n_src, d_model)
-    return (g * contrib_mat.unsqueeze(0)).sum(dim=2)  # (B, n_src)
+    out = contrib_mat.new_zeros(grad_3d.shape[0], positions.shape[0])  # (B, n_src)
+    for p in torch.unique(positions):
+        mask = positions == p
+        gp = grad_3d[:, int(p), :].to(contrib_mat.dtype)  # (B, d_model)
+        out[:, mask] = gp @ contrib_mat[mask].T  # (B, n_p)
+    return out
+
+
+def _partial_feature_influence(
+    n_nodes: int,
+    tgt: np.ndarray,
+    src: np.ndarray,
+    weight: np.ndarray,
+    logit_nodes: np.ndarray,
+    logit_p: np.ndarray,
+    *,
+    max_iter: int = 128,
+) -> np.ndarray:
+    """Power-iteration node influence over the *partially-attributed* graph.
+
+    Mirrors circuit-tracer's ``compute_partial_influences`` but sparse (``bincount``
+    scatter-adds over the edge arrays) so it scales to ~10^5 nodes without a dense
+    ``N*N`` matrix.  Only attributed *targets* (nodes that already have incoming edges)
+    propagate influence back to their sources, so an as-yet-unattributed feature accrues
+    influence purely from the targets it feeds — exactly the signal used to decide which
+    feature to attribute next.
+
+    ``tgt``/``src``/``weight`` are parallel arrays over the currently-attributed edges
+    (``weight`` indexed ``[target, source]``); ``logit_nodes``/``logit_p`` seed the
+    logits with their probabilities.  Returns an influence score per node index.
+    """
+    influence = np.zeros(n_nodes, dtype=np.float64)
+    if tgt.size == 0:
+        return influence
+    absw = np.abs(weight)
+    # Row-normalise over each target's incoming edges (sum of |w| per target).
+    row_sum = np.bincount(tgt, weights=absw, minlength=n_nodes)
+    w_norm = absw / np.maximum(row_sum[tgt], 1e-10)
+
+    prod = np.zeros(n_nodes, dtype=np.float64)
+    prod[logit_nodes] = logit_p
+    for _ in range(max_iter):
+        # distribute each target's current mass to its sources, weighted by w_norm
+        prod = np.bincount(src, weights=prod[tgt] * w_norm, minlength=n_nodes)
+        if not prod.any():
+            break
+        influence += prod
+    return influence
+
+
+def _select_features_by_influence(
+    n_nodes: int,
+    feat_node_arr: np.ndarray,
+    logit_nodes: np.ndarray,
+    logit_p: np.ndarray,
+    target_cap: int,
+    get_edges: Any,
+    attribute: Any,
+    *,
+    batch_size: int,
+    update_interval: int,
+) -> np.ndarray:
+    """circuit-tracer's dynamic feature selection (``_run_attribution``'s Phase 4 loop).
+
+    Repeatedly: rank features by influence over the edges attributed *so far*
+    (``get_edges()`` -> ``(tgt, src, weight)`` arrays), then ``attribute(chunk)`` the most
+    influential unvisited ones in batches, re-ranking every ``update_interval`` batches,
+    until ``target_cap`` features have been attributed.  Pure orchestration (no torch) so
+    it can be unit-tested against a synthetic edge oracle.  Returns a boolean ``visited``
+    mask over node indices.
+    """
+    visited = np.zeros(n_nodes, dtype=bool)
+    n_visited = 0
+    while n_visited < target_cap:
+        tgt, src, wgt = get_edges()
+        infl = _partial_feature_influence(n_nodes, tgt, src, wgt, logit_nodes, logit_p)
+        order = feat_node_arr[np.argsort(-infl[feat_node_arr])]
+        pending = [int(i) for i in order if not visited[i]][: update_interval * batch_size]
+        if not pending:
+            break  # no more reachable/influential features
+        for s in range(0, len(pending), batch_size):
+            if n_visited >= target_cap:
+                break
+            chunk = pending[s : s + batch_size]
+            if n_visited + len(chunk) > target_cap:
+                chunk = chunk[: target_cap - n_visited]
+            attribute(chunk)
+            visited[chunk] = True
+            n_visited += len(chunk)
+    return visited
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +240,8 @@ def build_attribution_graph(
     max_feature_targets: int | None = None,
     max_feature_nodes: int | None = None,
     max_targets_guard: int | None = None,
+    feature_selection: str = "all",
+    update_interval: int = 4,
     edge_batch_size: int = 128,
     min_edge_weight: float = 0.0,
     mlp_name_template: str = "model.layers.{layer}.mlp",
@@ -301,7 +397,14 @@ def build_attribution_graph(
             # vectorised read (avoids a GPU->CPU sync per feature)
             for f, act in zip(nz.tolist(), row[nz].tolist(), strict=True):
                 feat_candidates.append((layer, p, f, act))
-    if max_feature_nodes is not None and len(feat_candidates) > max_feature_nodes:
+    # In "influence_ranked" mode every active feature is kept as a NODE (a potential
+    # source/column); max_feature_nodes instead caps how many become attributed TARGETS
+    # (chosen by influence in Phase 5). The activation pre-cap applies only to "all" mode.
+    if (
+        feature_selection != "influence_ranked"
+        and max_feature_nodes is not None
+        and len(feat_candidates) > max_feature_nodes
+    ):
         feat_candidates.sort(key=lambda c: abs(c[3]), reverse=True)
         feat_candidates = feat_candidates[:max_feature_nodes]
     feat_candidates.sort(key=lambda c: (c[0], c[1], c[2]))  # stable node ordering
@@ -345,14 +448,33 @@ def build_attribution_graph(
             )
         )
 
+    n_feature_nodes = sum(1 for n in graph.nodes if n.node_type == "feature")
     log.info(
         "Built %d nodes (emb=%d, feat=%d, err=%d, logit=%d)",
         len(graph.nodes),
         sum(1 for n in graph.nodes if n.node_type == "embedding"),
-        sum(1 for n in graph.nodes if n.node_type == "feature"),
+        n_feature_nodes,
         sum(1 for n in graph.nodes if n.node_type == "error"),
         sum(1 for n in graph.nodes if n.node_type == "logit"),
     )
+
+    # Fail FAST — before the expensive contrib-vector (Phase 4) and edge (Phase 5) work —
+    # if this build would attribute more feature targets than the guard allows. A dense
+    # prompt with no cap (or influence with no cap) otherwise wastes a long Phase 4 over
+    # ~10^6 features before tripping. The dense N*N prune matrix scales as planned^2.
+    if max_targets_guard is not None:
+        if feature_selection == "influence_ranked":
+            planned = min(max_feature_nodes or n_feature_nodes, n_feature_nodes)
+        else:
+            planned = min(n_feature_nodes, max_feature_targets or n_feature_nodes)
+        if planned > max_targets_guard:
+            raise ValueError(
+                f"This build would attribute {planned} feature targets "
+                f"(guard={max_targets_guard}); on a dense prompt the dense N*N prune matrix "
+                f"would exhaust memory. Set a feat-nodes cap (e.g. 8000) — influence mode "
+                f"keeps the most influential features, so a cap is near-lossless — or use a "
+                f"shorter prompt for no-cap mode."
+            )
 
     # ------------------------------------------------------------------
     # Phase 4: pre-compute source contribution vectors
@@ -491,60 +613,116 @@ def build_attribution_graph(
         for k, layer in enumerate(source_layers):
             _emit_batch_edges(jacs[k + 1], layer_batches.get(layer), target_node_idxs)
 
-    # --- Feature targets (grouped by layer, chunked) ---
-    feature_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"]
-    if max_feature_targets is not None and len(feature_targets) > max_feature_targets:
-        # Top-by-activation (selection bias vs circuit-tracer's influence ranking; raise
-        # max_feature_targets toward the feature-node count to approach the full matrix).
-        feature_targets.sort(key=lambda t: abs(t[1].activation), reverse=True)
-        feature_targets = feature_targets[:max_feature_targets]
-    n_feat = len(feature_targets)
-    if max_targets_guard is not None and n_feat > max_targets_guard:
-        # The full edge matrix + the dense N*N pruning matrix scale with n_feat^2, so a
-        # very dense prompt (with no activation cap) would OOM the GPU/host. Fail fast with
-        # a clear message instead of wedging the device.
-        raise ValueError(
-            f"This prompt has {n_feat} active feature nodes; computing the full edge "
-            f"matrix / influence over them would exhaust memory (guard={max_targets_guard}). "
-            f"Set a feature-node cap (e.g. feat-nodes=8000 with cap-by=activation), or use a "
-            f"shorter prompt for no-cap / influence mode."
-        )
-    log.info(
-        "Computing edges for %d feature targets (batched, chunk=%d) ...", n_feat, edge_batch_size
-    )
+    # Compute edges for a set of feature targets, grouped by layer + chunked.
+    def _attribute_feature_targets(
+        targets: list[tuple[int, AttributionNode]], n_feat: int | None = None
+    ) -> None:
+        by_layer_targets: dict[int, list[tuple[int, AttributionNode]]] = {}
+        for idx, node in targets:
+            by_layer_targets.setdefault(node.layer, []).append((idx, node))
+        done = 0
+        for layer in sorted(by_layer_targets):
+            source_layers = list(range(layer))  # sources are earlier layers (+ embedding)
+            pre_act = pre_activations[layer]
+            pre2d = pre_act[0] if pre_act.dim() == 3 else pre_act  # (seq, d_transcoder)
+            ts = by_layer_targets[layer]
+            for s in range(0, len(ts), edge_batch_size):
+                chunk = ts[s : s + edge_batch_size]
+                pos_idx = torch.tensor([n.position for _, n in chunk], device=pre2d.device)
+                feat_idx = torch.tensor([n.feature_idx for _, n in chunk], device=pre2d.device)
+                target_vec = pre2d[pos_idx, feat_idx]  # (B,)
+                _edges_for_target_batch(target_vec, [i for i, _ in chunk], source_layers)
+                done += len(chunk)
+            if n_feat is not None:
+                log.info(
+                    "  layer %d: %d/%d feature targets done (edges: %d)",
+                    layer,
+                    done,
+                    n_feat,
+                    len(graph.edges),
+                )
 
-    by_layer_targets: dict[int, list[tuple[int, AttributionNode]]] = {}
-    for idx, node in feature_targets:
-        by_layer_targets.setdefault(node.layer, []).append((idx, node))
-
-    done = 0
-    for layer in sorted(by_layer_targets):
-        source_layers = list(range(layer))  # sources are earlier layers (+ embedding)
-        pre_act = pre_activations[layer]
-        pre2d = pre_act[0] if pre_act.dim() == 3 else pre_act  # (seq, d_transcoder)
-        targets = by_layer_targets[layer]
-        for s in range(0, len(targets), edge_batch_size):
-            chunk = targets[s : s + edge_batch_size]
-            pos_idx = torch.tensor([n.position for _, n in chunk], device=pre2d.device)
-            feat_idx = torch.tensor([n.feature_idx for _, n in chunk], device=pre2d.device)
-            target_vec = pre2d[pos_idx, feat_idx]  # (B,)
-            _edges_for_target_batch(target_vec, [i for i, _ in chunk], source_layers)
-            done += len(chunk)
-        log.info(
-            "  layer %d: %d/%d feature targets done (edges: %d)",
-            layer,
-            done,
-            n_feat,
-            len(graph.edges),
-        )
-
-    # --- Logit targets (batched) ---
-    logit_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"]
-    if logit_targets:
+    def _attribute_logits() -> None:
+        logit_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"]
+        if not logit_targets:
+            return
         log.info("Computing edges for %d logit targets ...", len(logit_targets))
         pos_idx = torch.tensor([n.position for _, n in logit_targets], device=logits.device)
         tok_idx = torch.tensor([n.token_id for _, n in logit_targets], device=logits.device)
         target_vec = logits[pos_idx, tok_idx]  # (B,)
         _edges_for_target_batch(target_vec, [i for i, _ in logit_targets], list(range(n_layers)))
 
+    all_feature_targets = [
+        (idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"
+    ]
+
+    # --- Influence-ranked feature attribution (circuit-tracer's dynamic selection) ---
+    if feature_selection == "influence_ranked":
+        _attribute_logits()  # logits first: they seed the influence propagation
+        logit_nodes = np.array(
+            [i for i, n in enumerate(graph.nodes) if n.node_type == "logit"], dtype=np.int64
+        )
+        logit_acts = np.array([graph.nodes[i].activation for i in logit_nodes], dtype=np.float64)
+        logit_p = np.exp(logit_acts - logit_acts.max())
+        logit_p = logit_p / logit_p.sum() if logit_p.sum() else logit_p
+
+        n_total = len(all_feature_targets)
+        target_cap = min(max_feature_nodes or n_total, n_total)  # guarded above, pre-Phase-4
+        n_nodes = len(graph.nodes)
+        feat_node_arr = np.array([idx for idx, _ in all_feature_targets], dtype=np.int64)
+        node_by_idx = {idx: node for idx, node in all_feature_targets}
+        log.info(
+            "Influence-ranked attribution: selecting %d of %d feature nodes ...",
+            target_cap,
+            n_total,
+        )
+
+        def _get_edges() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+            m = len(graph.edges)
+            return (
+                np.fromiter((e.target for e in graph.edges), np.int64, m),
+                np.fromiter((e.source for e in graph.edges), np.int64, m),
+                np.fromiter((e.weight for e in graph.edges), np.float64, m),
+            )
+
+        def _attribute(chunk: list[int]) -> None:
+            _attribute_feature_targets([(i, node_by_idx[i]) for i in chunk])
+            log.info("  attributed up to feature node (edges: %d)", len(graph.edges))
+
+        visited = _select_features_by_influence(
+            n_nodes,
+            feat_node_arr,
+            logit_nodes,
+            logit_p,
+            target_cap,
+            _get_edges,
+            _attribute,
+            batch_size=edge_batch_size,
+            update_interval=update_interval,
+        )
+
+        # Drop features that were never attributed (and edges touching them); reindex.
+        keep = [(n.node_type != "feature") or bool(visited[i]) for i, n in enumerate(graph.nodes)]
+        old_to_new = {old: i for i, old in enumerate(o for o in range(len(graph.nodes)) if keep[o])}
+        new_nodes = [n for i, n in enumerate(graph.nodes) if keep[i]]
+        new_edges = [
+            AttributionEdge(old_to_new[e.source], old_to_new[e.target], e.weight)
+            for e in graph.edges
+            if keep[e.source] and keep[e.target]
+        ]
+        return AttributionGraph(nodes=new_nodes, edges=new_edges)
+
+    # --- "all" mode: attribute every kept feature node (optionally capped by activation) ---
+    feature_targets = all_feature_targets
+    if max_feature_targets is not None and len(feature_targets) > max_feature_targets:
+        # Top-by-activation (selection bias vs circuit-tracer's influence ranking; raise
+        # max_feature_targets toward the feature-node count to approach the full matrix).
+        feature_targets.sort(key=lambda t: abs(t[1].activation), reverse=True)
+        feature_targets = feature_targets[:max_feature_targets]
+    n_feat = len(feature_targets)  # guarded above (pre-Phase-4)
+    log.info(
+        "Computing edges for %d feature targets (batched, chunk=%d) ...", n_feat, edge_batch_size
+    )
+    _attribute_feature_targets(feature_targets, n_feat=n_feat)
+    _attribute_logits()
     return graph

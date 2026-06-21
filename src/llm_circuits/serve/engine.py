@@ -260,26 +260,24 @@ class RealEngine(BaseEngine):
                 answer_id = int(self.model(input_ids).logits[0, -1].argmax().item())
 
             # build_attribution_graph uses torch.autograd.grad internally -> NOT no_grad.
+            # "influence" mode = circuit-tracer's dynamic selection: attribute features in
+            # influence order (never materialising the full edge matrix), capped to
+            # max_feature_nodes by influence. "activation" mode caps cheaply by |activation|
+            # before edges are computed. max_feature_nodes is the cap in BOTH modes.
             influence_cap = getattr(req, "node_selection", "activation") == "influence"
-            # "influence" mode mirrors circuit-tracer: keep ALL active features + the FULL
-            # edge matrix during construction, then drop all but the top-N by influence.
-            # "activation" mode caps cheaply by |activation| before edges are computed.
             graph = build_attribution_graph(
                 self.model,
                 self.tc,
                 input_ids,
                 n_bos_tokens=n_bos,
-                max_feature_targets=None if influence_cap else req.max_feature_targets,
-                max_feature_nodes=None if influence_cap else req.max_feature_nodes,
-                # Safety backstop: a no-cap / influence build on a very dense prompt produces
-                # 100k+ feature nodes -> the full edge matrix and the dense N*N prune matrix
-                # would OOM the GPU/host. Fail fast (-> 409 with a helpful message) instead.
+                max_feature_targets=req.max_feature_targets,
+                max_feature_nodes=req.max_feature_nodes,
+                feature_selection="influence_ranked" if influence_cap else "all",
+                # Safety backstop: a no-cap build (or influence with no cap) on a very dense
+                # prompt produces 100k+ targets -> the dense N*N prune matrix would OOM.
+                # Fail fast (-> 400 with a helpful message) instead of wedging the device.
                 max_targets_guard=self.MAX_TARGETS_GUARD,
             )
-            if influence_cap and req.max_feature_nodes is not None:
-                from llm_circuits.circuits.graph_pruning import cap_features_by_influence
-
-                graph = cap_features_by_influence(graph, req.max_feature_nodes)
             logit_token_strs = {
                 str(n.token_id): self.tokenizer.decode(n.token_id)
                 for n in graph.nodes

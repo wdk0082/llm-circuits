@@ -57,7 +57,10 @@ FORMATS: list[tuple[str, str]] = [
 
 N_EXAMPLES = 6  # how many solved problems to graph
 TOP_K_LOGITS = 5
-MAX_FEATURE_TARGETS = 500
+# Cap active-feature NODES (bounds the prune adjacency matrix), then compute the FULL
+# edge matrix over them (targets=None) -- affordable now that the edge backward is batched.
+MAX_FEATURE_NODES = 8000
+MAX_FEATURE_TARGETS = None
 MIN_EDGE_WEIGHT = 1e-4
 NODE_THRESHOLD = 0.7
 EDGE_THRESHOLD = 0.9
@@ -122,6 +125,7 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
         n_bos_tokens=n_bos,
         top_k_logits=TOP_K_LOGITS,
         max_feature_targets=MAX_FEATURE_TARGETS,
+        max_feature_nodes=MAX_FEATURE_NODES,
         min_edge_weight=MIN_EDGE_WEIGHT,
     )
     pruned = prune_graph(graph, node_threshold=NODE_THRESHOLD, edge_threshold=EDGE_THRESHOLD)

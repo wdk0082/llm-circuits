@@ -184,6 +184,8 @@ class TestRenderGraphExplorer:
         assert "46,125,50" in t and "198,40,40" in t
         # draggable supernodes in the subgraph
         assert "subDrag" in t and "supernode" in t and "subUnitsPerPx" in t
+        # hide-error-nodes toggle
+        assert 'id="hideerr"' in t and "hideErr" in t
         # ungrouped nodes are hollow; type encoded by shape (incl. legend)
         assert 'class="legend"' in t and "logit" in t
         # the full-size SVG rule must be scoped to the graph svgs, not match the

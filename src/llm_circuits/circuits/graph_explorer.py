@@ -245,6 +245,7 @@ _TEMPLATE = """<!DOCTYPE html>
   <h2>__TITLE__</h2>
   <span id="toolbar">
     <label>example <select id="pick"></select></label>
+    <label title="hide reconstruction-error nodes for readability"><input type="checkbox" id="hideerr"> hide errors</label>
     <span id="hint">click = inspect &nbsp;·&nbsp; shift-click = add to group</span> &nbsp;
     <input id="gname" type="text" placeholder="group name">
     <button id="mk">Group selected (<span id="seln">0</span>)</button>
@@ -282,6 +283,7 @@ const PAL = ["#8e24aa","#00897b","#f4511e","#3949ab","#c0ca33","#6d4c41","#00acc
 const PLACEHOLDER = "<em>Click a node to inspect its inputs, outputs, token predictions, and activation examples.</em>";
 
 let cur = 0, N, E, POS, W, H, XT, YT, amin, amax, arange, MAXW;
+let hideErr = false;  // hide reconstruction-error nodes + their edges for readability
 const allGroups = EX.map(() => []);
 let groups = allGroups[0];
 let selected = null;
@@ -367,6 +369,7 @@ function buildMain() {
     grp.addEventListener("mouseenter", () => { tip.innerHTML = esc(n.short); tip.style.display="block"; });
     grp.addEventListener("mousemove", ev => { tip.style.left=(ev.clientX+12)+"px"; tip.style.top=(ev.clientY+12)+"px"; });
     grp.addEventListener("mouseleave", () => { tip.style.display="none"; });
+    if (hideErr && n.t === "error") grp.style.display = "none";
     nodesG.appendChild(grp); nodeEls.push(grp);
   });
 }
@@ -376,6 +379,7 @@ function showEdges(idx) {
   const conn = new Set([idx]);
   E.forEach(([s,t,w]) => {
     if (s!==idx && t!==idx) return;
+    if (hideErr && (N[s].t === "error" || N[t].t === "error")) return;  // skip hidden errors
     const ln = document.createElementNS(SVGNS,"line");
     ln.setAttribute("x1",POS[s][0]); ln.setAttribute("y1",POS[s][1]);
     ln.setAttribute("x2",POS[t][0]); ln.setAttribute("y2",POS[t][1]);
@@ -406,6 +410,7 @@ function repaintNodes() {
 function featRows(idx, incoming) {
   const rows = E.filter(e => incoming ? e[1]===idx : e[0]===idx)
                 .map(e => ({other: incoming ? e[0] : e[1], w: e[2]}))
+                .filter(r => !(hideErr && N[r.other].t === "error"))  // skip hidden errors
                 .sort((a,b)=>Math.abs(b.w)-Math.abs(a.w)).slice(0,15);
   if (!rows.length) return "<div style='color:#999'>none</div>";
   return rows.map(r => `<div class="frow nav" data-idx="${r.other}" title="click to select">`
@@ -672,6 +677,12 @@ function loadExample(i) {
 const pick = document.getElementById("pick");
 EX.forEach((ex,i) => { const o=document.createElement("option"); o.value=i; o.textContent=ex.label; pick.appendChild(o); });
 pick.addEventListener("change", e => loadExample(+e.target.value));
+document.getElementById("hideerr").addEventListener("change", e => {
+  hideErr = e.target.checked;
+  buildMain();  // re-applies error-node visibility
+  repaintNodes();
+  if (selected != null) { showDetail(selected); showEdges(selected); } else clearEdges();
+});
 document.getElementById("mk").addEventListener("click", makeGroup);
 document.getElementById("clr").addEventListener("click", () => { selecting.clear(); repaintNodes(); });
 document.getElementById("exp").addEventListener("click", exportGroups);

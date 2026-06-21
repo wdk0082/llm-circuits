@@ -114,6 +114,23 @@ def _batched_edge_weights(
     return (g * contrib_mat).sum(dim=1)
 
 
+def _batched_edge_weights_multi(
+    grad_3d: Tensor,
+    positions: Tensor,
+    contrib_mat: Tensor,
+) -> Tensor:
+    """Edge weights for a batch of TARGETS against a batch of sources.
+
+    ``grad_3d`` is ``(B_targets, seq, d_model)`` (per-target gradient w.r.t. one
+    source layer's residual), ``positions`` is ``(n_src,)`` long, ``contrib_mat`` is
+    ``(n_src, d_model)``.  Returns ``(B_targets, n_src)`` where
+    ``w[b, s] = <grad_3d[b, positions[s]], contrib_mat[s]>`` — the multi-target
+    generalisation of :func:`_batched_edge_weights`.
+    """
+    g = grad_3d.index_select(1, positions).to(contrib_mat.dtype)  # (B, n_src, d_model)
+    return (g * contrib_mat.unsqueeze(0)).sum(dim=2)  # (B, n_src)
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -128,6 +145,7 @@ def build_attribution_graph(
     top_k_logits: int = 3,
     max_feature_targets: int | None = None,
     max_feature_nodes: int | None = None,
+    edge_batch_size: int = 128,
     min_edge_weight: float = 0.0,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
@@ -403,79 +421,119 @@ def build_attribution_graph(
             layer_batches[lay] = batch
 
     # ------------------------------------------------------------------
-    # Phase 5: compute edges via autograd.grad
+    # Phase 5: compute edges via BATCHED autograd.  Targets that share a source
+    # set (same layer) are differentiated together with one vmapped backward
+    # (``is_grads_batched``), chunked to ``edge_batch_size`` for memory — i.e.
+    # ~one backward per (layer, chunk) instead of one per target.
     # ------------------------------------------------------------------
 
-    def _emit_edges(
-        grad_tensor: Tensor | None,
+    def _emit_batch_edges(
+        grad_batched: Tensor | None,
         batch: tuple[list[int], Tensor, Tensor] | None,
-        target_node_idx: int,
+        target_node_idxs: list[int],
     ) -> None:
-        """Emit edges from one batched source group to *target_node_idx*.
+        """Emit edges from one source group to a *batch* of targets.
 
-        ``weight_i = <grad[pos_i], contrib_i>`` for every source ``i`` in the
-        batch, computed as a single fused op with one device->host transfer.
+        ``grad_batched`` is ``(B_targets, [1,] seq, d_model)``; ``batch`` is the
+        source ``(node_idx, positions, contrib_mat)``.  Computes the
+        ``(B_targets, n_sources)`` weight matrix in one fused op and appends the
+        edges above ``min_edge_weight``.
         """
-        if grad_tensor is None or batch is None:
+        if grad_batched is None or batch is None:
             return
-        node_idx, positions, contrib_mat = batch
-        grad_2d = grad_tensor[0] if grad_tensor.dim() == 3 else grad_tensor
-        weights = _batched_edge_weights(grad_2d, positions, contrib_mat)  # (n_sources,)
+        src_node_idx, positions, contrib_mat = batch
+        g = grad_batched[:, 0] if grad_batched.dim() == 4 else grad_batched  # (B, seq, d_model)
+        w = _batched_edge_weights_multi(g, positions, contrib_mat)  # (B_targets, n_sources)
+        mask = w.abs() > min_edge_weight
+        if not bool(mask.any()):
+            return
+        bs = mask.nonzero(as_tuple=False).tolist()  # [[target_row, source_col], ...]
+        vals = w[mask].tolist()
         edges = graph.edges
-        for src_idx, w in zip(node_idx, weights.tolist(), strict=True):
-            if abs(w) > min_edge_weight:
-                edges.append(AttributionEdge(source=src_idx, target=target_node_idx, weight=w))
+        for (tb, sc), weight in zip(bs, vals, strict=True):
+            edges.append(
+                AttributionEdge(source=src_node_idx[sc], target=target_node_idxs[tb], weight=weight)
+            )
 
-    def _compute_edges_for_target(
-        target_scalar: Tensor,
-        target_node_idx: int,
+    def _edges_for_target_batch(
+        target_vec: Tensor,  # (B,) target scalars sharing *source_layers*
+        target_node_idxs: list[int],
         source_layers: list[int],
     ) -> None:
-        """Compute edges from all sources at *source_layers* to the target."""
         grad_inputs = [embedding] + [residuals[sl] for sl in source_layers]
-
-        grads = torch.autograd.grad(
-            target_scalar,
-            grad_inputs,
-            retain_graph=True,
-            allow_unused=True,
-        )
-
-        # grads[0] = d(target)/d(embedding); grads[k+1] = d(target)/d(residuals[layer_k])
-        _emit_edges(grads[0], embed_batch, target_node_idx)
+        b = target_vec.shape[0]
+        try:
+            cot = torch.eye(b, device=target_vec.device, dtype=target_vec.dtype)
+            jacs = torch.autograd.grad(
+                target_vec,
+                grad_inputs,
+                grad_outputs=cot,
+                is_grads_batched=True,
+                retain_graph=True,
+                allow_unused=True,
+            )
+        except RuntimeError:
+            # vmap fallback: per-target backward, then stack (correct, slower).
+            cols = [
+                torch.autograd.grad(
+                    target_vec[j], grad_inputs, retain_graph=True, allow_unused=True
+                )
+                for j in range(b)
+            ]
+            jacs = [
+                None
+                if any(c[ii] is None for c in cols)
+                else torch.stack([c[ii] for c in cols], dim=0)
+                for ii in range(len(grad_inputs))
+            ]
+        _emit_batch_edges(jacs[0], embed_batch, target_node_idxs)
         for k, layer in enumerate(source_layers):
-            _emit_edges(grads[k + 1], layer_batches.get(layer), target_node_idx)
+            _emit_batch_edges(jacs[k + 1], layer_batches.get(layer), target_node_idxs)
 
-    # --- Feature targets ---
+    # --- Feature targets (grouped by layer, chunked) ---
     feature_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "feature"]
     if max_feature_targets is not None and len(feature_targets) > max_feature_targets:
-        # Sort by activation magnitude (descending) to keep the most important features
+        # Top-by-activation (selection bias vs circuit-tracer's influence ranking; raise
+        # max_feature_targets toward the feature-node count to approach the full matrix).
         feature_targets.sort(key=lambda t: abs(t[1].activation), reverse=True)
         feature_targets = feature_targets[:max_feature_targets]
     n_feat = len(feature_targets)
-    log.info("Computing edges for %d feature targets ...", n_feat)
-    for i, (node_idx, node) in enumerate(feature_targets):
-        if (i + 1) % 50 == 0 or i == 0:
-            log.info(
-                "  feature target %d / %d  (edges so far: %d)", i + 1, n_feat, len(graph.edges)
-            )
-        layer = node.layer
+    log.info(
+        "Computing edges for %d feature targets (batched, chunk=%d) ...", n_feat, edge_batch_size
+    )
+
+    by_layer_targets: dict[int, list[tuple[int, AttributionNode]]] = {}
+    for idx, node in feature_targets:
+        by_layer_targets.setdefault(node.layer, []).append((idx, node))
+
+    done = 0
+    for layer in sorted(by_layer_targets):
+        source_layers = list(range(layer))  # sources are earlier layers (+ embedding)
         pre_act = pre_activations[layer]
-        if pre_act.dim() == 3:
-            target_scalar = pre_act[0, node.position, node.feature_idx]
-        else:
-            target_scalar = pre_act[node.position, node.feature_idx]
+        pre2d = pre_act[0] if pre_act.dim() == 3 else pre_act  # (seq, d_transcoder)
+        targets = by_layer_targets[layer]
+        for s in range(0, len(targets), edge_batch_size):
+            chunk = targets[s : s + edge_batch_size]
+            pos_idx = torch.tensor([n.position for _, n in chunk], device=pre2d.device)
+            feat_idx = torch.tensor([n.feature_idx for _, n in chunk], device=pre2d.device)
+            target_vec = pre2d[pos_idx, feat_idx]  # (B,)
+            _edges_for_target_batch(target_vec, [i for i, _ in chunk], source_layers)
+            done += len(chunk)
+        log.info(
+            "  layer %d: %d/%d feature targets done (edges: %d)",
+            layer,
+            done,
+            n_feat,
+            len(graph.edges),
+        )
 
-        source_layers = list(range(layer))
-        _compute_edges_for_target(target_scalar, node_idx, source_layers)
-
-    # --- Logit targets ---
+    # --- Logit targets (batched) ---
     logit_targets = [(idx, n) for idx, n in enumerate(graph.nodes) if n.node_type == "logit"]
-    log.info("Computing edges for %d logit targets ...", len(logit_targets))
-    for i, (node_idx, node) in enumerate(logit_targets):
-        log.info("  logit target %d / %d", i + 1, len(logit_targets))
-        target_scalar = logits[node.position, node.token_id]
-        source_layers = list(range(n_layers))
-        _compute_edges_for_target(target_scalar, node_idx, source_layers)
+    if logit_targets:
+        log.info("Computing edges for %d logit targets ...", len(logit_targets))
+        pos_idx = torch.tensor([n.position for _, n in logit_targets], device=logits.device)
+        tok_idx = torch.tensor([n.token_id for _, n in logit_targets], device=logits.device)
+        target_vec = logits[pos_idx, tok_idx]  # (B,)
+        _edges_for_target_batch(target_vec, [i for i, _ in logit_targets], list(range(n_layers)))
 
     return graph

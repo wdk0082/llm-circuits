@@ -19,7 +19,9 @@ class LoadRequest(BaseModel):
 class BuildRequest(BaseModel):
     text: str
     use_chat: bool = False  # wrap in the chat template (instruct Q&A) vs raw completion
-    max_feature_targets: int | None = 256
+    # None = compute the FULL edge matrix over the kept feature nodes (cheap now that the
+    # edge backward is batched); pruning then selects by influence. Set an int to cap.
+    max_feature_targets: int | None = None
     max_feature_nodes: int | None = 4000  # cap active-feature nodes (dense inputs fire ~1M+)
     node_threshold: float = 0.8
     edge_threshold: float = 0.98

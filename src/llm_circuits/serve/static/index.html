@@ -75,8 +75,8 @@
   <span id="reprunestatus" class="muted"></span>
   <span style="color:#ccc">|</span>
   <b title="changing these needs a full Build">build caps (slow)</b>
-  <label title="feature nodes that get incoming edges computed">targets
-    <input id="targets" type="number" min="16" step="32" value="256" style="width:68px"></label>
+  <label title="feature nodes that get incoming edges (blank = full matrix over kept nodes)">targets
+    <input id="targets" type="number" min="16" step="32" value="" placeholder="full" style="width:60px"></label>
   <label title="max active-feature nodes kept (by |activation|) before pruning">feat-nodes
     <input id="featnodes" type="number" min="200" step="500" value="4000" style="width:74px"></label>
 </div>
@@ -160,9 +160,10 @@ $("buildbtn").addEventListener("click", async () => {
   clearGraphState();
   try {
     const t0 = performance.now();
+    const tgt = $("targets").value.trim();
     const b = await api("/api/build", {
       text, use_chat: $("usechat").checked, ...pruneVals(),
-      max_feature_targets: +$("targets").value, max_feature_nodes: +$("featnodes").value,
+      max_feature_targets: tgt === "" ? null : +tgt, max_feature_nodes: +$("featnodes").value,
     });
     frame.srcdoc = b.html;
     const dt = ((performance.now()-t0)/1000).toFixed(1);

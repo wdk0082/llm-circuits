@@ -8,6 +8,7 @@ import torch
 
 from llm_circuits.circuits.attribution_graph import (
     _batched_edge_weights,
+    _batched_edge_weights_multi,
     build_attribution_graph,
 )
 
@@ -60,7 +61,30 @@ class TestBatchedEdgeWeights:
         assert w.dtype == torch.float32
 
 
-def test_build_attribution_graph_exposes_min_edge_weight():
+class TestBatchedEdgeWeightsMulti:
+    """The multi-target helper must equal the single-target one, per target row."""
+
+    def test_matches_single_target_per_row(self):
+        torch.manual_seed(1)
+        b, seq, d, n = 7, 12, 32, 20
+        grad_3d = torch.randn(b, seq, d)
+        positions = torch.randint(0, seq, (n,))
+        contrib_mat = torch.randn(n, d)
+        multi = _batched_edge_weights_multi(grad_3d, positions, contrib_mat)
+        assert multi.shape == (b, n)
+        for t in range(b):
+            single = _batched_edge_weights(grad_3d[t], positions, contrib_mat)
+            assert torch.allclose(multi[t], single, atol=1e-6)
+
+    def test_casts_to_contrib_dtype(self):
+        grad_3d = torch.randn(3, 4, 5, dtype=torch.float64)
+        positions = torch.tensor([0, 3])
+        contrib_mat = torch.randn(2, 5, dtype=torch.float32)
+        assert _batched_edge_weights_multi(grad_3d, positions, contrib_mat).dtype == torch.float32
+
+
+def test_build_attribution_graph_exposes_knobs():
     params = inspect.signature(build_attribution_graph).parameters
     assert "min_edge_weight" in params
     assert params["min_edge_weight"].default == 0.0
+    assert "edge_batch_size" in params  # batched-backward chunk size

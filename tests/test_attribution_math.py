@@ -12,6 +12,7 @@ from llm_circuits.circuits.attribution_graph import (
     _batched_edge_weights_multi,
     _partial_feature_influence,
     _select_features_by_influence,
+    _select_salient_logits,
     build_attribution_graph,
 )
 
@@ -93,6 +94,50 @@ def test_build_attribution_graph_exposes_knobs():
     assert "edge_batch_size" in params  # batched-backward chunk size
     assert "feature_selection" in params  # "all" | "influence_ranked"
     assert "update_interval" in params  # influence re-ranking cadence
+    # circuit-tracer logit selection (replaces the old fixed top_k_logits)
+    assert params["desired_logit_prob"].default == 0.95
+    assert params["max_n_logits"].default == 10
+
+
+class TestSalientLogits:
+    """Logit selection + demeaning must match circuit-tracer's compute_salient_logits."""
+
+    def test_selection_matches_circuit_tracer(self):
+        import pytest
+
+        cs = pytest.importorskip("circuit_tracer.utils.salient_logits")
+        torch.manual_seed(3)
+        d_vocab, d_model = 200, 16
+        logits = torch.randn(d_vocab) * 2.0
+        w_u = torch.randn(d_model, d_vocab)  # (d_model, d_vocab)
+
+        idx_ct, p_ct, _ = cs.compute_salient_logits(
+            logits, w_u, max_n_logits=10, desired_logit_prob=0.95
+        )
+        idx_ours, p_ours = _select_salient_logits(logits, desired_logit_prob=0.95, max_n_logits=10)
+
+        assert idx_ours.tolist() == idx_ct.tolist()  # same token set, same order
+        assert torch.allclose(p_ours, p_ct, atol=1e-6)  # same actual probabilities
+
+    def test_demeaned_gradient_matches_unembed_demean(self):
+        # Our logit target (logit_t - mean_v logit_v) has gradient W_U[:,t] - mean_v W_U[:,v],
+        # which is exactly circuit-tracer's demeaned unembedding direction.
+        import pytest
+
+        cs = pytest.importorskip("circuit_tracer.utils.salient_logits")
+        torch.manual_seed(4)
+        d_vocab, d_model = 50, 8
+        resid = torch.randn(d_model)
+        w_u = torch.randn(d_model, d_vocab)
+        logits = resid @ w_u  # (d_vocab,)
+
+        _, _, demeaned_vecs = cs.compute_salient_logits(
+            logits, w_u, max_n_logits=5, desired_logit_prob=0.95
+        )
+        idx, _ = _select_salient_logits(logits, 0.95, 5)
+        # gradient of (logit_t - mean_v logit_v) wrt resid = W_U[:,t] - W_U.mean(dim=1)
+        ours_dirs = (w_u[:, idx] - w_u.mean(dim=1, keepdim=True)).T  # (k, d_model)
+        assert torch.allclose(ours_dirs, demeaned_vecs, atol=1e-5)
 
 
 # A tiny partially-attributed graph used by the influence tests below.

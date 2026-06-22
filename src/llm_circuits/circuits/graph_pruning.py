@@ -63,14 +63,23 @@ def _build_adjacency_matrix(
 
 
 def _compute_logit_weights(nodes: list[AttributionNode]) -> np.ndarray:
-    """Softmax over logit-node activations → probability vector of length *N*."""
+    """Logit-node probability vector of length *N* (circuit-tracer's influence seed).
+
+    Prefers each logit node's stored ``prob`` (the actual full-vocab softmax probability,
+    summing to ~desired_logit_prob — what circuit-tracer uses). Falls back to a softmax
+    over logit-node activations for older graphs built before ``prob`` was recorded.
+    """
     n = len(nodes)
     w = np.zeros(n, dtype=np.float64)
     logit_indices = [i for i, nd in enumerate(nodes) if nd.node_type == "logit"]
     if not logit_indices:
         return w
+    if all(nodes[i].prob is not None for i in logit_indices):
+        for li in logit_indices:
+            w[li] = float(nodes[li].prob)
+        return w
+    # Fallback: numerically-stable softmax over activations (renormalised over selected).
     logit_vals = np.array([nodes[i].activation for i in logit_indices])
-    # Numerically-stable softmax
     logit_vals = logit_vals - logit_vals.max()
     exp_vals = np.exp(logit_vals)
     probs = exp_vals / exp_vals.sum()
@@ -354,6 +363,7 @@ def graph_from_dict(d: dict) -> AttributionGraph:
             feature_idx=nd.get("feature_idx"),
             token_id=nd.get("token_id"),
             activation=nd.get("activation", 0.0),
+            prob=nd.get("prob"),
             label=nd.get("label"),
         )
         for nd in d.get("nodes", [])
@@ -389,6 +399,7 @@ def graph_to_dict(
             "feature_idx": nd.feature_idx,
             "token_id": nd.token_id,
             "activation": nd.activation,
+            "prob": nd.prob,
             "label": nd.label,
         }
         for nd in graph.nodes

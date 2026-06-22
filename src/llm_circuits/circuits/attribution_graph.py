@@ -57,6 +57,14 @@ class AttributionNode:
     activation: float = 0.0
     """Scalar activation value (feature activation, logit value, or L2 norm)."""
 
+    prob: float | None = None
+    """Softmax probability over the full vocab (only for ``"logit"`` nodes).
+
+    circuit-tracer seeds influence with the *actual* probabilities of the selected
+    logits (which sum to ``desired_logit_prob``), not a renormalised softmax over only
+    the selected ones — so we store it here rather than re-deriving from ``activation``.
+    """
+
     label: dict | None = None
     """Feature label metadata (only for ``"feature"`` nodes).
 
@@ -139,6 +147,22 @@ def _batched_edge_weights_multi(
         gp = grad_3d[:, int(p), :].to(contrib_mat.dtype)  # (B, d_model)
         out[:, mask] = gp @ contrib_mat[mask].T  # (B, n_p)
     return out
+
+
+def _select_salient_logits(
+    logit_vec: Tensor, desired_logit_prob: float, max_n_logits: int
+) -> tuple[Tensor, Tensor]:
+    """Pick the smallest logit set whose cumulative softmax prob >= desired_logit_prob.
+
+    Mirrors circuit-tracer's ``compute_salient_logits`` index/probability logic exactly
+    (top-k by prob, then a cumulative-probability cutoff capped at ``max_n_logits``).
+    Returns ``(token_ids, probs)`` for the selected logits (probs sum to ~desired_prob).
+    """
+    probs = torch.softmax(logit_vec, dim=-1)
+    top_p, top_idx = probs.topk(max_n_logits)
+    cutoff = int(torch.searchsorted(top_p.cumsum(0), desired_logit_prob)) + 1
+    cutoff = min(cutoff, max_n_logits)
+    return top_idx[:cutoff], top_p[:cutoff]
 
 
 def _partial_feature_influence(
@@ -236,7 +260,8 @@ def build_attribution_graph(
     input_ids: Tensor,
     *,
     n_bos_tokens: int = 1,
-    top_k_logits: int = 3,
+    desired_logit_prob: float = 0.95,
+    max_n_logits: int = 10,
     max_feature_targets: int | None = None,
     max_feature_nodes: int | None = None,
     max_targets_guard: int | None = None,
@@ -431,11 +456,14 @@ def build_attribution_graph(
                 )
             )
 
-    # Logit nodes: top-k at the last position
+    # Logit nodes: circuit-tracer's `compute_salient_logits` — the smallest set whose
+    # cumulative softmax probability reaches desired_logit_prob, capped at max_n_logits.
     last_pos = seq_len - 1
-    logit_vals, logit_ids = logits[last_pos].topk(top_k_logits)
-    for rank in range(top_k_logits):
-        tok = logit_ids[rank].item()
+    top_idx, top_p = _select_salient_logits(logits[last_pos], desired_logit_prob, max_n_logits)
+    cutoff = len(top_idx)
+    log.info("Selected %d logits with cumulative probability %.4f", cutoff, top_p.sum().item())
+    for rank in range(cutoff):
+        tok = int(top_idx[rank])
         idx = len(graph.nodes)
         node_index[("logit", n_layers, last_pos, tok)] = idx
         graph.nodes.append(
@@ -444,7 +472,8 @@ def build_attribution_graph(
                 layer=n_layers,
                 position=last_pos,
                 token_id=tok,
-                activation=logit_vals[rank].item(),
+                activation=logits[last_pos, tok].item(),  # raw logit value (display / demean ref)
+                prob=float(top_p[rank]),  # actual prob (influence seed; sums to ~desired_prob)
             )
         )
 
@@ -649,7 +678,11 @@ def build_attribution_graph(
         log.info("Computing edges for %d logit targets ...", len(logit_targets))
         pos_idx = torch.tensor([n.position for _, n in logit_targets], device=logits.device)
         tok_idx = torch.tensor([n.token_id for _, n in logit_targets], device=logits.device)
-        target_vec = logits[pos_idx, tok_idx]  # (B,)
+        # Demeaned logit direction (circuit-tracer): attribute (logit_t - mean_v logit_v) so
+        # the gradient seed is the unembedding column minus the mean unembedding direction.
+        # Softmax is invariant to a constant shift, so this is the part that affects p.
+        logit_mean = logits.mean(dim=-1)  # (seq,) mean over vocab per position
+        target_vec = logits[pos_idx, tok_idx] - logit_mean[pos_idx]  # (B,)
         _edges_for_target_batch(target_vec, [i for i, _ in logit_targets], list(range(n_layers)))
 
     all_feature_targets = [
@@ -662,9 +695,9 @@ def build_attribution_graph(
         logit_nodes = np.array(
             [i for i, n in enumerate(graph.nodes) if n.node_type == "logit"], dtype=np.int64
         )
-        logit_acts = np.array([graph.nodes[i].activation for i in logit_nodes], dtype=np.float64)
-        logit_p = np.exp(logit_acts - logit_acts.max())
-        logit_p = logit_p / logit_p.sum() if logit_p.sum() else logit_p
+        # Seed with the actual softmax probabilities (circuit-tracer), not a renormalised
+        # softmax over the selected logits — these sum to ~desired_logit_prob.
+        logit_p = np.array([graph.nodes[i].prob or 0.0 for i in logit_nodes], dtype=np.float64)
 
         n_total = len(all_feature_targets)
         target_cap = min(max_feature_nodes or n_total, n_total)  # guarded above, pre-Phase-4

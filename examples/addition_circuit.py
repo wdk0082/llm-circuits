@@ -56,7 +56,10 @@ FORMATS: list[tuple[str, str]] = [
 ]
 
 N_EXAMPLES = 6  # how many solved problems to graph
-TOP_K_LOGITS = 5
+# circuit-tracer's salient-logit selection: smallest set reaching this cumulative prob,
+# capped at MAX_N_LOGITS (a confident sum picks just the answer token).
+DESIRED_LOGIT_PROB = 0.95
+MAX_N_LOGITS = 10
 # Cap active-feature NODES (bounds the prune adjacency matrix), then compute the FULL
 # edge matrix over them (targets=None) -- affordable now that the edge backward is batched.
 MAX_FEATURE_NODES = 8000
@@ -123,7 +126,8 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
         tc,
         input_ids,
         n_bos_tokens=n_bos,
-        top_k_logits=TOP_K_LOGITS,
+        desired_logit_prob=DESIRED_LOGIT_PROB,
+        max_n_logits=MAX_N_LOGITS,
         max_feature_targets=MAX_FEATURE_TARGETS,
         max_feature_nodes=MAX_FEATURE_NODES,
         min_edge_weight=MIN_EDGE_WEIGHT,

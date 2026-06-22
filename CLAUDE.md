@@ -25,7 +25,7 @@ Mechanistic-interpretability research toolkit for analyzing LLM circuits, suppor
   - **`models/`** — HF model loading via `AutoModelForCausalLM`; `qwen3.py` and `gemma2.py` have family-specific wrappers
   - **`transcoders/`** — `registry.py` has frozen `ModelSpec` dataclass mapping family-prefixed keys (e.g. `qwen3-0.6b`, `gemma2-2b`) to HF repos; `circuit_tracer_loader.py` is the **only** file that imports from circuit-tracer
   - **`instrumentation/`** — Generic PyTorch hook utilities (`attach_hook` context manager, `ActivationRecorder`)
-  - **`circuits/`** — Custom attribution graphs (`build_attribution_graph`), local/global replacement models, graph pruning, HTML visualization, and feature interventions (`run_feature_intervention` = the paper's constrained patching + negative steering, the faithful way to validate circuits; `run_feature_ablation` is the simpler zeroing variant).
+  - **`circuits/`** — Custom attribution graphs (`build_attribution_graph`), local/global replacement models, graph pruning, HTML visualization, and feature interventions (`run_feature_intervention` = circuit-tracer's `feature_intervention` on the real model: decoder delta with the M convention, M=0 no-change / -1 ablate / -2 flip; cross-verified in `verification/`).
   - **`utils/`** — Path resolution, config loading, `seed_everything`
 - **`configs/`** — YAML configs per model size
 - **`examples/`** — Runnable scripts (`uv run python examples/<script>.py`)

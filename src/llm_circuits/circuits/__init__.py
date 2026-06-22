@@ -31,9 +31,6 @@ from llm_circuits.circuits.interventions import (
     AblationResult as AblationResult,
 )
 from llm_circuits.circuits.interventions import (
-    FeatureAblation as FeatureAblation,
-)
-from llm_circuits.circuits.interventions import (
     FeatureIntervention as FeatureIntervention,
 )
 from llm_circuits.circuits.interventions import (
@@ -43,28 +40,25 @@ from llm_circuits.circuits.interventions import (
     ProgressiveAblationResult as ProgressiveAblationResult,
 )
 from llm_circuits.circuits.interventions import (
+    ablate as ablate,
+)
+from llm_circuits.circuits.interventions import (
     ablation_logit_effect as ablation_logit_effect,
 )
 from llm_circuits.circuits.interventions import (
     ablation_prob_effect as ablation_prob_effect,
 )
 from llm_circuits.circuits.interventions import (
-    ablations_to_dict as ablations_to_dict,
-)
-from llm_circuits.circuits.interventions import (
     negative_steer as negative_steer,
-)
-from llm_circuits.circuits.interventions import (
-    run_feature_ablation as run_feature_ablation,
 )
 from llm_circuits.circuits.interventions import (
     run_feature_intervention as run_feature_intervention,
 )
 from llm_circuits.circuits.interventions import (
-    run_progressive_ablation as run_progressive_ablation,
+    run_progressive_intervention as run_progressive_intervention,
 )
 from llm_circuits.circuits.interventions import (
-    run_progressive_intervention as run_progressive_intervention,
+    steer as steer,
 )
 from llm_circuits.circuits.interventions import (
     sweep_patch_end_layer as sweep_patch_end_layer,

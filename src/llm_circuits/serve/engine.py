@@ -127,9 +127,9 @@ class MockEngine(BaseEngine):
         return {"html": html, "n_nodes": len(d["nodes"]), "n_feature_nodes": nfeat}
 
     def steer(self, req) -> dict:
-        # Deterministic, factor-dependent fake distribution so the slider visibly moves.
+        # Deterministic, M-dependent fake distribution so the slider visibly moves.
         base = [("5", 5, 0.80), ("6", 6, 0.10), ("4", 4, 0.05), ("3", 3, 0.03)]
-        shift = max(0.0, 1.0 - abs(req.factor - 1.0) / 2.0)  # M=1 -> unchanged, far -> flattened
+        shift = max(0.0, 1.0 - abs(req.m) / 2.0)  # M=0 -> unchanged, far -> flattened
         steered = []
         for tok, tid, p in base:
             np = p * shift if tok == "5" else p + (0.8 * p) * (1 - shift)
@@ -356,12 +356,11 @@ class RealEngine(BaseEngine):
         nfeat = sum(1 for n in d["nodes"] if n["node_type"] == "feature")
         return {"html": html, "n_nodes": len(d["nodes"]), "n_feature_nodes": nfeat}
 
-    def _interventions(self, nodes, factor):
+    def _interventions(self, nodes, m):
         from llm_circuits.circuits.interventions import FeatureIntervention
 
         return [
-            FeatureIntervention(n.layer, n.feature_idx, position=n.position, factor=factor)
-            for n in nodes
+            FeatureIntervention(n.layer, n.feature_idx, position=n.position, m=m) for n in nodes
         ]
 
     def _top(self, logits_row, k: int) -> list[dict]:
@@ -383,13 +382,13 @@ class RealEngine(BaseEngine):
             raise RuntimeError("build a graph first")
         from llm_circuits.circuits.interventions import run_feature_intervention
 
-        ivs = self._interventions(req.nodes, req.factor)
+        ivs = self._interventions(req.nodes, req.m)
         res = run_feature_intervention(
             self.model,
             self.tc,
             self._ctx["input_ids"],
             ivs,
-            mode=req.mode,
+            freeze_attention=req.freeze_attention,
             patch_end_layer=req.patch_end_layer,
             n_bos_tokens=self._ctx["n_bos"],
         )
@@ -410,7 +409,7 @@ class RealEngine(BaseEngine):
             sweep_patch_end_layer,
         )
 
-        ivs = self._interventions(req.nodes, req.factor)
+        ivs = self._interventions(req.nodes, req.m)
         clean = run_feature_intervention(
             self.model, self.tc, self._ctx["input_ids"], [], n_bos_tokens=self._ctx["n_bos"]
         )
@@ -421,6 +420,7 @@ class RealEngine(BaseEngine):
             self._ctx["input_ids"],
             ivs,
             tgt_id,
+            freeze_attention=req.freeze_attention,
             n_bos_tokens=self._ctx["n_bos"],
         )
         return {

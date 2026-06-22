@@ -1,26 +1,18 @@
-"""Feature interventions on the local replacement model.
+"""Feature interventions (faithful to circuit-tracer's ``feature_intervention``).
 
-The local replacement model (see :mod:`llm_circuits.circuits.local_replacement_model`)
-makes every transcoder feature an explicit, addressable quantity while freezing
-attention patterns and LayerNorm denominators and injecting a *constant* error
-term.  That makes it the right substrate for **interventions**: zeroing a feature
-removes exactly its decoder contribution from the residual stream, downstream
-encoders re-read the perturbed residual (so downstream features genuinely
-respond), and — because the error nodes are constants captured from the original
-run — the effect we measure is purely the feature we ablated, not a
-self-cancelling reconstruction.
+We steer/ablate a transcoder feature by adding its decoder delta to the **real**
+model's MLP output: with the **M convention**, a feature's new activation is
+``(1 + m) * clean``, so the delta is ``m * clean * W_dec`` (``m=0`` no change,
+``-1`` ablate, ``-2`` flip).  This runs the real model (no transcoder reconstruction,
+no error nodes), optionally freezing attention patterns and pinning MLP outputs to
+clean within a layer range — see :func:`run_feature_intervention`.
 
 This is the protocol used to *validate* attribution-graph edges: perturb a source
 feature, then check that the predicted downstream features / logits actually move.
+:func:`sweep_patch_end_layer` sweeps the layer-range knob and
+:func:`run_progressive_intervention` sweeps a cumulative curve.
 
-The faithful entry point is :func:`run_feature_intervention` (the paper's
-constrained patching with negative steering); :func:`run_feature_ablation` is the
-simpler zeroing variant, and the ``run_progressive_*`` helpers sweep cumulative
-curves.
-
-Scope: per-layer transcoders (Qwen3) and cross-layer transcoders share the same
-``ablations`` plumbing; the helpers here are family-agnostic but default to Qwen3
-module templates.
+Scope: per-layer transcoders (Qwen3) — the decoder writes to its own layer.
 """
 
 from __future__ import annotations
@@ -34,6 +26,8 @@ from torch import Tensor, nn
 from llm_circuits.circuits.local_replacement_model import (
     _QWEN3_LAYERNORM_TEMPLATES,
     LocalReplacementModel,
+    _make_frozen_attn_forward,
+    _make_frozen_rmsnorm_hook,
     capture_constants,
 )
 from llm_circuits.circuits.replacement_model import _is_transcoder_set
@@ -52,62 +46,56 @@ log = get_logger(__name__)
 
 
 @dataclass(frozen=True)
-class FeatureAblation:
-    """Zero a single transcoder feature.
-
-    Attributes
-    ----------
-    layer:
-        Transformer layer index of the feature.
-    feature_idx:
-        Transcoder feature index.
-    position:
-        Sequence position to ablate.  ``None`` (the default) ablates the feature
-        at *every* sequence position.
-    """
-
-    layer: int
-    feature_idx: int
-    position: int | None = None
-
-
-@dataclass(frozen=True)
 class FeatureIntervention:
-    """Steer/clamp a single transcoder feature to a target value.
+    """Steer/clamp a single transcoder feature.
 
-    The target is either absolute (``value``) or multiplicative
-    (``factor`` * the feature's *clean* activation).  The paper's primary
-    protocol is **negative steering** — set the feature to the opposite of its
-    original value, i.e. ``factor=-1`` (see :func:`negative_steer`).  ``factor=0``
-    or ``value=0`` is plain ablation.  ``position=None`` applies at every
-    sequence position.
+    Uses circuit-tracer's / the paper's **M (additive-delta) convention**: the feature's
+    new activation is ``(1 + m) * clean``, so the decoder delta added to the MLP output is
+    ``m * clean * W_dec``.  Hence:
+
+    * ``m == 0``  → no change,
+    * ``m == -1`` → ablation (the default),
+    * ``m == -2`` → negative steer (flip the sign; see :func:`negative_steer`).
+
+    ``value`` overrides ``m`` with an absolute target.  ``position=None`` applies at every
+    (non-BOS) sequence position.
     """
 
     layer: int
     feature_idx: int
     position: int | None = None
     value: float | None = None
-    factor: float | None = None
+    m: float = -1.0
 
     def target(self, clean_activation: float) -> float:
-        """Resolve the absolute target value given the feature's clean activation."""
+        """Resolve the absolute target activation given the feature's clean activation."""
         if self.value is not None:
             return self.value
-        if self.factor is not None:
-            return self.factor * clean_activation
-        return 0.0
+        return (1.0 + self.m) * clean_activation
+
+
+def steer(
+    layer: int, feature_idx: int, m: float, position: int | None = None
+) -> FeatureIntervention:
+    """Steer a feature by additive multiple ``m`` (new activation = ``(1 + m) * clean``)."""
+    return FeatureIntervention(layer, feature_idx, position=position, m=m)
+
+
+def ablate(layer: int, feature_idx: int, position: int | None = None) -> FeatureIntervention:
+    """Remove a feature's contribution (new activation = 0, i.e. ``m = -1``)."""
+    return FeatureIntervention(layer, feature_idx, position=position, m=-1.0)
 
 
 def negative_steer(
     layer: int, feature_idx: int, position: int | None = None
 ) -> FeatureIntervention:
-    """The paper's canonical perturbation: steer a feature to ``-1x`` its clean value."""
-    return FeatureIntervention(layer, feature_idx, position=position, factor=-1.0)
+    """The paper's canonical perturbation: flip a feature's sign (new = ``-clean``, m=-2)."""
+    return FeatureIntervention(layer, feature_idx, position=position, m=-2.0)
 
 
 @dataclass
 class AblationResult:
-    """Outcome of :func:`run_feature_ablation`."""
+    """Outcome of an intervention: baseline vs intervened logits (+ feature acts)."""
 
     baseline_logits: Tensor
     """Local-model logits with no ablation, shape ``(seq, vocab)``."""
@@ -128,113 +116,140 @@ class AblationResult:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Feature intervention (steer/ablate on the real model) — main entry point
 # ---------------------------------------------------------------------------
 
 
-def ablations_to_dict(
-    ablations: list[FeatureAblation],
-) -> dict[int, list[tuple[int | None, int]]]:
-    """Group :class:`FeatureAblation` specs into the ``{layer: [(position, feature_idx)]}``
-    mapping consumed by :class:`LocalReplacementModel`.
+def _make_base_mlp_hook(pin: bool, clean_out: Tensor | None, delta: Tensor | None) -> Any:
+    """Forward hook on a *real* MLP module (steering-base-model).
+
+    Optionally pins the MLP output to its clean recorded value (``pin``), then adds the
+    decoder ``delta``.  Shapes broadcast: ``(1, seq, d_model)`` output + ``(seq, d_model)``
+    delta.
     """
-    grouped: dict[int, list[tuple[int | None, int]]] = {}
-    for a in ablations:
-        grouped.setdefault(a.layer, []).append((a.position, a.feature_idx))
-    return grouped
+
+    def hook(_m: nn.Module, _inp: Any, output: Any) -> Any:
+        res = output[0] if isinstance(output, tuple) else output
+        if pin and clean_out is not None:
+            res = clean_out.to(res.dtype)
+        if delta is not None:
+            res = res + delta.to(res.dtype)
+        return (res, *output[1:]) if isinstance(output, tuple) else res
+
+    return hook
 
 
-# ---------------------------------------------------------------------------
-# Main entry point
-# ---------------------------------------------------------------------------
-
-
-def run_feature_ablation(
+def _steer_base_model(
     model: nn.Module,
     transcoder: TranscoderSet | CrossLayerTranscoder,
     input_ids: Tensor,
-    ablations: list[FeatureAblation],
+    interventions: list[FeatureIntervention],
+    base: Any,
+    caps: Any,
     *,
-    n_bos_tokens: int = 1,
-    mlp_name_template: str = "model.layers.{layer}.mlp",
-    output_module_template: str | None = None,
-    attn_name_template: str = "model.layers.{layer}.self_attn",
-    layernorm_templates: list[str] | None = None,
-    final_norm_name: str = "model.norm",
+    l_max: int,
+    patch_end_layer: int | None,
+    freeze_attention: bool,
+    n_bos_tokens: int,
+    mlp_name_template: str,
+    attn_name_template: str,
+    layernorm_templates: list[str],
+    final_norm_name: str,
 ) -> AblationResult:
-    """Run baseline and ablated local-replacement forward passes and compare them.
+    """circuit-tracer's ``feature_intervention`` on the REAL model (per-layer transcoders).
 
-    Captures constants once, then runs the local replacement model twice with the
-    *same* frozen attention/LayerNorm and constant error nodes: once without
-    ablation (baseline) and once with the requested features zeroed.  Both passes
-    run under ``no_grad`` (all parameters are frozen, so no graph is needed).
-
-    Args:
-        model: The full language model.
-        transcoder: A ``TranscoderSet`` or ``CrossLayerTranscoder``.
-        input_ids: Token ids, shape ``(batch, seq)`` or ``(seq,)``.
-        ablations: Features to zero.  An empty list makes ``ablated_*`` equal the
-            baseline (useful as a sanity check).
-        n_bos_tokens: Leading positions whose original MLP output is preserved.
-        mlp_name_template, output_module_template, attn_name_template,
-        layernorm_templates, final_norm_name: Module-name plumbing, forwarded to
-        :class:`LocalReplacementModel` (defaults target Qwen3).
-
-    Returns:
-        An :class:`AblationResult` with baseline/ablated logits and per-layer
-        feature activations.
+    Adds ``m * clean * W_dec`` to each steered feature's own-layer MLP output; freezes
+    attention patterns (all layers) when ``freeze_attention`` OR a constrained range is set
+    (circuit-tracer couples these — a constrained range always freezes attention); pins MLP
+    outputs to clean within ``[0, patch_end_layer]`` (and freezes LayerNorm if the range is
+    the whole model) so within-range MLPs don't recompute; runs the real model after
+    ``patch_end_layer``.
     """
-    if input_ids.dim() == 1:
-        input_ids = input_ids.unsqueeze(0)
-    if layernorm_templates is None:
-        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
+    n_layers = len(transcoder)
+    seq = input_ids.shape[1]
+    device = input_ids.device
 
-    is_set = _is_transcoder_set(transcoder)
-    n_layers = len(transcoder) if is_set else transcoder.n_layers
+    if patch_end_layer is not None and not (l_max <= patch_end_layer < n_layers):
+        raise ValueError(
+            f"patch_end_layer must be in [{l_max}, {n_layers - 1}] "
+            f"(>= last steered layer, < n_layers), got {patch_end_layer}"
+        )
+    ell = patch_end_layer  # None => propagate (pin nothing); else pin [0, ell]
+    freeze_ln = ell is not None and ell >= n_layers - 1  # pinning all layers => direct effect
+    # circuit-tracer couples these: a constrained range ALWAYS freezes the attention pattern
+    # (its setup_intervention_with_freeze freezes hook_pattern whenever it runs, and it runs
+    # for freeze_attention OR constrained_layers). So freeze_attention=False only takes effect
+    # in the unconstrained (propagate) case.
+    freeze_attn = freeze_attention or ell is not None
 
-    caps = capture_constants(
-        model,
-        input_ids,
-        n_layers=n_layers,
-        mlp_name_template=mlp_name_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
+    # Per-layer decoder delta from the CLEAN feature activations (M convention).
+    deltas: dict[int, Tensor] = {}
+    for iv in interventions:
+        feats = base.features[iv.layer]
+        if feats.dim() == 3:
+            feats = feats[0]
+        dec = (
+            transcoder.transcoders[iv.layer]
+            ._get_decoder_vectors(torch.tensor([iv.feature_idx], device=device))[0]
+            .float()
+        )  # (d_model,)
+        d = deltas.setdefault(
+            iv.layer, torch.zeros(seq, dec.shape[0], device=device, dtype=torch.float32)
+        )
+        positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
+        for p in positions:
+            clean_act = feats[p, iv.feature_idx].float().item()
+            d[p] += dec * (iv.target(clean_act) - clean_act)  # = m * clean * W_dec
 
-    common = dict(
-        include_error=True,
-        n_bos_tokens=n_bos_tokens,
-        mlp_name_template=mlp_name_template,
-        output_module_template=output_module_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
+    handles: list[Any] = []
+    saved_attn: dict[int, Any] = {}
+    try:
+        if freeze_attn:
+            for i in range(n_layers):
+                attn_mod = model.get_submodule(attn_name_template.format(layer=i))
+                saved_attn[i] = attn_mod.forward
+                attn_mod.forward = _make_frozen_attn_forward(attn_mod, caps.attn_weights[i])
+        if freeze_ln:
+            for tmpl in layernorm_templates:
+                for i in range(n_layers):
+                    name = tmpl.format(layer=i)
+                    handles.append(
+                        model.get_submodule(name).register_forward_hook(
+                            _make_frozen_rmsnorm_hook(name, caps.rmsnorm_scales)
+                        )
+                    )
+            handles.append(
+                model.get_submodule(final_norm_name).register_forward_hook(
+                    _make_frozen_rmsnorm_hook(final_norm_name, caps.rmsnorm_scales)
+                )
+            )
+        for i in range(n_layers):
+            pin = ell is not None and i <= ell
+            delta = deltas.get(i)
+            if not pin and delta is None:
+                continue
+            handles.append(
+                model.get_submodule(mlp_name_template.format(layer=i)).register_forward_hook(
+                    _make_base_mlp_hook(pin, caps.mlp_outputs.get(i) if pin else None, delta)
+                )
+            )
+        with torch.no_grad():
+            out = model(input_ids)
+        logits = out.logits
+        intervened_logits = (logits[0] if logits.dim() == 3 else logits).detach()
+    finally:
+        for i, fwd in saved_attn.items():
+            model.get_submodule(attn_name_template.format(layer=i)).forward = fwd
+        for h in handles:
+            h.remove()
 
-    # Baseline (no ablation).  Its per-layer error nodes are the *clean* errors,
-    # which we freeze for the ablated pass: otherwise the error term would be
-    # re-derived as ``captured_mlp_out - reconstruction`` and exactly cancel the
-    # ablation, leaving the output unchanged.
-    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
-        base = lm.forward(input_ids)
-
-    # Ablated: zero the requested features and reuse the clean error nodes so the
-    # ablation actually propagates to the logits.
-    abl_dict = ablations_to_dict(ablations)
-    with (
-        torch.no_grad(),
-        LocalReplacementModel(
-            model, transcoder, caps, ablations=abl_dict, frozen_errors=base.errors, **common
-        ) as lm,
-    ):
-        abl = lm.forward(input_ids)
-
+    base_logits = caps.original_logits
+    base_logits = (base_logits[0] if base_logits.dim() == 3 else base_logits).detach()
     return AblationResult(
-        baseline_logits=base.logits.detach(),
-        ablated_logits=abl.logits.detach(),
+        baseline_logits=base_logits,
+        ablated_logits=intervened_logits,
         baseline_features=base.features,
-        ablated_features=abl.features,
+        ablated_features={},
     )
 
 
@@ -244,41 +259,29 @@ def run_feature_intervention(
     input_ids: Tensor,
     interventions: list[FeatureIntervention],
     *,
-    mode: str = "constrained",
     patch_end_layer: int | None = None,
+    freeze_attention: bool = True,
     n_bos_tokens: int = 1,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
     layernorm_templates: list[str] | None = None,
     final_norm_name: str = "model.norm",
-    decoder_layer_template: str = "model.layers.{layer}",
 ) -> AblationResult:
-    """Steer/clamp features on the local replacement model and compare to baseline.
+    """Steer/clamp features on the REAL model and compare logits to the clean baseline.
 
-    ``mode="constrained"`` (the paper's **primary** protocol): freeze attention,
-    LayerNorm denominators, and error nodes; steer each feature based on its
-    **clean** activation; inject the change as a single residual-stream delta at the
-    *last* intervened layer's output, so MLPs *within* the range are not recomputed
-    and only layers *after* the range respond.  The change for feature ``f`` is
-    ``W_dec[f] * (target_f - clean_act_f)``; with :func:`negative_steer`
-    (``factor=-1``) the target is ``-clean_act_f``, so its contribution flips sign.
+    Faithful to circuit-tracer's ``feature_intervention`` (per-layer transcoders): adds the
+    decoder delta ``m * clean * W_dec`` to each feature's *real* MLP output — no transcoder
+    reconstruction, no error nodes.  **M convention**: new activation = ``(1 + m) * clean``
+    (``m=0`` no change, ``-1`` ablate, ``-2`` flip).
 
-    ``patch_end_layer`` is the paper's layer-range knob (the *end* of the patching
-    range): the delta is injected at that layer's output instead of the last steered
-    layer, freezing every layer up to it (no second-order effects in range) and
-    letting only layers *above* it recompute.  Must be ``>= max(intervention layers)``
-    and ``< n_layers``; defaults to the last steered layer (maximum downstream
-    recompute).  :func:`sweep_patch_end_layer` sweeps this and picks the most
-    suppressive end layer.
-
-    ``mode="iterative"`` (the paper's appendix alternative): freeze attention and
-    error nodes but let **LayerNorm recompute**, and clamp each feature to its
-    target during the live transcoder recompute so effects propagate through every
-    layer's recomputed features.
-
-    ``ablated_logits`` in the returned result holds the *intervened* logits.
-    Per-layer transcoders only (Qwen3); raises for cross-layer transcoders.
+    ``freeze_attention=True`` freezes attention **patterns** on every layer (V/O still
+    respond); a constrained range forces this too.  ``patch_end_layer=L`` pins MLP outputs
+    to their clean recorded values for layers ``[0, L]`` (within-range MLPs don't recompute)
+    and runs the real model after L; if L is the last layer, LayerNorm is frozen too (pure
+    direct/linear effect).  ``patch_end_layer=None`` pins nothing — the delta propagates
+    through the real downstream MLPs + LayerNorm.  Defaults to the last steered layer (max
+    downstream recompute); must be in ``[max steered layer, n_layers-1]``.
     """
     if input_ids.dim() == 1:
         input_ids = input_ids.unsqueeze(0)
@@ -309,102 +312,43 @@ def run_feature_intervention(
         attn_name_template=attn_name_template,
         layernorm_templates=layernorm_templates,
         final_norm_name=final_norm_name,
-        freeze_layernorm=mode == "constrained",
+        freeze_layernorm=True,
     )
 
-    # Clean baseline (gives clean activations for the steering targets + the error
-    # nodes we freeze for the intervened pass).
+    # Clean baseline. The local-replacement clean run reproduces the real residual stream
+    # exactly (error nodes), so base.features are the real clean feature activations — used
+    # as the steering targets' clean values.
     with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
         base = lm.forward(input_ids)
 
     if not interventions:
+        # No intervention → the baseline is just the real clean logits (consistent with
+        # steering-base-model, which compares against the real model).
+        clean_logits = caps.original_logits
+        clean_logits = (clean_logits[0] if clean_logits.dim() == 3 else clean_logits).detach()
         return AblationResult(
-            baseline_logits=base.logits.detach(),
-            ablated_logits=base.logits.detach(),
+            baseline_logits=clean_logits,
+            ablated_logits=clean_logits,
             baseline_features=base.features,
             ablated_features=base.features,
         )
 
-    device = input_ids.device
-    seq = input_ids.shape[1]
-
-    if mode == "iterative":
-        # Attention + errors frozen, LayerNorm recomputes; clamp each feature to its
-        # target during the live transcoder recompute (effects propagate everywhere).
-        clamps: dict[int, list[tuple]] = {}
-        for iv in interventions:
-            feats = base.features[iv.layer]
-            if feats.dim() == 3:
-                feats = feats[0]
-            positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
-            for p in positions:
-                clean_act = feats[p, iv.feature_idx].float().item()
-                clamps.setdefault(iv.layer, []).append((p, iv.feature_idx, iv.target(clean_act)))
-        with (
-            torch.no_grad(),
-            LocalReplacementModel(
-                model, transcoder, caps, ablations=clamps, frozen_errors=base.errors, **common
-            ) as lm,
-        ):
-            intervened = lm.forward(input_ids)
-        return AblationResult(
-            baseline_logits=base.logits.detach(),
-            ablated_logits=intervened.logits.detach(),
-            baseline_features=base.features,
-            ablated_features=intervened.features,
-        )
-
-    if mode != "constrained":
-        raise ValueError(f"mode must be 'constrained' or 'iterative', got {mode!r}")
-
-    # Constrained patching: build the residual delta to inject at the patch end
-    # layer's output (defaults to the last intervened layer).
     l_max = max(iv.layer for iv in interventions)
-    inject_layer = l_max if patch_end_layer is None else patch_end_layer
-    if not (l_max <= inject_layer < n_layers):
-        raise ValueError(
-            f"patch_end_layer must be in [{l_max}, {n_layers - 1}] "
-            f"(>= last steered layer, < n_layers), got {patch_end_layer}"
-        )
-    delta: Tensor | None = None
-    for iv in interventions:
-        feats = base.features[iv.layer]
-        if feats.dim() == 3:
-            feats = feats[0]
-        dec = (
-            transcoder.transcoders[iv.layer]
-            ._get_decoder_vectors(torch.tensor([iv.feature_idx], device=device))[0]
-            .float()
-        )  # (d_model,)
-        if delta is None:
-            delta = torch.zeros(seq, dec.shape[0], device=device, dtype=torch.float32)
-        positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
-        for p in positions:
-            clean_act = feats[p, iv.feature_idx].float().item()
-            delta[p] += dec * (iv.target(clean_act) - clean_act)
-
-    dec_layer = model.get_submodule(decoder_layer_template.format(layer=inject_layer))
-
-    def _inject(_m: nn.Module, _i: Any, output: Any) -> Any:
-        res = output[0] if isinstance(output, tuple) else output
-        new = res + delta.to(res.dtype)
-        return (new, *output[1:]) if isinstance(output, tuple) else new
-
-    with (
-        torch.no_grad(),
-        LocalReplacementModel(model, transcoder, caps, frozen_errors=base.errors, **common) as lm,
-    ):
-        handle = dec_layer.register_forward_hook(_inject)
-        try:
-            intervened = lm.forward(input_ids)
-        finally:
-            handle.remove()
-
-    return AblationResult(
-        baseline_logits=base.logits.detach(),
-        ablated_logits=intervened.logits.detach(),
-        baseline_features=base.features,
-        ablated_features=intervened.features,
+    return _steer_base_model(
+        model,
+        transcoder,
+        input_ids,
+        interventions,
+        base,
+        caps,
+        l_max=l_max,
+        patch_end_layer=patch_end_layer,
+        freeze_attention=freeze_attention,
+        n_bos_tokens=n_bos_tokens,
+        mlp_name_template=mlp_name_template,
+        attn_name_template=attn_name_template,
+        layernorm_templates=layernorm_templates,
+        final_norm_name=final_norm_name,
     )
 
 
@@ -461,90 +405,6 @@ class ProgressiveAblationResult:
     position: int
 
 
-def run_progressive_ablation(
-    model: nn.Module,
-    transcoder: TranscoderSet | CrossLayerTranscoder,
-    input_ids: Tensor,
-    ordered_ablations: list[FeatureAblation],
-    token_id: int,
-    *,
-    n_bos_tokens: int = 1,
-    position: int = -1,
-    mlp_name_template: str = "model.layers.{layer}.mlp",
-    output_module_template: str | None = None,
-    attn_name_template: str = "model.layers.{layer}.self_attn",
-    layernorm_templates: list[str] | None = None,
-    final_norm_name: str = "model.norm",
-) -> ProgressiveAblationResult:
-    """Ablate the first ``k`` of *ordered_ablations* for ``k = 0 … len``, recording
-    the *token_id* logit and probability at *position* after each step.
-
-    Constants are captured once and the clean-run errors are frozen, so every step
-    is a single forward.  The resulting curve shows how the target collapses as its
-    top features are removed in order — the intuitive companion to the single-shot
-    :func:`run_feature_ablation`.
-    """
-    if input_ids.dim() == 1:
-        input_ids = input_ids.unsqueeze(0)
-    if layernorm_templates is None:
-        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
-
-    is_set = _is_transcoder_set(transcoder)
-    n_layers = len(transcoder) if is_set else transcoder.n_layers
-
-    caps = capture_constants(
-        model,
-        input_ids,
-        n_layers=n_layers,
-        mlp_name_template=mlp_name_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
-    common = dict(
-        include_error=True,
-        n_bos_tokens=n_bos_tokens,
-        mlp_name_template=mlp_name_template,
-        output_module_template=output_module_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
-
-    logits_out: list[float] = []
-    probs_out: list[float] = []
-
-    def _record(ctx) -> None:
-        row = ctx.logits[position]
-        logits_out.append(row[token_id].item())
-        probs_out.append(row.softmax(dim=-1)[token_id].item())
-
-    # k = 0: clean baseline (also yields the errors we freeze for later steps).
-    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
-        base = lm.forward(input_ids)
-    frozen = base.errors
-    _record(base)
-
-    # k = 1 … K: ablate the first k features, reusing the clean errors.
-    for k in range(1, len(ordered_ablations) + 1):
-        abl = ablations_to_dict(ordered_ablations[:k])
-        with (
-            torch.no_grad(),
-            LocalReplacementModel(
-                model, transcoder, caps, ablations=abl, frozen_errors=frozen, **common
-            ) as lm,
-        ):
-            _record(lm.forward(input_ids))
-
-    return ProgressiveAblationResult(
-        n_ablated=list(range(len(ordered_ablations) + 1)),
-        logits=logits_out,
-        probs=probs_out,
-        token_id=token_id,
-        position=position,
-    )
-
-
 def run_progressive_intervention(
     model: nn.Module,
     transcoder: TranscoderSet | CrossLayerTranscoder,
@@ -554,43 +414,26 @@ def run_progressive_intervention(
     *,
     n_bos_tokens: int = 1,
     position: int = -1,
+    patch_end_layer: int | None = None,
+    freeze_attention: bool = True,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
     layernorm_templates: list[str] | None = None,
     final_norm_name: str = "model.norm",
-    decoder_layer_template: str = "model.layers.{layer}",
 ) -> ProgressiveAblationResult:
-    """Cumulative **constrained-patching** curve (the faithful counterpart to
-    :func:`run_progressive_ablation`).
+    """Cumulative steering curve: apply the first ``k`` of *ordered_interventions* for
+    ``k = 0 … len`` and record the target token's logit + probability at each step.
 
-    Applies the first ``k`` of *ordered_interventions* (e.g. :func:`negative_steer`)
-    for ``k = 0 … len`` and records the target token's logit and probability at each
-    step.  Constants are captured once; each step injects a residual delta at the
-    last intervened layer (in-range MLPs are not recomputed).  Per-layer
-    transcoders only.
+    Delegates to :func:`run_feature_intervention` (the faithful real-model intervention).
+    Per-layer transcoders only.
     """
     if input_ids.dim() == 1:
         input_ids = input_ids.unsqueeze(0)
-    if layernorm_templates is None:
-        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
-    if not _is_transcoder_set(transcoder):
-        raise NotImplementedError(
-            "constrained progressive intervention is implemented for per-layer transcoders only"
-        )
-    n_layers = len(transcoder)
 
-    caps = capture_constants(
-        model,
-        input_ids,
-        n_layers=n_layers,
-        mlp_name_template=mlp_name_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
-    common = dict(
-        include_error=True,
+    kw = dict(
+        patch_end_layer=patch_end_layer,
+        freeze_attention=freeze_attention,
         n_bos_tokens=n_bos_tokens,
         mlp_name_template=mlp_name_template,
         output_module_template=output_module_template,
@@ -599,13 +442,6 @@ def run_progressive_intervention(
         final_norm_name=final_norm_name,
     )
 
-    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
-        base = lm.forward(input_ids)
-    clean_features = base.features
-    frozen = base.errors
-    device = input_ids.device
-    seq = input_ids.shape[1]
-
     logits_out: list[float] = []
     probs_out: list[float] = []
 
@@ -613,45 +449,12 @@ def run_progressive_intervention(
         logits_out.append(row[token_id].item())
         probs_out.append(row.softmax(dim=-1)[token_id].item())
 
-    _record(base.logits[position])
-
-    for k in range(1, len(ordered_interventions) + 1):
-        subset = ordered_interventions[:k]
-        l_max = max(iv.layer for iv in subset)
-        delta: Tensor | None = None
-        for iv in subset:
-            feats = clean_features[iv.layer]
-            if feats.dim() == 3:
-                feats = feats[0]
-            dec = (
-                transcoder.transcoders[iv.layer]
-                ._get_decoder_vectors(torch.tensor([iv.feature_idx], device=device))[0]
-                .float()
-            )
-            if delta is None:
-                delta = torch.zeros(seq, dec.shape[0], device=device, dtype=torch.float32)
-            positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
-            for p in positions:
-                clean_act = feats[p, iv.feature_idx].float().item()
-                delta[p] += dec * (iv.target(clean_act) - clean_act)
-
-        dec_layer = model.get_submodule(decoder_layer_template.format(layer=l_max))
-
-        def _inject(_m: nn.Module, _i: Any, output: Any, _delta: Tensor = delta) -> Any:
-            res = output[0] if isinstance(output, tuple) else output
-            new = res + _delta.to(res.dtype)
-            return (new, *output[1:]) if isinstance(output, tuple) else new
-
-        with (
-            torch.no_grad(),
-            LocalReplacementModel(model, transcoder, caps, frozen_errors=frozen, **common) as lm,
-        ):
-            handle = dec_layer.register_forward_hook(_inject)
-            try:
-                ctx = lm.forward(input_ids)
-            finally:
-                handle.remove()
-        _record(ctx.logits[position])
+    for k in range(len(ordered_interventions) + 1):
+        # k=0 → no interventions → run_feature_intervention returns the clean baseline.
+        res = run_feature_intervention(
+            model, transcoder, input_ids, ordered_interventions[:k], **kw
+        )
+        _record(res.ablated_logits[position])
 
     return ProgressiveAblationResult(
         n_ablated=list(range(len(ordered_interventions) + 1)),
@@ -711,31 +514,24 @@ def sweep_patch_end_layer(
     *,
     n_bos_tokens: int = 1,
     position: int = -1,
+    freeze_attention: bool = True,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
     layernorm_templates: list[str] | None = None,
     final_norm_name: str = "model.norm",
-    decoder_layer_template: str = "model.layers.{layer}",
 ) -> LayerSweepResult:
-    """Sweep the constrained-patching **end layer** (the paper's layer-range knob).
+    """Sweep the **patch end layer** (the paper's layer-range knob).
 
-    Steers *interventions* (constrained mode) and injects the resulting residual
-    delta at each candidate end layer, from the last steered layer up to the final
-    layer, recording the *token_id* logit and probability at *position* each time.
-    A higher end layer freezes more of the model (fewer layers recompute); the paper
-    picks the end layer that suppresses the target logit the most
-    (:attr:`LayerSweepResult.best_end_layer`).
-
-    Constants and the clean baseline are captured once and the residual delta is built
-    once (it is constant across end layers, by residual-stream additivity under
-    constrained patching), so the whole sweep is one capture + ``n_layers - l_max``
-    frozen forwards.  Per-layer transcoders only (Qwen3).
+    For each end layer from the last steered layer up to the final layer, runs
+    :func:`run_feature_intervention` with that ``patch_end_layer`` and records the
+    *token_id* logit + probability at *position*.  A higher end layer pins more of the
+    model (fewer layers recompute); the paper picks the end layer that suppresses the
+    target logit the most (:attr:`LayerSweepResult.best_end_layer`).  Per-layer
+    transcoders only (Qwen3).
     """
     if input_ids.dim() == 1:
         input_ids = input_ids.unsqueeze(0)
-    if layernorm_templates is None:
-        layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
     if not _is_transcoder_set(transcoder):
         raise NotImplementedError(
             "patch-end-layer sweep is implemented for per-layer transcoders only"
@@ -743,76 +539,32 @@ def sweep_patch_end_layer(
     if not interventions:
         raise ValueError("sweep_patch_end_layer requires at least one intervention")
     n_layers = len(transcoder)
+    l_max = max(iv.layer for iv in interventions)
 
-    caps = capture_constants(
-        model,
-        input_ids,
-        n_layers=n_layers,
-        mlp_name_template=mlp_name_template,
-        attn_name_template=attn_name_template,
-        layernorm_templates=layernorm_templates,
-        final_norm_name=final_norm_name,
-    )
-    common = dict(
-        include_error=True,
+    kw = dict(
+        freeze_attention=freeze_attention,
         n_bos_tokens=n_bos_tokens,
         mlp_name_template=mlp_name_template,
         output_module_template=output_module_template,
         attn_name_template=attn_name_template,
         layernorm_templates=layernorm_templates,
         final_norm_name=final_norm_name,
-        freeze_layernorm=True,
     )
 
-    with torch.no_grad(), LocalReplacementModel(model, transcoder, caps, **common) as lm:
-        base = lm.forward(input_ids)
-
-    device = input_ids.device
-    seq = input_ids.shape[1]
-
-    # Residual delta is constant across end layers (decoder vectors + clean acts fixed).
-    l_max = max(iv.layer for iv in interventions)
-    delta: Tensor | None = None
-    for iv in interventions:
-        feats = base.features[iv.layer]
-        if feats.dim() == 3:
-            feats = feats[0]
-        dec = (
-            transcoder.transcoders[iv.layer]
-            ._get_decoder_vectors(torch.tensor([iv.feature_idx], device=device))[0]
-            .float()
-        )
-        if delta is None:
-            delta = torch.zeros(seq, dec.shape[0], device=device, dtype=torch.float32)
-        positions = [iv.position] if iv.position is not None else list(range(n_bos_tokens, seq))
-        for p in positions:
-            clean_act = feats[p, iv.feature_idx].float().item()
-            delta[p] += dec * (iv.target(clean_act) - clean_act)
-
-    def _inject(_m: nn.Module, _i: Any, output: Any) -> Any:
-        res = output[0] if isinstance(output, tuple) else output
-        new = res + delta.to(res.dtype)
-        return (new, *output[1:]) if isinstance(output, tuple) else new
-
+    # Clean baseline (real clean logits) + per-end-layer intervened forwards.
+    base_row = run_feature_intervention(model, transcoder, input_ids, [], **kw).baseline_logits[
+        position
+    ]
     end_layers = list(range(l_max, n_layers))
     logits_out: list[float] = []
     probs_out: list[float] = []
-    with (
-        torch.no_grad(),
-        LocalReplacementModel(model, transcoder, caps, frozen_errors=base.errors, **common) as lm,
-    ):
-        for end in end_layers:
-            dec_layer = model.get_submodule(decoder_layer_template.format(layer=end))
-            handle = dec_layer.register_forward_hook(_inject)
-            try:
-                out = lm.forward(input_ids)
-            finally:
-                handle.remove()
-            row = out.logits[position]
-            logits_out.append(row[token_id].item())
-            probs_out.append(row.softmax(dim=-1)[token_id].item())
+    for end in end_layers:
+        row = run_feature_intervention(
+            model, transcoder, input_ids, interventions, patch_end_layer=end, **kw
+        ).ablated_logits[position]
+        logits_out.append(row[token_id].item())
+        probs_out.append(row.softmax(dim=-1)[token_id].item())
 
-    base_row = base.logits[position]
     return LayerSweepResult(
         end_layers=end_layers,
         logits=logits_out,

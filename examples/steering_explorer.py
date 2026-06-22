@@ -2,11 +2,11 @@
 """Pre-compute an interactive steering explorer for the addition circuits.
 
 For each saved attribution graph, take the answer "supernode" (the top influence
-features feeding the answer logit) and sweep a single **steering factor M** over
-the whole supernode (the paper's canonical knob: M=+1 clean, 0 ablate, -1 negative
-steer), recording the top tokens' probabilities at each M via **constrained
-patching**.  The results are baked into a self-contained HTML with a dropdown
-(example) + slider (M) + live bar chart — no live model needed.
+features feeding the answer logit) and sweep a single **steering multiple M** over
+the whole supernode (additive-delta convention: M=0 no change, -1 ablate, -2
+negative steer / flip), recording the top tokens' probabilities at each M via the
+faithful **steering-base-model** intervention.  The results are baked into a
+self-contained HTML with a dropdown (example) + slider (M) + live bar chart.
 
 Usage:
     uv run python examples/steering_explorer.py
@@ -29,7 +29,8 @@ from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 MODEL_SIZE = "4b"
 DTYPE_STR = "bf16"
 N_FEATURES = 8  # supernode size: top-N influence features feeding the answer
-FACTORS = [1.0, 0.75, 0.5, 0.25, 0.0, -0.5, -1.0, -1.5, -2.0]  # steering factor M sweep
+# Additive-delta M sweep: M=0 no change, -1 ablate, -2 negative steer (flip).
+FACTORS = [0.0, -0.25, -0.5, -1.0, -1.5, -2.0, -2.5, -3.0]
 N_TOKENS = 8  # tracked tokens per factor (union across factors is shown)
 MAX_TRACKED = 12
 # ─────────────────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ def main() -> None:
         tracked: set[int] = {int(answer_id)}
         for m in FACTORS:
             steers = [
-                FeatureIntervention(layer, fid, position=pos, factor=m) for layer, fid, pos in feats
+                FeatureIntervention(layer, fid, position=pos, m=m) for layer, fid, pos in feats
             ]
             res = run_feature_intervention(model, tc, input_ids, steers, n_bos_tokens=n_bos)
             probv = res.ablated_logits[-1].float().softmax(dim=-1).cpu()
@@ -127,8 +128,11 @@ def main() -> None:
                 "probs": probs,
             }
         )
-        m1_top = tokens[probs[FACTORS.index(-1.0)].index(max(probs[FACTORS.index(-1.0)]))]
-        print(f"  {label}: clean top={answer_str!r}  -> at M=-1 top={m1_top!r}", flush=True)
+        m_flip = probs[FACTORS.index(-2.0)]
+        flip_top = tokens[m_flip.index(max(m_flip))]
+        print(
+            f"  {label}: clean top={answer_str!r}  -> at M=-2 (flip) top={flip_top!r}", flush=True
+        )
 
     if not examples:
         print("No examples produced.")

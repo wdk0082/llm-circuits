@@ -6,12 +6,10 @@ import torch
 
 from llm_circuits.circuits.interventions import (
     AblationResult,
-    FeatureAblation,
     FeatureIntervention,
     LayerSweepResult,
     ablation_logit_effect,
     ablation_prob_effect,
-    ablations_to_dict,
     negative_steer,
 )
 from llm_circuits.circuits.local_replacement_model import _apply_ablations
@@ -53,19 +51,6 @@ class TestApplyAblations:
         out = _apply_ablations(feats, [(2, 5)])
         assert out[0, 2, 5] == 0.0
         assert out.sum() == feats.sum() - 1.0
-
-
-class TestAblationsToDict:
-    def test_grouping(self):
-        abls = [
-            FeatureAblation(3, 100),
-            FeatureAblation(3, 7, position=2),
-            FeatureAblation(5, 9),
-        ]
-        assert ablations_to_dict(abls) == {3: [(None, 100), (2, 7)], 5: [(None, 9)]}
-
-    def test_empty(self):
-        assert ablations_to_dict([]) == {}
 
 
 class TestAblationLogitEffect:
@@ -115,24 +100,31 @@ class TestAblationProbEffect:
 
 
 class TestFeatureIntervention:
-    def test_ablation_target_is_zero(self):
-        # No value/factor -> ablation (target 0 regardless of clean activation).
+    # M convention: new activation = (1 + m) * clean; m=0 no change, m=-1 ablate, m=-2 flip.
+    def test_default_is_ablation(self):
+        # Default m=-1 -> target 0 (ablation) regardless of clean activation.
         assert FeatureIntervention(3, 100).target(5.0) == 0.0
 
     def test_explicit_value(self):
         assert FeatureIntervention(3, 100, value=2.5).target(5.0) == 2.5
 
-    def test_multiplicative_factor(self):
-        assert FeatureIntervention(3, 100, factor=-1.0).target(5.0) == -5.0
-        assert FeatureIntervention(3, 100, factor=2.0).target(4.0) == 8.0
+    def test_m_convention(self):
+        assert FeatureIntervention(3, 100, m=0.0).target(5.0) == 5.0  # no change
+        assert FeatureIntervention(3, 100, m=-1.0).target(5.0) == 0.0  # ablate
+        assert FeatureIntervention(3, 100, m=1.0).target(4.0) == 8.0  # double
+        assert FeatureIntervention(3, 100, m=-2.0).target(3.0) == -3.0  # flip
 
-    def test_value_takes_precedence_over_factor(self):
-        assert FeatureIntervention(3, 100, value=1.0, factor=-1.0).target(5.0) == 1.0
+    def test_value_takes_precedence_over_m(self):
+        assert FeatureIntervention(3, 100, value=1.0, m=-2.0).target(5.0) == 1.0
 
-    def test_negative_steer_helper(self):
-        iv = negative_steer(7, 9, position=2)
-        assert iv == FeatureIntervention(7, 9, position=2, factor=-1.0)
-        assert iv.target(3.0) == -3.0  # opposite of the clean value
+    def test_helpers(self):
+        from llm_circuits.circuits.interventions import ablate, steer
+
+        assert steer(7, 9, m=0.5, position=2) == FeatureIntervention(7, 9, position=2, m=0.5)
+        assert ablate(7, 9).target(3.0) == 0.0  # m=-1
+        ns = negative_steer(7, 9, position=2)
+        assert ns == FeatureIntervention(7, 9, position=2, m=-2.0)
+        assert ns.target(3.0) == -3.0  # flip sign
 
 
 class TestLayerSweepResult:

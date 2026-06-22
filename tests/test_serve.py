@@ -92,7 +92,7 @@ def test_steer_returns_baseline_and_steered(client):
     client.post("/api/load", json={"size": "4b"})
     r = client.post(
         "/api/steer",
-        json={"nodes": [{"layer": 10, "feature_idx": 7, "position": 1}], "factor": -1.0},
+        json={"nodes": [{"layer": 10, "feature_idx": 7, "position": 1}], "m": -2.0},
     )
     assert r.status_code == 200
     body = r.json()
@@ -104,7 +104,7 @@ def test_sweep_returns_curve(client):
     client.post("/api/load", json={"size": "4b"})
     r = client.post(
         "/api/sweep",
-        json={"nodes": [{"layer": 10, "feature_idx": 7, "position": 1}], "factor": -1.0},
+        json={"nodes": [{"layer": 10, "feature_idx": 7, "position": 1}], "m": -2.0},
     )
     assert r.status_code == 200
     body = r.json()

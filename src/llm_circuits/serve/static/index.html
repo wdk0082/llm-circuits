@@ -97,15 +97,12 @@
       <select id="grp" style="flex:1"></select>
     </div>
     <div class="row">
-      <label>M</label>
-      <input id="slider" type="range" min="-10" max="10" step="0.5" value="-1">
-      <span id="mval" style="width:34px;text-align:right">-1.0</span>
+      <label title="additive-delta multiple: new activation = (1+M)*clean. M=0 no change, M=-1 ablate, M=-2 flip (negative steer).">M</label>
+      <input id="slider" type="range" min="-4" max="4" step="0.25" value="0">
+      <span id="mval" style="width:34px;text-align:right">0.0</span>
     </div>
     <div class="row">
-      <label>mode</label>
-      <select id="mode"><option value="constrained">constrained</option>
-        <option value="iterative">iterative</option></select>
-      <label title="patch end layer (blank = last steered layer)">end L</label>
+      <label title="patch end layer (blank = last steered layer). MLP outputs are pinned to clean up to here, the real model runs after. = last layer freezes LayerNorm too (pure direct effect).">end L</label>
       <input id="endlayer" type="number" style="width:64px" placeholder="auto">
     </div>
     <div class="row">
@@ -225,7 +222,7 @@ function curNodes() {
 }
 function steerBody() {
   const end = $("endlayer").value;
-  return { nodes: curNodes(), factor: +$("slider").value, mode: $("mode").value,
+  return { nodes: curNodes(), m: +$("slider").value,
            patch_end_layer: end === "" ? null : +end };
 }
 
@@ -265,7 +262,7 @@ $("sweepbtn").addEventListener("click", async () => {
   $("sweephdr").style.display = "block";
   $("sweepout").innerHTML = "<span class='muted'>sweeping…</span>";
   try {
-    const w = await api("/api/sweep", {nodes: curNodes(), factor: +$("slider").value});
+    const w = await api("/api/sweep", {nodes: curNodes(), m: +$("slider").value});
     $("sweepout").innerHTML = sweepPlot(w);
   } catch (e) { $("sweepout").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
 });

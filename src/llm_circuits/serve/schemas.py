@@ -49,15 +49,16 @@ class NodeRef(BaseModel):
 
 class SteerRequest(BaseModel):
     nodes: list[NodeRef]
-    factor: float = -1.0  # multiplicative M; -1 = negative steer, 0 = ablate, 1 = clean
-    mode: str = "constrained"  # or "iterative"
+    m: float = 0.0  # additive-delta M: 0 = no change, -1 = ablate, -2 = negative steer
+    freeze_attention: bool = True  # freeze attention patterns (forced True when a range is set)
     patch_end_layer: int | None = None
     top_k: int = 10
 
 
 class SweepRequest(BaseModel):
     nodes: list[NodeRef]
-    factor: float = -1.0
+    m: float = -2.0  # negative steer by default (flip)
+    freeze_attention: bool = True
 
 
 class TokenProb(BaseModel):

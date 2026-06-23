@@ -10,7 +10,7 @@ from llm_circuits.circuits.interventions import (
     LayerSweepResult,
     ablation_logit_effect,
     ablation_prob_effect,
-    negative_steer,
+    steer,
 )
 from llm_circuits.circuits.local_replacement_model import _apply_ablations
 
@@ -118,13 +118,11 @@ class TestFeatureIntervention:
         assert FeatureIntervention(3, 100, value=1.0, m=-2.0).target(5.0) == 1.0
 
     def test_helpers(self):
-        from llm_circuits.circuits.interventions import ablate, steer
-
         assert steer(7, 9, m=0.5, position=2) == FeatureIntervention(7, 9, position=2, m=0.5)
-        assert ablate(7, 9).target(3.0) == 0.0  # m=-1
-        ns = negative_steer(7, 9, position=2)
+        assert steer(7, 9, m=-1.0).target(3.0) == 0.0  # m=-1 -> ablate
+        ns = steer(7, 9, m=-2.0, position=2)
         assert ns == FeatureIntervention(7, 9, position=2, m=-2.0)
-        assert ns.target(3.0) == -3.0  # flip sign
+        assert ns.target(3.0) == -3.0  # m=-2 -> flip sign
 
 
 class TestLayerSweepResult:

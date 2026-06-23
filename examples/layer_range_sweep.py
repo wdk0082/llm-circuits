@@ -28,7 +28,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import torch
 
-from llm_circuits.circuits.interventions import negative_steer, sweep_patch_end_layer
+from llm_circuits.circuits.interventions import steer, sweep_patch_end_layer
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import artifacts_dir, default_device
@@ -65,7 +65,7 @@ def _mid_answer_features(d: dict):
     feats = [n for n in nodes if n["node_type"] == "feature" and n["layer"] <= MAX_STEER_LAYER]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
     steers = [
-        negative_steer(n["layer"], n["feature_idx"], position=n["position"])
+        steer(n["layer"], n["feature_idx"], m=-2.0, position=n["position"])
         for n in feats[:MAX_FEATURES]
     ]
     return steers, answer_token_id

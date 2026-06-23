@@ -28,8 +28,8 @@ from llm_circuits.circuits.graph_pruning import graph_to_dict, prune_graph
 from llm_circuits.circuits.interventions import (
     ablation_logit_effect,
     ablation_prob_effect,
-    negative_steer,
     run_feature_intervention,
+    steer,
 )
 from llm_circuits.circuits.visualization import render_graph_html_str, render_suite_html
 from llm_circuits.instrumentation.chat import prepare_messages
@@ -168,7 +168,7 @@ def build_circuit(model, tokenizer, tc, repo_id, size, tmpl, a, b, out_dir) -> d
     direct.sort(key=lambda t: abs(t[1]), reverse=True)
     top = direct[:N_TOP_FEATURES]
     steers = [
-        negative_steer(pg.nodes[i].layer, pg.nodes[i].feature_idx, position=pg.nodes[i].position)
+        steer(pg.nodes[i].layer, pg.nodes[i].feature_idx, m=-2.0, position=pg.nodes[i].position)
         for i, _ in top
     ]
 

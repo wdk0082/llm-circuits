@@ -55,7 +55,7 @@ class FeatureIntervention:
 
     * ``m == 0``  → no change,
     * ``m == -1`` → ablation (the default),
-    * ``m == -2`` → negative steer (flip the sign; see :func:`negative_steer`).
+    * ``m == -2`` → negative steer (flip the sign: new activation = ``-clean``).
 
     ``value`` overrides ``m`` with an absolute target.  ``position=None`` applies at every
     (non-BOS) sequence position.
@@ -77,20 +77,12 @@ class FeatureIntervention:
 def steer(
     layer: int, feature_idx: int, m: float, position: int | None = None
 ) -> FeatureIntervention:
-    """Steer a feature by additive multiple ``m`` (new activation = ``(1 + m) * clean``)."""
+    """Steer a feature by additive multiple ``m`` (new activation = ``(1 + m) * clean``).
+
+    This is the single entry point for the M convention: ``m=-1`` ablates, ``m=-2`` negative
+    -steers (the paper's sign-flip), ``m>0`` amplifies.
+    """
     return FeatureIntervention(layer, feature_idx, position=position, m=m)
-
-
-def ablate(layer: int, feature_idx: int, position: int | None = None) -> FeatureIntervention:
-    """Remove a feature's contribution (new activation = 0, i.e. ``m = -1``)."""
-    return FeatureIntervention(layer, feature_idx, position=position, m=-1.0)
-
-
-def negative_steer(
-    layer: int, feature_idx: int, position: int | None = None
-) -> FeatureIntervention:
-    """The paper's canonical perturbation: flip a feature's sign (new = ``-clean``, m=-2)."""
-    return FeatureIntervention(layer, feature_idx, position=position, m=-2.0)
 
 
 @dataclass

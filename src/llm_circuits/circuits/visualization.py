@@ -711,11 +711,12 @@ def render_steering_explorer_html(
     """Render a self-contained interactive steering explorer.
 
     *data* is ``{"model": str, "examples": [{"label", "answer", "factors": [float],
-    "tokens": [str], "probs": [[float per token] per factor]}]}``.  A dropdown picks
-    the example; a slider sweeps the steering factor applied to the whole answer
-    supernode (``+1`` = clean, ``0`` = ablate, ``-1`` = negative steer), and a bar
-    chart shows the top tokens' probabilities — all pre-computed offline with
-    constrained patching, so the page is fully static.
+    "tokens": [str], "probs": [[float per token] per factor]}]}``, where ``factors`` are
+    the steering multiples **M** swept.  A dropdown picks the example; a slider sweeps M
+    over the whole answer supernode (``0`` = no change, ``-1`` = ablate, ``-2`` = negative
+    steer / flip; new activation = ``(1 + M) * clean``), and a bar chart shows the top
+    tokens' probabilities — all pre-computed offline with the base-model intervention, so
+    the page is fully static.
     """
     output_path = Path(output_path)
     data_json = json.dumps(data)
@@ -751,7 +752,7 @@ def render_steering_explorer_html(
     Example: <select id="pick"></select>
     <span id="readout"></span>
     <input id="slider" type="range" min="0" max="0" value="0" step="1">
-    <span id="hint">+1 = clean · 0 = ablate · -1 = negative steer (green = answer token)</span>
+    <span id="hint">M: 0 = no change · -1 = ablate · -2 = negative steer (green = answer token)</span>
   </div>
 </header>
 <div id="bars"></div>

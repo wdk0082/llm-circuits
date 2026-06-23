@@ -40,16 +40,10 @@ from llm_circuits.circuits.interventions import (
     ProgressiveAblationResult as ProgressiveAblationResult,
 )
 from llm_circuits.circuits.interventions import (
-    ablate as ablate,
-)
-from llm_circuits.circuits.interventions import (
     ablation_logit_effect as ablation_logit_effect,
 )
 from llm_circuits.circuits.interventions import (
     ablation_prob_effect as ablation_prob_effect,
-)
-from llm_circuits.circuits.interventions import (
-    negative_steer as negative_steer,
 )
 from llm_circuits.circuits.interventions import (
     run_feature_intervention as run_feature_intervention,

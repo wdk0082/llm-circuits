@@ -29,8 +29,8 @@ import torch
 
 from llm_circuits.circuits.interventions import (
     FeatureIntervention,
-    negative_steer,
     run_progressive_intervention,
+    steer,
 )
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.models.qwen3 import load_qwen3
@@ -74,7 +74,7 @@ def _ordered_answer_features(d: dict) -> tuple[list[FeatureIntervention], int | 
     feats = [n for n in nodes if n["node_type"] == "feature"]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
     steers = [
-        negative_steer(n["layer"], n["feature_idx"], position=n["position"])
+        steer(n["layer"], n["feature_idx"], m=-2.0, position=n["position"])
         for n in feats[:MAX_FEATURES]
     ]
     return steers, answer_token_id

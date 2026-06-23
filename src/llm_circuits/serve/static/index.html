@@ -69,21 +69,26 @@
   <label title="keep nodes up to this fraction of influence (higher = more nodes)">node&theta;
     <input id="nodethr" type="range" min="0.5" max="1" step="0.01" value="0.8">
     <span id="nodethrv">0.80</span></label>
-  <label title="keep edges up to this fraction of influence">edge&theta;
-    <input id="edgethr" type="number" min="0.8" max="1" step="0.005" value="0.98" style="width:62px"></label>
+  <label title="keep edges up to this fraction of influence (higher = more edges)">edge&theta;
+    <input id="edgethr" type="range" min="0.8" max="1" step="0.005" value="0.98">
+    <span id="edgethrv">0.98</span></label>
   <button id="reprunebtn" disabled>Reprune</button>
   <span id="reprunestatus" class="muted"></span>
   <span style="color:#ccc">|</span>
   <b title="changing these needs a full Build">build caps (slow)</b>
-  <label title="feature nodes that get incoming edges (blank = full matrix over kept nodes)">targets
-    <input id="targets" type="number" min="16" step="32" value="" placeholder="full" style="width:60px"></label>
-  <label title="max active-feature nodes kept before pruning (blank = no cap: keep ALL active features — slow, the most faithful)">feat-nodes
-    <input id="featnodes" type="number" min="200" step="500" value="4000" placeholder="no cap" style="width:74px"></label>
-  <label title="how feat-nodes selects which features to keep. activation = cheap pre-edge cap by |activation|. influence = circuit-tracer's dynamic selection: attribute features in influence order (never builds the full matrix) and keep the most influential feat-nodes. Influence mode is faithful but needs a feat-nodes cap (it can't run uncapped on a dense model).">cap by
+  <label title="how feat-nodes are selected. influence = circuit-tracer's faithful dynamic selection (attribute features in influence order; slower). activation = cheap pre-edge cap by |activation| (fast).">cap by
     <select id="capby" style="width:92px">
-      <option value="activation" selected>activation</option>
-      <option value="influence">influence</option>
+      <option value="influence" selected>influence</option>
+      <option value="activation">activation</option>
     </select></label>
+  <label title="max feature nodes attributed (the cap). influence: top-N by influence; activation: top-N by |activation|. Lower = faster.">feat-nodes
+    <input id="featnodes" type="number" min="200" step="500" value="4000" style="width:74px"></label>
+  <label id="targetslbl" title="activation mode only: which kept feature nodes get incoming edges.">targets
+    <select id="targetmode" style="width:88px">
+      <option value="full" selected>full matrix</option>
+      <option value="cap">cap to:</option>
+    </select>
+    <input id="targets" type="number" min="16" step="32" value="2000" style="width:76px;display:none"></label>
 </div>
 <div id="main">
   <div id="left"><iframe id="frame" title="attribution graph"></iframe></div>
@@ -102,12 +107,22 @@
       <span id="mval" style="width:34px;text-align:right">0.0</span>
     </div>
     <div class="row">
-      <label title="patch end layer (blank = last steered layer). MLP outputs are pinned to clean up to here, the real model runs after. = last layer freezes LayerNorm too (pure direct effect).">end L</label>
-      <input id="endlayer" type="number" style="width:64px" placeholder="auto">
+      <label title="how far to pin the model. propagate = real downstream MLPs respond (circuit-tracer default). direct = pin all MLPs + freeze LayerNorm → pure linear/direct effect. custom = pin MLPs up to a chosen layer, real model after.">patch</label>
+      <select id="patchmode" style="flex:1">
+        <option value="propagate" selected>propagate (real model)</option>
+        <option value="direct">direct (freeze all → linear)</option>
+        <option value="custom">pin up to layer:</option>
+      </select>
+      <input id="endlayer" type="number" style="width:76px;display:none" placeholder="auto"
+        title="blank = auto (the last steered layer); higher pins more, freezing more of the model">
     </div>
     <div class="row">
-      <button id="steerbtn" disabled>Steer</button>
-      <button id="sweepbtn" disabled>Layer sweep</button>
+      <label title="freeze attention patterns on all layers (circuit-tracer default). A non-propagate patch forces this on regardless; it only takes effect for propagate. Uncheck for the fully-real model.">
+        <input id="freezeattn" type="checkbox" checked> freeze attention</label>
+    </div>
+    <div class="row">
+      <button id="steerbtn" title="run a single intervention with the patch setting above" disabled>Steer</button>
+      <button id="sweepbtn" title="sweep the pin layer from the last steered layer to the last layer (ignores the patch dropdown; always freezes attention since every point is constrained)" disabled>Layer sweep</button>
     </div>
     <div id="steerout"></div>
     <h3 id="sweephdr" style="display:none">Layer-range sweep</h3>
@@ -137,7 +152,32 @@ async function refreshModels() {
 function setLoaded(m) {
   $("status").innerHTML = `<span class="ok">loaded Qwen3-${m.loaded}</span> (${m.n_layers} layers)`;
   $("buildbtn").disabled = false;
+  window.nLayers = m.n_layers || 36;
 }
+
+// Show/hide the conditional number inputs so no box relies on "blank = magic default".
+function syncKnobVisibility() {
+  $("targetslbl").style.display = $("capby").value === "influence" ? "none" : "";
+  $("targets").style.display = $("targetmode").value === "cap" ? "" : "none";
+  $("endlayer").style.display = $("patchmode").value === "custom" ? "" : "none";
+  // A non-propagate patch forces freeze_attention on (server: freeze_attn = freeze OR
+  // range-set), so reflect it: tick + disable the box; it's only a real choice in propagate.
+  const constrained = $("patchmode").value !== "propagate";
+  if (constrained) $("freezeattn").checked = true;
+  $("freezeattn").disabled = constrained;
+  $("freezeattn").parentElement.style.opacity = constrained ? 0.5 : "";
+}
+$("capby").addEventListener("change", syncKnobVisibility);
+$("targetmode").addEventListener("change", syncKnobVisibility);
+$("patchmode").addEventListener("change", () => {
+  syncKnobVisibility();
+  // Pre-fill the custom layer with the last steered layer (l_max) so "auto" is visible.
+  if ($("patchmode").value === "custom" && !$("endlayer").value) {
+    const lm = lMax();
+    if (lm != null) $("endlayer").value = lm;
+  }
+});
+syncKnobVisibility();
 
 $("loadbtn").addEventListener("click", async () => {
   const size = $("model").value;
@@ -165,11 +205,12 @@ $("buildbtn").addEventListener("click", async () => {
   clearGraphState();
   try {
     const t0 = performance.now();
-    const tgt = $("targets").value.trim();
     const fn = $("featnodes").value.trim();
+    // targets (edge-matrix cap) only applies in activation mode; "full matrix" => null.
+    const capTargets = $("capby").value === "activation" && $("targetmode").value === "cap";
     const b = await api("/api/build", {
       text, use_chat: $("usechat").checked, ...pruneVals(),
-      max_feature_targets: tgt === "" ? null : +tgt,
+      max_feature_targets: capTargets ? +$("targets").value : null,
       max_feature_nodes: fn === "" ? null : +fn,
       node_selection: $("capby").value,
     });
@@ -200,6 +241,7 @@ async function reprune() {
 }
 $("nodethr").addEventListener("input", () => $("nodethrv").textContent = (+$("nodethr").value).toFixed(2));
 $("nodethr").addEventListener("change", () => { if (!$("reprunebtn").disabled) reprune(); });
+$("edgethr").addEventListener("input", () => $("edgethrv").textContent = (+$("edgethr").value).toFixed(3));
 $("edgethr").addEventListener("change", () => { if (!$("reprunebtn").disabled) reprune(); });
 $("reprunebtn").addEventListener("click", reprune);
 
@@ -220,10 +262,21 @@ function curNodes() {
   const g = groups[+$("grp").value];
   return g ? g.nodes : [];
 }
+function lMax() {  // the last steered layer of the current supernode (the "auto" pin layer)
+  const ls = curNodes().map(n => n.layer);
+  return ls.length ? Math.max(...ls) : null;
+}
+function patchEndLayer() {
+  const pm = $("patchmode").value;
+  if (pm === "propagate") return null;
+  if (pm === "direct") return (window.nLayers || 36) - 1;
+  const v = $("endlayer").value;  // custom: blank => auto = last steered layer (l_max)
+  return v === "" ? lMax() : +v;
+}
 function steerBody() {
-  const end = $("endlayer").value;
   return { nodes: curNodes(), m: +$("slider").value,
-           patch_end_layer: end === "" ? null : +end };
+           freeze_attention: $("freezeattn").checked,
+           patch_end_layer: patchEndLayer() };
 }
 
 function barChart(baseline, steered) {
@@ -262,7 +315,8 @@ $("sweepbtn").addEventListener("click", async () => {
   $("sweephdr").style.display = "block";
   $("sweepout").innerHTML = "<span class='muted'>sweeping…</span>";
   try {
-    const w = await api("/api/sweep", {nodes: curNodes(), m: +$("slider").value});
+    const w = await api("/api/sweep", {nodes: curNodes(), m: +$("slider").value,
+                                       freeze_attention: $("freezeattn").checked});
     $("sweepout").innerHTML = sweepPlot(w);
   } catch (e) { $("sweepout").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
 });

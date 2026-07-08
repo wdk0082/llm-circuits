@@ -29,9 +29,10 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
 - **`bin/run`** is the run wrapper (sources `.env`, prepends `.venv/bin` to
   `PATH`, execs) used on both laptop and VM; `launch.sh` invokes
   `./bin/run python -u <script.py>` on the TPU.
-- **Device:** `launch.sh` injects `LLM_CIRCUITS_DEVICE=tpu`. Resolving that to
-  an actual `torch_xla` XLA device in `settings.py`/model loaders is a deferred
-  follow-up — the plumbing delivers the marker today.
+- **Device:** `launch.sh` injects `LLM_CIRCUITS_DEVICE=tpu`, which
+  `settings.default_device()` resolves to the torch_xla `"xla"` device;
+  `hf_loader` loads on CPU then moves to XLA. Smoke test:
+  `gcp/launch.sh examples/tpu_smoke_test.py`.
 - **torch_xla** is installed on the VM by `gcp/bootstrap.sh`
   (`torch_xla[tpu]==2.10.0`, matched to the `torch` pin in `uv.lock`), **not**
   in `pyproject.toml`, so the lockfile stays cross-platform.

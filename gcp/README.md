@@ -51,10 +51,11 @@ Helpers: `gcp/status.sh` (state of QR / TPU / bucket), `gcp/ssh.sh [cmd]`
 - **`./bin/run`** is the entrypoint on both laptop and VM: it sources `.env`,
   prepends `.venv/bin` to `PATH`, then execs. `launch.sh` runs
   `./bin/run python -u <script.py>` on the VM.
-- **Device:** `launch.sh` injects `LLM_CIRCUITS_DEVICE=tpu` (this repo's device
-  env var, read by `llm_circuits.settings.default_device`). Wiring `tpu` to an
-  actual `torch_xla` XLA device in `settings.py` / the model loaders is a
-  deferred follow-up — the lifecycle plumbing already delivers the marker.
+- **Device:** `launch.sh` injects `LLM_CIRCUITS_DEVICE=tpu`, which
+  `llm_circuits.settings.default_device` resolves to the torch_xla `"xla"`
+  device (models load on CPU, then move to XLA — see
+  `models/hf_loader.py`). Verify the wiring with
+  `gcp/launch.sh examples/tpu_smoke_test.py`.
 - **torch_xla** is installed on the VM by `bootstrap.sh`
   (`torch_xla[tpu]==2.10.0`, matched to the `torch` pin in `uv.lock`), kept out
   of `pyproject.toml` so the lockfile stays cross-platform. Override with
@@ -85,6 +86,6 @@ Helpers: `gcp/status.sh` (state of QR / TPU / bucket), `gcp/ssh.sh [cmd]`
 - Code reaches the VM via `git clone`/`pull` (push before launching). For
   fast local iteration without pushing, `scp` the changed files with
   `gcp/ssh.sh` or add an rsync helper.
-- The on-VM checkpoint-to-GCS write + SIGTERM-on-preemption handler is
-  framework-specific — add it to `src/llm_circuits/` alongside the torch_xla
-  device wiring.
+- The on-VM checkpoint-to-GCS write + SIGTERM-on-preemption handler is not
+  implemented (moot while `TPU_SPOT=0`; add to `src/llm_circuits/` if Spot
+  quota ever appears).

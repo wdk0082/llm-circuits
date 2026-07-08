@@ -8,10 +8,33 @@ from pathlib import Path
 import torch
 
 
+def xla_device() -> str:
+    """Import torch_xla (registering the ``xla`` device type) and return ``"xla"``.
+
+    torch_xla is Linux/TPU-only and installed on the TPU VM by
+    ``gcp/bootstrap.sh`` — it is deliberately absent from ``pyproject.toml``.
+    """
+    try:
+        import torch_xla  # noqa: F401  (import registers 'xla' with torch)
+    except ImportError as exc:
+        raise RuntimeError(
+            "LLM_CIRCUITS_DEVICE=tpu requires torch_xla, which is installed on "
+            "the TPU VM by gcp/bootstrap.sh and is not available on laptops."
+        ) from exc
+    return "xla"
+
+
 def default_device() -> str:
-    """Return the best available device string."""
+    """Return the best available device string.
+
+    ``LLM_CIRCUITS_DEVICE`` overrides auto-detection; the values ``tpu`` and
+    ``xla`` resolve to the torch_xla ``"xla"`` device (TPU VM only).
+    """
     override = os.environ.get("LLM_CIRCUITS_DEVICE")
     if override:
+        normalized = override.strip().lower()
+        if normalized in ("tpu", "xla"):
+            return xla_device()
         return override
     if torch.cuda.is_available():
         return "cuda"
@@ -21,7 +44,7 @@ def default_device() -> str:
 
 
 def default_dtype() -> torch.dtype:
-    """Return bfloat16 on CUDA/CPU, float32 on MPS (bf16 unsupported on older MPS)."""
+    """Return bfloat16 on CUDA/CPU/XLA (TPU-native), float32 on MPS (bf16 unsupported on older MPS)."""
     dev = default_device()
     if dev == "mps":
         return torch.float32

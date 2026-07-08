@@ -15,10 +15,11 @@ so that its output is replaced by the corresponding transcoder reconstruction.
 
 .. note::
 
-    For **Gemma2** models the transcoder reads from ``pre_feedforward_layernorm``
-    output and writes to ``post_feedforward_layernorm`` output.  Pass
-    ``output_module_template="model.layers.{layer}.post_feedforward_layernorm"``
-    to :func:`replace_mlps_with_transcoders` and :func:`compare_models`.
+    Some architectures read the transcoder input and write its output on
+    *different* submodules (a "two-hook" layer).  Pass
+    ``output_module_template="model.layers.{layer}.<output_submodule>"`` to
+    :func:`replace_mlps_with_transcoders` and :func:`compare_models` to replace
+    that separate output module.  Qwen3 is single-hook, so it is left ``None``.
 """
 
 from __future__ import annotations
@@ -72,7 +73,7 @@ class _CrossLayerBuffer:
 
 
 class _InputBuffer:
-    """Stores captured transcoder inputs for two-hook architectures (e.g. Gemma2).
+    """Stores captured transcoder inputs for two-hook architectures.
 
     When the transcoder's input source and output target live on different
     submodules, an input-capture hook stores the MLP input here, and the
@@ -313,8 +314,8 @@ def replace_mlps_with_transcoders(
         output_module_template: If provided, a *separate* submodule whose output
             is replaced by the transcoder reconstruction.  Required for
             architectures where the transcoder output target differs from the
-            input source.  For Gemma2, pass
-            ``"model.layers.{layer}.post_feedforward_layernorm"``.
+            input source (a "two-hook" layer).  Qwen3 is single-hook, so this is
+            left ``None``.
 
     Yields:
         A :class:`ReplacementContext` whose ``reconstructions`` (and optionally

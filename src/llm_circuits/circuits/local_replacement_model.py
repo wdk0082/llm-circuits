@@ -24,7 +24,7 @@ The main entry points are:
 * :func:`run_local_replacement` — convenience wrapper that captures constants
   and runs one local forward pass in a single call.
 
-Scope: **Qwen3 only** (Gemma2 support deferred).
+Scope: **Qwen3**.
 """
 
 from __future__ import annotations
@@ -785,8 +785,9 @@ def run_local_replacement(
         n_bos_tokens: Number of leading positions to preserve original MLP
             output (transcoders cannot reconstruct the attention-sink position).
         mlp_name_template: Format string for MLP submodule names.
-        output_module_template: Separate output module (for Gemma2-style
-            architectures).
+        output_module_template: Separate output module (for two-hook
+            architectures whose transcoder output target differs from its input
+            source); ``None`` for single-hook Qwen3.
         attn_name_template: Format string for attention submodule names.
         layernorm_templates: Format strings for RMSNorm modules to freeze.
             Defaults to Qwen3 templates.

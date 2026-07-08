@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# bin/run — load .env, put the repo venv on PATH, then exec the given command.
+#
+# Use it for everything:
+#   ./bin/run python experiments/001_foo.py --task offset
+#   ./bin/run pytest
+#   ./bin/run ruff check tests experiments
+#
+# The same wrapper works on your laptop and on the TPU VM — each has its own
+# `.env` and its own `.venv`.
+set -euo pipefail
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ ! -f "$REPO_DIR/.env" ]]; then
+    echo "bin/run: missing $REPO_DIR/.env (copy .env.example -> .env)" >&2
+    exit 1
+fi
+
+# Treat `.env` as defaults: if the caller already set a var (e.g. launch.sh
+# injects DEVICE / CKPT_DIR), their value wins. Snapshot any key `.env` will
+# set that's already in the environment, source `.env`, then replay snapshots.
+CALLER_OVERRIDES=""
+while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)= ]] || continue
+    key="${BASH_REMATCH[1]}"
+    if [[ -n "${!key+set}" ]]; then
+        CALLER_OVERRIDES+="export ${key}=$(printf '%q' "${!key}")"$'\n'
+    fi
+done < "$REPO_DIR/.env"
+
+set -a
+# shellcheck disable=SC1091
+source "$REPO_DIR/.env"
+set +a
+
+# Replay caller's overrides last so they win.
+if [[ -n "$CALLER_OVERRIDES" ]]; then
+    # shellcheck disable=SC2086
+    eval "$CALLER_OVERRIDES"
+fi
+
+VENV_DIR="$REPO_DIR/.venv"
+if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+    echo "bin/run: no python at $VENV_DIR/bin/python — run \`uv sync\` first" >&2
+    exit 1
+fi
+
+PATH="$VENV_DIR/bin:$PATH"
+exec "$@"

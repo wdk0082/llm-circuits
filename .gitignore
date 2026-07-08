@@ -213,3 +213,8 @@ artifacts/
 *.code-workspace
 .vscode/
 screenshot/
+
+# Cloud TPU — never commit service-account keys or credentials
+gcp/keys/
+*sa-key.json
+scratch/

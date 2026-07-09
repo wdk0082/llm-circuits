@@ -81,6 +81,32 @@ def synonym_prompt(concept: str, lang: str) -> str:
     return SYNONYM_PROMPT[lang].format(w=WORD[concept][lang])
 
 
+# The paper's EXACT raw completion prompts (biology digest §B.1): the final token is a
+# content-bearing open quote — where the paper's open-quote-in-language-X detection
+# features live. The chat-template prompts end on assistant-header tokens instead, so the
+# raw forms are the format control for the language swap. Raw behavior on Qwen3-4B
+# (probed 2026-07-09): antonym large/grand/大 @ 0.77/0.99/0.99 — task intact; synonym
+# en=tiny, fr echoes pet(it) (echo NOT a chat artifact), zh 小/微 near-tie.
+RAW_ANTONYM_PROMPT = {
+    "en": 'The opposite of "{w}" is "',
+    "fr": 'Le contraire de "{w}" est "',
+    "zh": '"{w}"的反义词是"',
+}
+RAW_SYNONYM_PROMPT = {
+    "en": 'A synonym of "{w}" is "',
+    "fr": 'Un synonyme de "{w}" est "',
+    "zh": '"{w}"的近义词是"',
+}
+
+
+def raw_antonym_prompt(concept: str, lang: str) -> str:
+    return RAW_ANTONYM_PROMPT[lang].format(w=WORD[concept][lang])
+
+
+def raw_synonym_prompt(concept: str, lang: str) -> str:
+    return RAW_SYNONYM_PROMPT[lang].format(w=WORD[concept][lang])
+
+
 def tokenize(tokenizer, prompt: str, device) -> torch.Tensor:
     """Chat-template tokenisation identical to the graph builder (so positions line up)."""
     messages, _, tkw = prepare_messages(prompt, "qwen3", enable_thinking=False)
@@ -89,16 +115,35 @@ def tokenize(tokenizer, prompt: str, device) -> torch.Tensor:
     ).to(device)
 
 
+def tokenize_raw(tokenizer, prompt: str, device) -> torch.Tensor:
+    """Raw-completion tokenisation with a prepended special token (the attention sink).
+
+    Mirrors ``addition_helper.tokenize_raw``: transcoders can't reconstruct position 0,
+    so raw prompts get a special token (eos/pad — Qwen3 has no BOS) prepended and every
+    downstream consumer keeps ``n_bos_tokens=1``.
+    """
+    ids = tokenizer(prompt, add_special_tokens=False, return_tensors="pt").input_ids
+    special = tokenizer.bos_token_id or tokenizer.pad_token_id or tokenizer.eos_token_id
+    ids = torch.cat([torch.tensor([[special]], dtype=ids.dtype), ids], dim=1)
+    return ids.to(device)
+
+
+def _tokenize(tokenizer, prompt: str, device, raw: bool) -> torch.Tensor:
+    return tokenize_raw(tokenizer, prompt, device) if raw else tokenize(tokenizer, prompt, device)
+
+
 # ---------------------------------------------------------------------------
 # Task verification + attribution graphs
 # ---------------------------------------------------------------------------
 
 
 @torch.no_grad()
-def model_answer(model, tokenizer, prompt: str, n_gen: int = 4) -> tuple[int, str, str]:
+def model_answer(
+    model, tokenizer, prompt: str, n_gen: int = 4, *, raw: bool = False
+) -> tuple[int, str, str]:
     """Greedy answer; returns (first_token_id, first_token_str, full_continuation)."""
     device = next(model.parameters()).device
-    ids = tokenize(tokenizer, prompt, device)
+    ids = _tokenize(tokenizer, prompt, device, raw)
     out = model.generate(
         ids,
         attention_mask=torch.ones_like(ids),
@@ -122,13 +167,16 @@ def build_graph(
     edge_threshold: float = 0.98,
     out_html=None,
     title: str = "",
+    raw: bool = False,
 ):
     """Build -> prune -> label an attribution graph for the next (answer) token.
 
+    ``raw=True`` uses :func:`tokenize_raw` (paper-format completion prompts) instead of
+    the chat template; ``n_bos_tokens=1`` holds either way (sink-token prepend).
     Returns ``(pruned_dict, answer_token_id, input_ids)``; writes the explorer HTML if asked.
     """
     device = next(model.parameters()).device
-    input_ids = tokenize(tokenizer, prompt, device)
+    input_ids = _tokenize(tokenizer, prompt, device, raw)
     with torch.no_grad():
         answer_id = int(model(input_ids).logits[0, -1].argmax())
 
@@ -411,7 +459,9 @@ def plot_overlap_curves(curves, *, ax=None, title="Cross-language feature overla
 # ---------------------------------------------------------------------------
 
 
-def position_supernode(model, tc, prompt, tokenizer, position, top_n: int = 10, *, max_layer=None):
+def position_supernode(
+    model, tc, prompt, tokenizer, position, top_n: int = 10, *, max_layer=None, raw: bool = False
+):
     """Top-``top_n`` features by activation at ``position`` (layers ``< max_layer`` if given).
 
     ``position`` is an int index or ``"final"``.  Returns ``([(layer, idx, act)], input_ids)``.
@@ -421,7 +471,7 @@ def position_supernode(model, tc, prompt, tokenizer, position, top_n: int = 10, 
     after the fact (as callers previously did) returns an empty set.
     """
     device = next(model.parameters()).device
-    ids = tokenize(tokenizer, prompt, device)
+    ids = _tokenize(tokenizer, prompt, device, raw)
     pos = ids.shape[1] - 1 if position == "final" else position
     cap = _capture_mlp_inputs(model, tc, ids)
     n_scan = len(tc) if max_layer is None else max(1, min(int(max_layer), len(tc)))
@@ -708,16 +758,21 @@ def early_language_detection_supernode(
     max_layer_frac: float = 0.34,
     top_k: int = 40,
     keep: int = 12,
+    raw: bool = False,
 ):
     """Language-detection supernodes per the paper: EARLY-layer, final-token features unique
     to each language (the paper swaps 'open-quote-in-language-X' / 'beginning-of-document-
     in-language-Y' features, which live early in the model).
 
     Like :func:`lang_specific_final_features` but restricted to layers
-    ``< max_layer_frac * n_layers``.  Returns ``{lang: [(layer, idx, act)]}``.
+    ``< max_layer_frac * n_layers``.  ``raw=True`` builds them on the paper's raw
+    open-quote prompts, whose final token IS an open quote in the prompt's language —
+    the token the paper's detection features actually live on (the chat prompts end on
+    assistant-header tokens instead).  Returns ``{lang: [(layer, idx, act)]}``.
     """
     n_layers = len(tc)
     lmax = max(1, int(n_layers * max_layer_frac))
+    prompt_fn = raw_antonym_prompt if raw else antonym_prompt
     finals: dict[str, list[tuple[int, int, float]]] = {}
     sets: dict[str, set[tuple[int, int]]] = {}
     for lg in LANGS:
@@ -726,11 +781,12 @@ def early_language_detection_supernode(
         node, _ = position_supernode(
             model,
             tc,
-            antonym_prompt(concept, lg),
+            prompt_fn(concept, lg),
             tokenizer,
             "final",
             top_n=top_k,
             max_layer=lmax,
+            raw=raw,
         )
         finals[lg] = node
         sets[lg] = {(L, i) for (L, i, _) in node}
@@ -767,7 +823,11 @@ def overlap_curves_paper(model, tc, tokenizer, corpus=None):
     For each paragraph and language pair, IOU per layer of the feature sets active anywhere
     in the context; plus the paper's **baseline**: the same IOU computed on UNRELATED
     paragraph pairs (paragraph i in language A vs paragraph (i+1) mod N in language B).
-    Returns ``{pair: curve, f"{pair}-baseline": curve, "mean", "mean-baseline"}``.
+    Returns ``{pair: curve, f"{pair}-baseline": curve, "mean", "mean-baseline",
+    "set-size"}`` — ``set-size`` is the mean active-set size per layer (over corpus x
+    languages), the granularity check for cross-model IOU comparisons (IOU is
+    mechanically sensitive to how many features fire, so same-recipe pairs should show
+    comparable set sizes).
     """
     corpus = corpus or CORPUS
     n_layers = len(tc)
@@ -790,6 +850,12 @@ def overlap_curves_paper(model, tc, tokenizer, corpus=None):
         out[f"{a}-{b}-baseline"] = base / n
     out["mean"] = np.mean([out[f"{a}-{b}"] for a, b in pairs], axis=0)
     out["mean-baseline"] = np.mean([out[f"{a}-{b}-baseline"] for a, b in pairs], axis=0)
+    out["set-size"] = np.array(
+        [
+            np.mean([len(sets_by_lang[lg][i][L]) for lg in LANGS for i in range(n)])
+            for L in range(n_layers)
+        ]
+    )
     return out
 
 

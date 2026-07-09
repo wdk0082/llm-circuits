@@ -463,13 +463,16 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
     """Positions of the operand digit tokens in a ``calc: a+b=`` prompt.
 
     Qwen3 tokenises digits one per token, so ``36+59`` -> tokens 3,6,+,5,9.  Returns
-    ``{"a_digits": [...], "b_digits": [...], "eq": [pos_of_=]}`` (positions past N_BOS).
+    ``{"a_digits": [...], "b_digits": [...], "eq": [pos_of_=], "plus": [pos_of_+]}``
+    (positions past N_BOS).  ``plus``/``eq`` are the operator positions where the paper's
+    add-function features live.
     """
     toks = [tokenizer.decode([int(t)]) for t in input_ids[0]]
     a_str, b_str = str(a), str(b)
     a_pos: list[int] = []
     b_pos: list[int] = []
     eq_pos: list[int] = []
+    plus_pos: list[int] = []
     plus_seen = False
     for i, t in enumerate(toks):
         if i < N_BOS:
@@ -477,13 +480,19 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
         s = t.strip()
         if s == "+":
             plus_seen = True
+            plus_pos.append(i)
         elif s == "=":
             eq_pos.append(i)
         elif s.isdigit():
             (b_pos if plus_seen else a_pos).append(i)
     # keep only the trailing len(a_str)/len(b_str) digit tokens (guards against digits
     # appearing elsewhere in the prompt).
-    return {"a_digits": a_pos[-len(a_str) :], "b_digits": b_pos[-len(b_str) :], "eq": eq_pos}
+    return {
+        "a_digits": a_pos[-len(a_str) :],
+        "b_digits": b_pos[-len(b_str) :],
+        "eq": eq_pos,
+        "plus": plus_pos,
+    }
 
 
 def position_features(pruned_dict, positions, top_n: int = 12, *, max_layer: int | None = None):
@@ -826,8 +835,23 @@ def probe_features_on_prompt(model, tc, tokenizer, feats, prompt: str):
 
 
 @torch.no_grad()
-def introspection_dialogue(model, tokenizer, a: int = 36, b: int = 59, max_new: int = 80):
-    """Two-turn chat: answer a+b, then explain how.  Returns both responses."""
+def introspection_dialogue(
+    model,
+    tokenizer,
+    a: int = 36,
+    b: int = 59,
+    max_new: int = 80,
+    *,
+    how_question: str = "Briefly, how did you get that?",
+    do_sample: bool = False,
+    temperature: float = 0.7,
+):
+    """Two-turn chat: answer a+b, then explain how.  Returns both responses.
+
+    The answer turn is always greedy (it is the behavior under study); ``do_sample`` /
+    ``temperature`` / ``how_question`` vary only the EXPLANATION turn — the paper's
+    carry-narration claim should be checked over sampled phrasings, not one greedy shot.
+    """
     device = next(model.parameters()).device
     msgs = [{"role": "user", "content": f"Answer in one word. What is {a}+{b}?"}]
     ids = tokenizer.apply_chat_template(
@@ -844,20 +868,19 @@ def introspection_dialogue(model, tokenizer, a: int = 36, b: int = 59, max_new: 
 
     msgs += [
         {"role": "assistant", "content": answer},
-        {"role": "user", "content": "Briefly, how did you get that?"},
+        {"role": "user", "content": how_question},
     ]
     ids2 = tokenizer.apply_chat_template(
         msgs, return_tensors="pt", add_generation_prompt=True, enable_thinking=False
     ).to(device)
+    gen_kw: dict = {"do_sample": do_sample, "pad_token_id": tokenizer.eos_token_id}
+    if do_sample:
+        gen_kw["temperature"] = temperature
     out2 = model.generate(
-        ids2,
-        attention_mask=torch.ones_like(ids2),
-        max_new_tokens=max_new,
-        do_sample=False,
-        pad_token_id=tokenizer.eos_token_id,
+        ids2, attention_mask=torch.ones_like(ids2), max_new_tokens=max_new, **gen_kw
     )
     explanation = tokenizer.decode(out2[0, ids2.shape[1] :], skip_special_tokens=True).strip()
-    return {"answer": answer, "explanation": explanation}
+    return {"answer": answer, "explanation": explanation, "how_question": how_question}
 
 
 # ---------------------------------------------------------------------------

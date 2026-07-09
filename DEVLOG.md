@@ -413,6 +413,17 @@ position-sensitive):
   `The opposite of "small" is "` prompts (accepting weaker task behavior). If it still
   does nothing, "the causal handle sits later in Qwen3" is earned; until then the
   verdict is *unresolved-format-confound*, not *differs*.
+- **Scale claim: de-confound with a same-recipe pair — rerun the overlap IOU at 4b vs
+  8b.** The "not reproduced (confounded)" verdict compared 0.6b (`-lowl0` transcoder
+  recipe) against 4b (plain recipe), so dictionary granularity/sparsity confounds the
+  IOU. The registry has a same-recipe pair: `mwhanna/qwen3-4b-transcoders` vs
+  `mwhanna/qwen3-8b-transcoders` (both plain). Swap the 0.6b for 8b in
+  `multilingual.ipynb`'s scale-comparison section (it already frees the 4b before
+  loading the comparison model; overlap is forward-only, so an A100-80GB fits 8b bf16 +
+  lazy-decoder transcoders). If 8b > 4b on the baseline-subtracted mid-layer IOU
+  (especially en-zh / fr-zh), the paper's scale claim reproduces; if the inversion
+  persists on a same-recipe pair, it is a real Qwen3-vs-Claude difference worth
+  reporting.
 
 ---
 

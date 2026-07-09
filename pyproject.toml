@@ -35,6 +35,7 @@ dev = [
 notebook = [
     "jupyterlab",
     "ipykernel",
+    "datasets>=4.5.0",
 ]
 serve = [
     "fastapi>=0.137.2",

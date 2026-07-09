@@ -1680,6 +1680,7 @@ dev = [
     { name = "ruff" },
 ]
 notebook = [
+    { name = "datasets" },
     { name = "ipykernel" },
     { name = "jupyterlab" },
 ]
@@ -1711,6 +1712,7 @@ dev = [
     { name = "ruff" },
 ]
 notebook = [
+    { name = "datasets", specifier = ">=4.5.0" },
     { name = "ipykernel" },
     { name = "jupyterlab" },
 ]

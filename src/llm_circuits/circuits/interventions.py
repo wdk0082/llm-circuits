@@ -160,6 +160,7 @@ def _steer_base_model(
     attn_name_template: str,
     layernorm_templates: list[str],
     final_norm_name: str,
+    readout_layers: list[int] | None = None,
 ) -> AblationResult:
     """circuit-tracer's ``feature_intervention`` on the REAL model (per-layer transcoders).
 
@@ -206,9 +207,27 @@ def _steer_base_model(
             clean_act = feats[p, iv.feature_idx].float().item()
             d[p] += dec * (iv.target(clean_act) - clean_act)  # = m * clean * W_dec
 
+    # Optional feature readout: capture the intervened forward's MLP inputs at the
+    # requested layers so downstream feature activations (the paper's "% of baseline"
+    # node annotations) can be measured on the SAME perturbed pass.
+    readout_caps: dict[int, Tensor] = {}
+
+    def _make_readout_hook(layer_idx: int) -> Any:
+        def hook(_m: nn.Module, inp: Any, _out: Any) -> None:
+            readout_caps[layer_idx] = inp[0].detach()
+
+        return hook
+
     handles: list[Any] = []
     saved_attn: dict[int, Any] = {}
     try:
+        if readout_layers:
+            for i in sorted(set(readout_layers)):
+                handles.append(
+                    model.get_submodule(mlp_name_template.format(layer=i)).register_forward_hook(
+                        _make_readout_hook(i)
+                    )
+                )
         if freeze_attn:
             for i in range(n_layers):
                 attn_mod = model.get_submodule(attn_name_template.format(layer=i))
@@ -248,13 +267,20 @@ def _steer_base_model(
         for h in handles:
             h.remove()
 
+    # Encode the captured perturbed MLP inputs -> intervened feature activations.
+    ablated_features: dict[int, Tensor] = {}
+    with torch.no_grad():
+        for i, x in readout_caps.items():
+            feats = transcoder.transcoders[i].encode(x)
+            ablated_features[i] = (feats[0] if feats.dim() == 3 else feats).detach()
+
     base_logits = caps.original_logits
     base_logits = (base_logits[0] if base_logits.dim() == 3 else base_logits).detach()
     return AblationResult(
         baseline_logits=base_logits,
         ablated_logits=intervened_logits,
         baseline_features=base.features,
-        ablated_features={},
+        ablated_features=ablated_features,
     )
 
 
@@ -267,6 +293,7 @@ def run_feature_intervention(
     patch_end_layer: int | None = None,
     freeze_attention: bool = True,
     n_bos_tokens: int = 1,
+    readout_layers: list[int] | None = None,
     mlp_name_template: str = "model.layers.{layer}.mlp",
     output_module_template: str | None = None,
     attn_name_template: str = "model.layers.{layer}.self_attn",
@@ -287,6 +314,10 @@ def run_feature_intervention(
     direct/linear effect).  ``patch_end_layer=None`` pins nothing — the delta propagates
     through the real downstream MLPs + LayerNorm.  Defaults to the last steered layer (max
     downstream recompute); must be in ``[max steered layer, n_layers-1]``.
+
+    ``readout_layers`` captures the intervened forward's MLP inputs at those layers and
+    fills :attr:`AblationResult.ablated_features` with the perturbed feature activations —
+    the paper's "% activation relative to baseline" node measurements.
     """
     if input_ids.dim() == 1:
         input_ids = input_ids.unsqueeze(0)
@@ -354,6 +385,7 @@ def run_feature_intervention(
         attn_name_template=attn_name_template,
         layernorm_templates=layernorm_templates,
         final_norm_name=final_norm_name,
+        readout_layers=readout_layers,
     )
 
 

@@ -176,9 +176,7 @@ def graph_features_at_position(pruned_dict, position: int, top_n: int = 10):
     position which surfaces late generic features.  ``activation`` is the donor inject value.
     """
     feats = [
-        n
-        for n in pruned_dict["nodes"]
-        if n["node_type"] == "feature" and n["position"] == position
+        n for n in pruned_dict["nodes"] if n["node_type"] == "feature" and n["position"] == position
     ]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
     return [(n["layer"], n["feature_idx"], float(n.get("activation", 0.0))) for n in feats[:top_n]]
@@ -415,8 +413,7 @@ def position_supernode(model, tc, prompt, tokenizer, position, top_n: int = 10):
             vec = tc.transcoders[L].encode(cap[L])[0][pos]  # (d_t,)
             v, i = vec.topk(top_n)
             cands.extend(
-                (L, int(idx), float(act))
-                for act, idx in zip(v.tolist(), i.tolist(), strict=True)
+                (L, int(idx), float(act)) for act, idx in zip(v.tolist(), i.tolist(), strict=True)
             )
     cands.sort(key=lambda x: x[2], reverse=True)
     return cands[:top_n], ids
@@ -500,3 +497,298 @@ def direct_logit_effect(model, tc, layer: int, feature_idx: int, token_ids: dict
     contrib = wu @ (gamma * dec)  # (vocab,)
     demeaned = contrib - contrib.mean()
     return {lg: float(demeaned[t]) for lg, t in token_ids.items()}
+
+
+# ---------------------------------------------------------------------------
+# PAPER-EXACT protocols (biology.html, Multilingual Circuits)
+# ---------------------------------------------------------------------------
+# The paper's swap protocol differs from ``run_graft`` in two ways:
+#   1. the SOURCE supernode is steered to a NEGATIVE multiple of its clean
+#      activation (operation/language: -5x; operand: -0.5x) -- not just ablated;
+#   2. the intervention is SWEPT along a strength axis (0 -> donor_max) and the
+#      paper reports the crossover strength (~4x for the operation swap).
+# Multiplier convention: paper multiples are MULTIPLICATIVE on the clean
+# activation (M_paper), and our FeatureIntervention.m is additive-delta, so
+# m = M_paper - 1 (e.g. -5x  ->  m=-6).
+
+# Paper endpoint strengths per swap kind: (source_mult, donor_mult).
+PAPER_SWAP_STRENGTHS = {
+    "operation": (-5.0, 6.0),
+    "operand": (-0.5, 1.5),
+    "language": (-5.0, 6.0),
+}
+
+
+def paper_swap(
+    model,
+    tc,
+    recipient_ids,
+    source_node,
+    donor_node,
+    position,
+    *,
+    source_mult: float,
+    donor_mult: float,
+):
+    """One paper-protocol swap: source at ``source_mult x clean``, donor at ``donor_mult x donor``.
+
+    ``source_node``/``donor_node`` are ``[(layer, idx, act)]`` lists (``act`` = clean/donor
+    activation); ``position`` is an int or ``"final"``.  Donor features also present in the
+    source are dropped from the suppression set so the inject isn't cancelled.
+    """
+    pos = recipient_ids.shape[1] - 1 if position == "final" else position
+    donor_keys = {(L, idx) for (L, idx, _) in donor_node}
+    ivs = [
+        FeatureIntervention(L, idx, position=pos, m=source_mult - 1.0)
+        for (L, idx, _) in source_node
+        if (L, idx) not in donor_keys
+    ]
+    ivs += [
+        FeatureIntervention(L, idx, position=pos, value=donor_mult * act)
+        for (L, idx, act) in donor_node
+    ]
+    return run_feature_intervention(model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS)
+
+
+def paper_swap_sweep(
+    model,
+    tc,
+    recipient_ids,
+    source_node,
+    donor_node,
+    position,
+    tokenizer,
+    *,
+    kind: str,
+    baseline_token: int,
+    expected_token: int,
+    n_steps: int = 13,
+):
+    """Sweep the swap strength 0 -> donor_max (the paper's Fig B3/B4 line charts).
+
+    At strength ``s`` the donor is injected at ``s x donor_act`` and the source is steered to
+    ``(source_max/donor_max)*s x clean`` -- a proportional ramp that hits the paper's quoted
+    endpoint pair (e.g. -5x/+6x) exactly at ``s = donor_max``.  Tracks the probability of the
+    ``baseline_token`` (clean answer) and ``expected_token`` (the swapped task's answer) at
+    every step and reports the **crossover** = smallest s where P(expected) > P(baseline)
+    (paper: ~4x for the operation swap, consistent across languages).
+
+    Returns a dict with ``strengths``, ``p_baseline``, ``p_expected``, ``top_tokens`` (per
+    step), and ``crossover`` (None if never crossed).
+    """
+    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
+    strengths = [don_max * i / (n_steps - 1) for i in range(n_steps)]
+    p_base, p_exp, tops = [], [], []
+    for s in strengths:
+        if s == 0.0:
+            res = run_feature_intervention(model, tc, recipient_ids, [], n_bos_tokens=N_BOS)
+            row = res.baseline_logits[-1]
+        else:
+            res = paper_swap(
+                model,
+                tc,
+                recipient_ids,
+                source_node,
+                donor_node,
+                position,
+                source_mult=1.0 + (src_max - 1.0) * (s / don_max),
+                donor_mult=s,
+            )
+            row = res.ablated_logits[-1]
+        probs = row.float().softmax(-1)
+        p_base.append(float(probs[baseline_token]))
+        p_exp.append(float(probs[expected_token]))
+        tops.append(top_token_probs(row, tokenizer, k=4))
+    crossover = next(
+        (s for s, pb, pe in zip(strengths, p_base, p_exp, strict=True) if pe > pb), None
+    )
+    return {
+        "kind": kind,
+        "strengths": strengths,
+        "p_baseline": p_base,
+        "p_expected": p_exp,
+        "top_tokens": tops,
+        "crossover": crossover,
+    }
+
+
+def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=None):
+    """Paper-style probability-vs-strength panels, one per language (Fig B3/B4/B5)."""
+    langs = list(results_by_lang)
+    own = ax_row is None
+    if own:
+        _, ax_row = plt.subplots(1, len(langs), figsize=(4.2 * len(langs), 3.4))
+    ax_row = np.atleast_1d(ax_row)
+    for ax, lg in zip(ax_row, langs, strict=True):
+        r = results_by_lang[lg]
+        ax.plot(r["strengths"], r["p_baseline"], "o-", label=f"baseline {token_strs[lg][0]!r}")
+        ax.plot(r["strengths"], r["p_expected"], "s-", label=f"expected {token_strs[lg][1]!r}")
+        if r["crossover"] is not None:
+            ax.axvline(r["crossover"], color="red", ls="--", alpha=0.6)
+            ax.text(r["crossover"], 0.5, f" x{r['crossover']:.1f}", color="red", fontsize=8)
+        ax.set_title(LANG_NAME[lg])
+        ax.set_xlabel("intervention strength (x donor act)")
+        ax.set_ylim(-0.02, 1.02)
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=7)
+    ax_row[0].set_ylabel("next-token probability")
+    if own:
+        plt.suptitle(title)
+        plt.tight_layout()
+    return ax_row
+
+
+def early_language_detection_supernode(
+    model,
+    tc,
+    tokenizer,
+    concept: str = "small",
+    *,
+    max_layer_frac: float = 0.34,
+    top_k: int = 40,
+    keep: int = 12,
+):
+    """Language-detection supernodes per the paper: EARLY-layer, final-token features unique
+    to each language (the paper swaps 'open-quote-in-language-X' / 'beginning-of-document-
+    in-language-Y' features, which live early in the model).
+
+    Like :func:`lang_specific_final_features` but restricted to layers
+    ``< max_layer_frac * n_layers``.  Returns ``{lang: [(layer, idx, act)]}``.
+    """
+    n_layers = len(tc)
+    lmax = max(1, int(n_layers * max_layer_frac))
+    finals: dict[str, list[tuple[int, int, float]]] = {}
+    sets: dict[str, set[tuple[int, int]]] = {}
+    for lg in LANGS:
+        node, _ = position_supernode(
+            model, tc, antonym_prompt(concept, lg), tokenizer, "final", top_n=top_k
+        )
+        node = [(L, i, a) for (L, i, a) in node if lmax > L]
+        finals[lg] = node
+        sets[lg] = {(L, i) for (L, i, _) in node}
+    out: dict[str, list[tuple[int, int, float]]] = {}
+    for lg in LANGS:
+        others = set().union(*(sets[o] for o in LANGS if o != lg))
+        out[lg] = [(L, i, a) for (L, i, a) in finals[lg] if (L, i) not in others][:keep]
+    return out
+
+
+# ---------------------------------------------------------------------------
+# PAPER-EXACT overlap: IOU of features active anywhere in context + baseline
+# ---------------------------------------------------------------------------
+
+
+def active_features_by_layer(model, tc, prompt, tokenizer) -> dict[int, set[int]]:
+    """Features ACTIVE ANYWHERE in the (non-BOS) context, per layer — the paper's set
+    definition for the cross-lingual IOU (vs. our earlier top-k-per-layer proxy)."""
+    device = next(model.parameters()).device
+    ids = tokenize(tokenizer, prompt, device)
+    cap = _capture_mlp_inputs(model, tc, ids)
+    out: dict[int, set[int]] = {}
+    with torch.no_grad():
+        for L in range(len(tc)):
+            f = tc.transcoders[L].encode(cap[L])[0]  # (seq, d_t); JumpReLU zeros inactive
+            active = (f[N_BOS:] > 0).any(0).nonzero(as_tuple=True)[0]
+            out[L] = set(active.tolist())
+    return out
+
+
+def overlap_curves_paper(model, tc, tokenizer, corpus=None):
+    """The paper's cross-lingual overlap analysis (Fig B7 protocol).
+
+    For each paragraph and language pair, IOU per layer of the feature sets active anywhere
+    in the context; plus the paper's **baseline**: the same IOU computed on UNRELATED
+    paragraph pairs (paragraph i in language A vs paragraph (i+1) mod N in language B).
+    Returns ``{pair: curve, f"{pair}-baseline": curve, "mean", "mean-baseline"}``.
+    """
+    corpus = corpus or CORPUS
+    n_layers = len(tc)
+    pairs = [("en", "fr"), ("en", "zh"), ("fr", "zh")]
+    sets_by_lang: dict[str, list[dict[int, set[int]]]] = {lg: [] for lg in LANGS}
+    for sent in corpus:
+        for lg in LANGS:
+            sets_by_lang[lg].append(active_features_by_layer(model, tc, sent[lg], tokenizer))
+    n = len(corpus)
+    out: dict[str, np.ndarray] = {}
+    for a, b in pairs:
+        main = np.zeros(n_layers)
+        base = np.zeros(n_layers)
+        for i in range(n):
+            j = (i + 1) % n  # unrelated pairing for the baseline
+            for L in range(n_layers):
+                main[L] += _iou(sets_by_lang[a][i][L], sets_by_lang[b][i][L])
+                base[L] += _iou(sets_by_lang[a][i][L], sets_by_lang[b][j][L])
+        out[f"{a}-{b}"] = main / n
+        out[f"{a}-{b}-baseline"] = base / n
+    out["mean"] = np.mean([out[f"{a}-{b}"] for a, b in pairs], axis=0)
+    out["mean-baseline"] = np.mean([out[f"{a}-{b}-baseline"] for a, b in pairs], axis=0)
+    return out
+
+
+# Longer parallel paragraphs (closer to the paper's "diverse paragraphs" than single
+# sentences); appended to CORPUS for the paper-protocol overlap analysis.
+PARAGRAPHS = [
+    {
+        "en": "The library opened early that morning. Students filled the reading room, "
+        "and the smell of old paper hung in the air. By noon, every seat was taken.",
+        "fr": "La bibliothèque a ouvert tôt ce matin-là. Les étudiants remplissaient la salle "
+        "de lecture, et l'odeur du vieux papier flottait dans l'air. À midi, toutes les "
+        "places étaient prises.",
+        "zh": "那天早上图书馆很早就开门了。学生们坐满了阅览室，空气中弥漫着旧纸张的气味。到了中午，所有的座位都被占满了。",
+    },
+    {
+        "en": "The storm arrived without warning. Fishermen pulled their boats onto the shore "
+        "while dark clouds rolled over the harbor. Within an hour, the rain had flooded the streets.",
+        "fr": "La tempête est arrivée sans prévenir. Les pêcheurs ont tiré leurs bateaux sur le "
+        "rivage tandis que des nuages sombres roulaient sur le port. En une heure, la pluie "
+        "avait inondé les rues.",
+        "zh": "暴风雨毫无预警地来临了。渔民们把船拖上岸，乌云在港口上空翻滚。不到一个小时，雨水就淹没了街道。",
+    },
+    {
+        "en": "Grandmother kept a small garden behind the house. Every summer she grew tomatoes, "
+        "beans, and bright yellow sunflowers. The neighbors often stopped to admire it.",
+        "fr": "Grand-mère entretenait un petit jardin derrière la maison. Chaque été, elle "
+        "cultivait des tomates, des haricots et des tournesols jaune vif. Les voisins "
+        "s'arrêtaient souvent pour l'admirer.",
+        "zh": "祖母在房子后面种了一个小花园。每年夏天她都种西红柿、豆角和明黄色的向日葵。邻居们经常驻足欣赏。",
+    },
+    {
+        "en": "The old clockmaker repaired watches for fifty years. His hands stayed steady even "
+        "as his eyes grew weak. People brought him timepieces from across the country.",
+        "fr": "Le vieil horloger a réparé des montres pendant cinquante ans. Ses mains sont "
+        "restées sûres même quand ses yeux ont faibli. Les gens lui apportaient des montres "
+        "de tout le pays.",
+        "zh": "老钟表匠修了五十年的表。即使视力渐渐衰退，他的双手依然稳健。人们从全国各地把钟表送到他这里。",
+    },
+    {
+        "en": "The train crossed the mountains at dawn. Passengers pressed their faces to the "
+        "windows as snow-covered peaks appeared in the pink morning light.",
+        "fr": "Le train a traversé les montagnes à l'aube. Les passagers collaient leur visage "
+        "aux fenêtres tandis que les sommets enneigés apparaissaient dans la lumière rose du matin.",
+        "zh": "火车在黎明时分穿越群山。乘客们把脸贴在车窗上，看着白雪覆盖的山峰出现在粉色的晨光中。",
+    },
+    {
+        "en": "The market square filled with vendors before sunrise. Farmers arranged fruit in "
+        "neat pyramids while bakers unloaded warm bread. By eight, the square buzzed with buyers.",
+        "fr": "La place du marché s'est remplie de vendeurs avant le lever du soleil. Les "
+        "fermiers disposaient les fruits en pyramides soignées pendant que les boulangers "
+        "déchargeaient du pain chaud. À huit heures, la place bourdonnait d'acheteurs.",
+        "zh": "日出之前，集市广场上就挤满了摊贩。农民们把水果摆成整齐的金字塔，面包师们卸下热腾腾的面包。到八点钟，广场上已经挤满了买东西的人。",
+    },
+    {
+        "en": "The young scientist checked her results three times. The numbers pointed to the "
+        "same surprising conclusion each time. She sat back and stared at the screen in silence.",
+        "fr": "La jeune scientifique a vérifié ses résultats trois fois. Les chiffres menaient "
+        "chaque fois à la même conclusion surprenante. Elle s'est adossée et a fixé l'écran "
+        "en silence.",
+        "zh": "年轻的科学家把她的结果核对了三遍。每一次数字都指向同一个令人惊讶的结论。她靠在椅背上，默默地盯着屏幕。",
+    },
+    {
+        "en": "The theater dimmed its lights as the orchestra tuned. A hush fell over the "
+        "audience when the conductor raised his baton. The first notes filled the hall like a wave.",
+        "fr": "Le théâtre a baissé ses lumières pendant que l'orchestre s'accordait. Un silence "
+        "est tombé sur le public quand le chef d'orchestre a levé sa baguette. Les premières "
+        "notes ont rempli la salle comme une vague.",
+        "zh": "剧院的灯光渐渐暗下来，乐队开始调音。指挥举起指挥棒时，观众席一片寂静。第一个音符如波浪般充满了大厅。",
+    },
+]

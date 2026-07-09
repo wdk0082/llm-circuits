@@ -28,14 +28,21 @@ from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 from llm_circuits.transcoders.registry import get_spec
 
-# Natural-language format Qwen3-4b handles best (bare "a+b=" makes the instruct model
-# explain instead of answering); matches examples/addition_circuit.py.
+# Two prompt styles:
+#   "chat" — natural-language instruct format (bare "a+b=" makes the instruct model explain
+#            instead of answering); matches examples/addition_circuit.py.
+#   "calc" — the PAPER's exact raw-completion format ``calc: a+b=`` (biology.html uses
+#            10,000 prompts of this form, feature activity read on the ``=`` token). Raw
+#            completion, no chat template; a special token is prepended as the attention
+#            sink (circuit-tracer's convention) so n_bos_tokens=1 still holds.
 PROMPT_TEMPLATE = "What is {a}+{b}? Answer with just the number."
-N_BOS = 1  # Qwen3 chat template prepends one BOS-like token
+CALC_TEMPLATE = "calc: {a}+{b}="
+N_BOS = 1  # one BOS-like token (chat template's first token, or our raw-prompt prepend)
 
 
-def addition_prompt(a: int, b: int) -> str:
-    return PROMPT_TEMPLATE.format(a=a, b=b)
+def addition_prompt(a: int, b: int, style: str = "chat") -> str:
+    tmpl = CALC_TEMPLATE if style == "calc" else PROMPT_TEMPLATE
+    return tmpl.format(a=a, b=b)
 
 
 def tokenize(tokenizer, prompt: str, device) -> torch.Tensor:
@@ -46,17 +53,42 @@ def tokenize(tokenizer, prompt: str, device) -> torch.Tensor:
     ).to(device)
 
 
+def tokenize_raw(tokenizer, prompt: str, device) -> torch.Tensor:
+    """Raw-completion tokenisation with a prepended special token (the attention sink).
+
+    Mirrors circuit-tracer's ``ensure_tokenized``: transcoders can't reconstruct position 0,
+    so raw prompts get a special token (eos/pad — Qwen3 has no BOS) prepended and every
+    downstream consumer keeps ``n_bos_tokens=1``.
+    """
+    ids = tokenizer(prompt, add_special_tokens=False, return_tensors="pt").input_ids
+    special = tokenizer.bos_token_id or tokenizer.pad_token_id or tokenizer.eos_token_id
+    ids = torch.cat([torch.tensor([[special]], dtype=ids.dtype), ids], dim=1)
+    return ids.to(device)
+
+
+def tokenize_addition(tokenizer, a: int, b: int, device, style: str = "chat") -> torch.Tensor:
+    prompt = addition_prompt(a, b, style)
+    return (
+        tokenize_raw(tokenizer, prompt, device)
+        if style == "calc"
+        else tokenize(tokenizer, prompt, device)
+    )
+
+
 # ---------------------------------------------------------------------------
 # Accuracy sweep
 # ---------------------------------------------------------------------------
 
 
-def accuracy_grid(model, tokenizer, a_vals, b_vals, batch_size: int = 256, n_gen: int = 4):
+def accuracy_grid(
+    model, tokenizer, a_vals, b_vals, batch_size: int = 256, n_gen: int = 4, *, style: str = "chat"
+):
     """Greedy multi-token generation for every (a, b); returns (correct, predicted grids).
 
     Qwen3 tokenises numbers **digit-by-digit** ("95" -> ['9','5']), so we greedily generate
     ``n_gen`` tokens and compare the leading integer of the decoded continuation to
-    ``str(a+b)``.  ``correct[i, j]`` is True iff they match.
+    ``str(a+b)``.  ``correct[i, j]`` is True iff they match.  ``style="calc"`` uses the
+    paper's raw ``calc: a+b=`` format.
     """
     import re
 
@@ -69,7 +101,7 @@ def accuracy_grid(model, tokenizer, a_vals, b_vals, batch_size: int = 256, n_gen
     bylen: dict[int, list] = defaultdict(list)
     for a in a_vals:
         for b in b_vals:
-            ids = tokenize(tokenizer, addition_prompt(a, b), device)
+            ids = tokenize_addition(tokenizer, a, b, device, style)
             bylen[ids.shape[1]].append((a, b, ids))
 
     with torch.no_grad():
@@ -100,7 +132,16 @@ def accuracy_grid(model, tokenizer, a_vals, b_vals, batch_size: int = 256, n_gen
 
 
 def feature_grids(
-    model, tc, features, a_vals, b_vals, tokenizer, batch_size: int = 256, *, probe: str = "first"
+    model,
+    tc,
+    features,
+    a_vals,
+    b_vals,
+    tokenizer,
+    batch_size: int = 256,
+    *,
+    probe: str = "first",
+    style: str = "chat",
 ):
     """Activation of each feature over the full (a, b) grid.
 
@@ -143,7 +184,7 @@ def feature_grids(
     bylen: dict[int, list] = defaultdict(list)
     for a in a_vals:
         for b in b_vals:
-            ids = tokenize(tokenizer, addition_prompt(a, b), device)
+            ids = tokenize_addition(tokenizer, a, b, device, style)
             if probe == "ones":
                 ans = tokenizer(
                     str(a + b), add_special_tokens=False, return_tensors="pt"
@@ -159,8 +200,10 @@ def feature_grids(
                     model(torch.cat([ids for _, _, ids in chunk], dim=0))
                     for L in layers:
                         feats = tc.transcoders[L].encode(captured[L])  # (B, seq, d_t)
-                        if probe == "ones":
-                            sel = feats[:, -1, :].float().cpu().numpy()  # predict-ones position
+                        if probe in ("ones", "last"):
+                            # final position: predict-ones (teacher-forced) or the prompt's
+                            # last token — for style="calc" that is the paper's "=" token.
+                            sel = feats[:, -1, :].float().cpu().numpy()
                         else:
                             sel = feats[:, N_BOS:, :].amax(dim=1).float().cpu().numpy()
                         for L2, f in features:
@@ -188,6 +231,7 @@ def build_addition_graph(
     b: int,
     *,
     target: str = "first",
+    style: str = "chat",
     max_feature_nodes: int = 8000,
     node_threshold: float = 0.8,
     edge_threshold: float = 0.98,
@@ -207,7 +251,7 @@ def build_addition_graph(
     ``out_html`` if given.
     """
     device = next(model.parameters()).device
-    prompt_ids = tokenize(tokenizer, addition_prompt(a, b), device)
+    prompt_ids = tokenize_addition(tokenizer, a, b, device, style)
     if target == "ones":
         ans_ids = tokenizer(str(a + b), add_special_tokens=False, return_tensors="pt").input_ids.to(
             device
@@ -245,7 +289,7 @@ def build_addition_graph(
     pruned_dict = graph_to_dict(
         pg,
         influence_scores=pruned.influence_scores,
-        prompt=addition_prompt(a, b),
+        prompt=addition_prompt(a, b, style),
         answer_token=tokenizer.decode(answer_id),
         tokens=[tokenizer.decode(t) for t in input_ids[0]],
         logit_token_strs=logit_strs,
@@ -375,6 +419,10 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
     )
     if frac_on <= 0.01:
         rep["label"] = "sparse"
+    elif a_conc > 1.5 and b_conc > 1.5:
+        # Jointly selective for BOTH operands' residues -> a repeating grid of points:
+        # the paper's LOOKUP-TABLE signature (e.g. "_6 + _9").
+        rep["label"] = f"lookup(a%10={a_top},b%10={b_top})"
     elif sum_ac10 > 0.4 and s_conc > 1.3:
         rep["label"] = f"mod10-sum(r{s_top})"
     elif a_conc > 1.5:

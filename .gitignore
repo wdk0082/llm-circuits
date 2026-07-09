@@ -218,3 +218,5 @@ screenshot/
 gcp/keys/
 *sa-key.json
 scratch/
+# HF cache accidentally rooted in the repo when HF_HOME is set-but-empty
+hub/

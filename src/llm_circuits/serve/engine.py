@@ -75,8 +75,12 @@ class MockEngine(BaseEngine):
         self.n_layers = _QWEN3_LAYERS.get(size, 36)
 
     def _saved_graph(self) -> dict:
-        out_dir = artifacts_dir() / "addition_circuit"
-        cands = sorted(out_dir.glob("addition_graph_qwen3-*plus*.json"))
+        # Prefer a graph saved by examples/demo.py; fall back to legacy
+        # addition_circuit artifacts, then the minimal synthetic graph below.
+        cands = sorted((artifacts_dir() / "demo").glob("graph.json"))
+        cands += sorted(
+            (artifacts_dir() / "addition_circuit").glob("addition_graph_qwen3-*plus*.json")
+        )
         if cands:
             return json.loads(cands[0].read_text())
         # minimal synthetic graph if nothing is built yet

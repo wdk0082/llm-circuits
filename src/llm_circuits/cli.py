@@ -155,3 +155,29 @@ def generate(
     text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
     rprint(f"[bold]Prompt:[/bold]  {prompt}")
     rprint(f"[bold]Output:[/bold]  {text}")
+
+
+@app.command()
+def serve(
+    port: int = typer.Option(8000, help="Port to bind"),
+    host: str = typer.Option("127.0.0.1", help="Bind address (keep localhost; forward the port)"),
+    mock: bool = typer.Option(False, "--mock", help="CPU mock engine (no model; for UI dev)"),
+):
+    """Launch the interactive attribution-graph + steering UI (FastAPI).
+
+    Loads a Qwen3 model + transcoders on demand from the browser and does live
+    graph building, re-pruning, steering, and end-layer sweeps. Run on a GPU
+    node (VS Code auto-forwards the port), or with --mock anywhere.
+    """
+    import os
+
+    try:
+        import uvicorn
+    except ImportError as exc:  # serve extras not installed
+        rprint("[red]serve dependencies missing — install with: uv sync --group serve[/red]")
+        raise typer.Exit(1) from exc
+
+    if mock:
+        os.environ["LLM_CIRCUITS_SERVE_MOCK"] = "1"
+    rprint(f"[bold]llm-circuits serve[/bold] on http://{host}:{port}  (mock={mock})")
+    uvicorn.run("llm_circuits.serve.app:app", host=host, port=port)

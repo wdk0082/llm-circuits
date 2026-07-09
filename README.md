@@ -47,7 +47,7 @@ src/llm_circuits/
   instrumentation/      # Generic PyTorch hooks and activation recording
   circuits/             # Attribution graphs and interventions (our own impl)
 configs/                # YAML configs per model size
-examples/               # Runnable machinery demos (not the paper reproduction)
+examples/               # demo.py (one end-to-end toolkit walkthrough) + tpu_smoke_test.py
 tests/                  # pytest suite
 notebooks/              # The paper reproductions: <behavior>.ipynb + <behavior>_helper.py
 ```
@@ -62,6 +62,24 @@ notebooks/              # The paper reproductions: <behavior>.ipynb + <behavior>
 | qwen3-8b | qwen3 | 8b | Qwen/Qwen3-8B | mwhanna/qwen3-8b-transcoders | per-layer |
 | qwen3-14b | qwen3 | 14b | Qwen/Qwen3-14B | mwhanna/qwen3-14b-transcoders-lowl0 | per-layer |
 
+## Interactive UI
+
+A FastAPI app (`src/llm_circuits/serve/`) for **live** circuit work from the browser:
+load a Qwen3 size, build + re-prune attribution graphs, steer features, and sweep the
+constrained-patching end layer — the interactive version of `examples/demo.py`.
+
+```bash
+uv run --group serve llm-circuits serve          # GPU node; open http://localhost:8000
+uv run --group serve llm-circuits serve --mock   # CPU mock engine (UI dev, no model)
+```
+
+(`--group serve` is needed at *run* time — plain `uv run` re-syncs the env without the
+serve extras.)
+
+On the HPC, run it inside an interactive GPU allocation with
+`bash hpc/run_interactive_server.sh` — VS Code auto-forwards the port. The server
+binds `127.0.0.1` on purpose; forward the port rather than exposing it.
+
 ## Cloud TPU
 
 Run experiments on an ephemeral Google Cloud TPU (v6e) via the lifecycle
@@ -73,7 +91,7 @@ from `.env`.
 cp .env.example .env             # fill in CRSID / GIT_REMOTE / GCS_BUCKET
 gcp/setup_storage.sh             # one-time: grant the TPU access to your bucket
 gcp/create.sh                    # provision (Spot + queued resource) and bootstrap
-gcp/launch.sh examples/addition_circuit.py   # run on the TPU (LLM_CIRCUITS_DEVICE=tpu)
+gcp/launch.sh examples/tpu_smoke_test.py     # run on the TPU (LLM_CIRCUITS_DEVICE=tpu)
 gcp/pull.sh                      # bring artifacts back to ./artifacts
 gcp/teardown.sh                  # delete the TPU; bucket data is kept
 ```

@@ -38,7 +38,7 @@ Also set in `.env`: `GIT_REMOTE` (the repo URL the VM clones — e.g.
 ```bash
 gcp/create.sh                          # provision (Spot + queued resource); waits for ACTIVE, bootstraps
 git commit -am wip && git push         # the VM runs committed code (GIT_REF, default main)
-gcp/launch.sh examples/addition_circuit.py   # run on the TPU; LLM_CIRCUITS_DEVICE=tpu + GCS dirs injected
+gcp/launch.sh examples/tpu_smoke_test.py     # run on the TPU; LLM_CIRCUITS_DEVICE=tpu + GCS dirs injected
 gcp/pull.sh                            # sync gs://…/artifacts -> ./artifacts for inspection
 gcp/teardown.sh                        # delete the TPU; data stays in the bucket
 ```

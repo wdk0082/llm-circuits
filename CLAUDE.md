@@ -51,7 +51,8 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   - **`utils/`** — Path resolution, config loading, `seed_everything`
 - **`configs/`** — YAML configs per model size
 - **`notebooks/`** — **The paper reproductions live here**, two files per behavior: `addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` + `multilingual_helper.py` (helpers are task-specific and stay out of the package). Verdicts vs the paper in each Summary + `DEVLOG.md`.
-- **`examples/`** — Runnable machinery demos only (`uv run python examples/<script>.py`) — replacement-model comparisons, steering/graph-explorer demos. Not the paper reproduction.
+- **`examples/`** — Two scripts only: `demo.py` (ONE end-to-end toolkit walkthrough on an addition example: load → replacement/local-replacement checks → graph → re-prune → labels → steer → end-layer sweep → progressive curve → explorer HTML; `sbatch hpc/run_demo.sbatch`) and `tpu_smoke_test.py` (device wiring). Not the paper reproduction.
+- **`src/llm_circuits/serve/`** — the interactive UI (FastAPI + static frontend): live build/re-prune/steer/sweep in the browser. Start with `uv run --group serve llm-circuits serve` (`--mock` for CPU dev; the `--group serve` is required at run time) or `hpc/run_interactive_server.sh` on a GPU allocation.
 
 ## Code Style
 

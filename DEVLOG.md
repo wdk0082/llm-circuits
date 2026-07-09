@@ -402,6 +402,18 @@ position-sensitive):
   probed as their own group.
 - The introspection prompt was asked once (greedy); no sampling over phrasings.
 
+### Next-session queue
+
+- **Language swap: rerun on RAW open-quote prompts before trusting the "differs"
+  verdict.** The paper's recipient position is a content-bearing open-quote token
+  (`…the opposite of "small" is "`), where the open-quote-in-language-X detection
+  features live; our chat-template prompts end on assistant-header tokens that carry no
+  quote at all — so the early-layer supernodes may have had nothing to grab. Control:
+  build the language-detection supernodes and run the −5×/+6× swap on raw
+  `The opposite of "small" is "` prompts (accepting weaker task behavior). If it still
+  does nothing, "the causal handle sits later in Qwen3" is earned; until then the
+  verdict is *unresolved-format-confound*, not *differs*.
+
 ---
 
 ## Repo cleanup: reproduction consolidated into notebooks/ (2026-07-09, same session)

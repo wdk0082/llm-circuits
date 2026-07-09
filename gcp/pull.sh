@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gcp/pull.sh — bring artifacts to the laptop for inspection / committing.
-#   bucket mode : rsync gs://<bucket>/artifacts -> $LOCAL_ARTIFACTS
+#   bucket mode : rsync $GCS_ARTIFACTS (from .env) -> $LOCAL_ARTIFACTS
 #   local-pull  : scp $HOME/scratch/artifacts from the VM -> $LOCAL_ARTIFACTS
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -8,8 +8,9 @@ dest="${LOCAL_ARTIFACTS:-./artifacts}"
 mkdir -p "$dest"
 
 if use_bucket; then
-    echo "Syncing gs://$GCS_BUCKET/artifacts -> $dest"
-    gcloud storage rsync --recursive "gs://$GCS_BUCKET/artifacts" "$dest"
+    src="${GCS_ARTIFACTS:-gs://$GCS_BUCKET/artifacts}"
+    echo "Syncing $src -> $dest"
+    gcloud storage rsync --recursive "$src" "$dest"
 else
     require PROJECT_ID ZONE TPU_NAME
     echo "Copying VM artifacts -> $dest"

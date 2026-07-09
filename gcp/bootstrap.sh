@@ -12,7 +12,10 @@ require PROJECT_ID ZONE TPU_NAME
 
 REPO_NAME="$(basename "${GIT_REMOTE%.git}")"
 REF="${GIT_REF:-main}"
-TORCH_XLA_VERSION="${TORCH_XLA_VERSION:-2.10.0}" # match the torch pin in uv.lock (torch 2.10.0)
+# Latest torch_xla release. torch_xla lags torch (uv.lock has torch 2.10, but
+# no torch_xla 2.10 exists) — the matching torch is installed alongside below,
+# downgrading the VM venv's torch. The laptop keeps the lockfile's torch.
+TORCH_XLA_VERSION="${TORCH_XLA_VERSION:-2.9.0}"
 
 scp_to_vm() { # scp_to_vm <local-path> <remote-path>
     gcloud compute tpus tpu-vm scp "$1" "$TPU_NAME:$2" \
@@ -49,8 +52,9 @@ cd \$HOME/$REPO_NAME
 git fetch origin $REF && git checkout $REF && git pull --ff-only
 mkdir -p \$HOME/scratch/hf \$HOME/scratch/cache \$HOME/scratch/uv-cache \$HOME/scratch/artifacts
 uv sync --frozen --all-groups
-# torch_xla (TPU): Linux/TPU-only, pinned to match the torch in uv.lock.
-uv pip install "torch_xla[tpu]==$TORCH_XLA_VERSION" --find-links https://storage.googleapis.com/libtpu-releases/index.html
+# torch_xla (TPU): Linux/TPU-only. Install the matching torch alongside so the
+# ABI lines up (this downgrades the venv's torch from the lockfile version).
+uv pip install "torch_xla[tpu]==$TORCH_XLA_VERSION" "torch==$TORCH_XLA_VERSION" --find-links https://storage.googleapis.com/libtpu-releases/index.html
 \$HOME/$REPO_NAME/.venv/bin/python -c "import torch, torch_xla; print('torch', torch.__version__, '| torch_xla', torch_xla.__version__)"
 echo BOOTSTRAP_OK
 EOF

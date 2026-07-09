@@ -34,8 +34,9 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   `hf_loader` loads on CPU then moves to XLA. Smoke test:
   `gcp/launch.sh examples/tpu_smoke_test.py`.
 - **torch_xla** is installed on the VM by `gcp/bootstrap.sh`
-  (`torch_xla[tpu]==2.10.0`, matched to the `torch` pin in `uv.lock`), **not**
-  in `pyproject.toml`, so the lockfile stays cross-platform.
+  (`torch_xla[tpu]==2.9.0` + matching `torch==2.9.0` — torch_xla lags torch, so
+  the VM's torch is downgraded from the lockfile's 2.10), **not** in
+  `pyproject.toml`, so the lockfile stays cross-platform.
 - Full details, projects, and cross-project auth: `gcp/README.md`.
 
 ## Architecture

@@ -57,9 +57,11 @@ Helpers: `gcp/status.sh` (state of QR / TPU / bucket), `gcp/ssh.sh [cmd]`
   `models/hf_loader.py`). Verify the wiring with
   `gcp/launch.sh examples/tpu_smoke_test.py`.
 - **torch_xla** is installed on the VM by `bootstrap.sh`
-  (`torch_xla[tpu]==2.10.0`, matched to the `torch` pin in `uv.lock`), kept out
-  of `pyproject.toml` so the lockfile stays cross-platform. Override with
-  `TORCH_XLA_VERSION` in `.env` if you bump `torch`.
+  (`torch_xla[tpu]==2.9.0` + matching `torch==2.9.0` — torch_xla releases lag
+  torch, so the VM's torch is downgraded from the lockfile's 2.10; the laptop
+  keeps the lockfile). Kept out of `pyproject.toml` so the lockfile stays
+  cross-platform. Override with `TORCH_XLA_VERSION` in `.env` when a newer
+  torch_xla ships.
 - **Artifacts** are written to `$LLM_CIRCUITS_ARTIFACTS_DIR` (staged to
   `~/scratch/artifacts` on the VM). In bucket mode `launch.sh` rsyncs them to
   `gs://<bucket>/artifacts` after the run; in local-pull mode they are scp'd

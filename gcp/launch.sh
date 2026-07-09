@@ -18,9 +18,13 @@ tpu_ssh --command "cd \$HOME/$REPO_NAME && git fetch origin $REF && git checkout
 
 # LLM_CIRCUITS_DEVICE=tpu marks the run for the TPU (torch_xla). Artifacts
 # stage to on-VM scratch; $HOME expands on the VM (see the escaped \$HOME).
+# GCS paths come from .env (CKPT_DIR/GCS_ARTIFACTS, typically namespaced under
+# the repo name — the bucket is shared) with un-namespaced fallbacks.
 inject="LLM_CIRCUITS_DEVICE=tpu LLM_CIRCUITS_ARTIFACTS_DIR=\$HOME/scratch/artifacts"
 if use_bucket; then
-    inject="$inject CKPT_DIR='gs://$GCS_BUCKET/checkpoints' GCS_ARTIFACTS='gs://$GCS_BUCKET/artifacts'"
+    ckpt_dir="${CKPT_DIR:-gs://$GCS_BUCKET/checkpoints}"
+    gcs_artifacts="${GCS_ARTIFACTS:-gs://$GCS_BUCKET/artifacts}"
+    inject="$inject CKPT_DIR='$ckpt_dir' GCS_ARTIFACTS='$gcs_artifacts'"
 fi
 
 # Forward experiment knobs set inline (e.g. `DRY_RUN=1 gcp/launch.sh ...`);
@@ -40,8 +44,8 @@ tpu_ssh --command "cd \$HOME/$REPO_NAME && PYTHONUNBUFFERED=1 $inject ./bin/run 
 # Bucket mode: sync the staged artifacts to GCS so they survive VM deletion.
 # Local-pull mode: copy them back to the laptop now, before the VM is gone.
 if use_bucket; then
-    echo "Syncing artifacts -> gs://$GCS_BUCKET/artifacts …"
-    tpu_ssh --command "gcloud storage rsync --recursive \$HOME/scratch/artifacts gs://$GCS_BUCKET/artifacts" || true
+    echo "Syncing artifacts -> $gcs_artifacts …"
+    tpu_ssh --command "gcloud storage rsync --recursive \$HOME/scratch/artifacts $gcs_artifacts" || true
 else
     echo "Local-pull mode: copying artifacts back…"
     "$GCP_DIR/pull.sh" || true

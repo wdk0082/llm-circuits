@@ -1,11 +1,12 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-09, end of the A100 session): the paper-exact suites
-> have been **executed on a local A100-80GB** (not TPU/Slurm) and compared against the
-> paper — see "A100 session: suites executed + per-experiment verdicts" below.
-> Four selection/protocol bugs were found by the first runs and fixed; two addendum
-> scripts (`examples/paper_addition_polymer_probe.py`,
-> `examples/paper_addition_swap_addendum.py`) complete the paper's intervention table.
+> **⏩ CURRENT STATE** (2026-07-09, end of the A100 session): the paper-exact
+> reproduction is **executed and consolidated under `notebooks/`** — two files per
+> behavior (`addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` +
+> `multilingual_helper.py`), both executed end-to-end on a local A100-80GB with verdicts
+> vs the paper in each notebook's Summary. See "A100 session: suites executed +
+> per-experiment verdicts" for the full comparison and "Repo cleanup" for the layout
+> change (the former `examples/paper_*.py` suites are folded into the notebooks).
 > Artifacts (JSON/PNG/HTML, gitignored) live on the A100 node under
 > `artifacts/paper_{addition,multilingual}/<size>/`.
 
@@ -400,3 +401,31 @@ position-sensitive):
 - "Add-function" features (operand-stripe class at the `+`/`=` positions) were not
   probed as their own group.
 - The introspection prompt was asked once (greedy); no sampling over phrasings.
+
+---
+
+## Repo cleanup: reproduction consolidated into notebooks/ (2026-07-09, same session)
+
+The reproduction had spread across `examples/` (four `paper_*.py` stage-scripts, a
+TPU/batch-era artifact) and `notebooks/` (two notebooks + three helper modules). It now
+lives **only under `notebooks/`, two files per behavior**:
+
+- `addition.ipynb` + `addition_helper.py` — the helper merges the former `helper.py`,
+  `addition_paper.py`, and the non-CLI logic of `examples/paper_addition_suite.py`,
+  `paper_addition_polymer_probe.py`, `paper_addition_swap_addendum.py` (all six retired
+  files deleted). The notebook runs every stage of the paper dive inline and was
+  re-executed end-to-end on the A100.
+- `multilingual.ipynb` + `multilingual_helper.py` — the helper gained the sweep
+  orchestration (`run_swap_sweeps`) from the retired `examples/paper_multilingual_suite.py`
+  and a `size_key` parameter for `build_graph`; the notebook runs behavior → graphs +
+  shared-core analysis → the three paper swaps → overlap (+ baseline) → default-language →
+  the 0.6b scale comparison (frees the 4b and loads 0.6b in-notebook), re-executed
+  end-to-end.
+
+`examples/` keeps only generic machinery demos (`compare_*`, `graph_explorer`,
+`layer_range_sweep`, `progressive_steering`, `steering_explorer`, `tpu_smoke_test`, and
+`addition_circuit.py`, which those demos consume artifacts from — it demos the toolkit
+pipeline, not the paper protocol). Updated pointers: `CLAUDE.md` (architecture bullets),
+`README.md`, `notebooks/README.md`, both notebook sbatch wrappers (artifact paths are now
+`artifacts/paper_{addition,multilingual}/<size>/`). The historical sections above refer to
+the retired `examples/paper_*.py` paths; their logic lives on in the two helpers.

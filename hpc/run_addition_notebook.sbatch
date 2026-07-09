@@ -8,9 +8,10 @@
 #SBATCH --output=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.out
 #SBATCH --error=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.err
 
-# Execute notebooks/addition.ipynb on a GPU node (reproduces the addition dive A-D).
-# --allow-errors so a single failing cell doesn't abort the rest — errors land inline
-# in the executed notebook for diagnosis; figures save under artifacts/addition_notebook/.
+# Execute notebooks/addition.ipynb on a GPU node (the paper-exact addition reproduction;
+# helpers in notebooks/addition_helper.py). --allow-errors so a single failing cell
+# doesn't abort the rest — errors land inline in the executed notebook for diagnosis;
+# artifacts (explorer HTMLs, PNGs, JSONs) save under artifacts/paper_addition/<size>/.
 
 set -euo pipefail
 

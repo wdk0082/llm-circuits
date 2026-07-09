@@ -47,9 +47,9 @@ src/llm_circuits/
   instrumentation/      # Generic PyTorch hooks and activation recording
   circuits/             # Attribution graphs and interventions (our own impl)
 configs/                # YAML configs per model size
-examples/               # Runnable scripts
+examples/               # Runnable machinery demos (not the paper reproduction)
 tests/                  # pytest suite
-notebooks/              # Research notebooks
+notebooks/              # The paper reproductions: <behavior>.ipynb + <behavior>_helper.py
 ```
 
 ## Available model specs

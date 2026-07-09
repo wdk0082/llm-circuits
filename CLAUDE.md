@@ -50,7 +50,8 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   - **`circuits/`** — Custom attribution graphs (`build_attribution_graph`), local/global replacement models, graph pruning, HTML visualization, and feature interventions (`run_feature_intervention` = circuit-tracer's `feature_intervention` on the real model: decoder delta with the M convention, M=0 no-change / -1 ablate / -2 flip; cross-verified in `verification/`).
   - **`utils/`** — Path resolution, config loading, `seed_everything`
 - **`configs/`** — YAML configs per model size
-- **`examples/`** — Runnable scripts (`uv run python examples/<script>.py`)
+- **`notebooks/`** — **The paper reproductions live here**, two files per behavior: `addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` + `multilingual_helper.py` (helpers are task-specific and stay out of the package). Verdicts vs the paper in each Summary + `DEVLOG.md`.
+- **`examples/`** — Runnable machinery demos only (`uv run python examples/<script>.py`) — replacement-model comparisons, steering/graph-explorer demos. Not the paper reproduction.
 
 ## Code Style
 

@@ -8,9 +8,10 @@
 #SBATCH --output=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.out
 #SBATCH --error=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.err
 
-# Execute notebooks/multilingual.ipynb on a GPU node (reproduces the multilingual dive A-D).
-# --allow-errors so a single failing cell doesn't abort the rest; figures + graph explorers
-# save under artifacts/multilingual_notebook/.
+# Execute notebooks/multilingual.ipynb on a GPU node (the paper-exact multilingual
+# reproduction; helpers in notebooks/multilingual_helper.py). --allow-errors so a single
+# failing cell doesn't abort the rest; artifacts (explorer HTMLs, sweep PNGs, JSONs) save
+# under artifacts/paper_multilingual/<size>/.
 set -euo pipefail
 . /etc/profile.d/modules.sh
 module purge

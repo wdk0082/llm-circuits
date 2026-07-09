@@ -104,6 +104,7 @@ def build_graph(
     tokenizer,
     prompt: str,
     *,
+    size_key: str = "4b",
     max_feature_nodes: int = 8000,
     node_threshold: float = 0.8,
     edge_threshold: float = 0.98,
@@ -125,7 +126,7 @@ def build_graph(
     pruned = prune_graph(graph, node_threshold=node_threshold, edge_threshold=edge_threshold)
     pg = pruned.graph
 
-    repo_id = get_spec("qwen3-4b").transcoder_repo
+    repo_id = get_spec(f"qwen3-{size_key}").transcoder_repo
     by_layer: dict[int, list[int]] = defaultdict(list)
     for nd in pg.nodes:
         if nd.node_type == "feature":
@@ -641,6 +642,49 @@ def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=No
         plt.suptitle(title)
         plt.tight_layout()
     return ax_row
+
+
+def run_swap_sweeps(model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13, out_png=None):
+    """Run :func:`paper_swap_sweep` for every job and draw the Fig B3/B4/B5 panel row.
+
+    ``jobs`` entries: ``{lang, label, recipient_ids, source, donor, position,
+    baseline_token, expected_token}`` (source/donor are ``[(layer, idx, act)]``).
+    Prints one line per job, saves the panel to ``out_png`` if given, and returns
+    ``{lang: sweep_result}``.  NOTE: track the *actual* top tokens (``top_tokens`` per
+    step), not just ``p_expected`` — e.g. the FR operand swap lands on lowercase
+    ``f``(roid) while the recorded expected token is capitalized ``F``.
+    """
+    results: dict[str, dict] = {}
+    token_strs: dict[str, tuple[str, str]] = {}
+    for job in jobs:
+        lg = job["lang"]
+        r = paper_swap_sweep(
+            model,
+            tc,
+            job["recipient_ids"],
+            job["source"],
+            job["donor"],
+            job["position"],
+            tokenizer,
+            kind=kind,
+            baseline_token=job["baseline_token"],
+            expected_token=job["expected_token"],
+            n_steps=n_steps,
+        )
+        r["label"] = job["label"]
+        results[lg] = r
+        token_strs[lg] = (
+            tokenizer.decode([job["baseline_token"]]).strip(),
+            tokenizer.decode([job["expected_token"]]).strip(),
+        )
+        print(
+            f"{kind} {job['label']}: crossover={r['crossover']} "
+            f"p_exp(max)={max(r['p_expected']):.3f} final_tops={r['top_tokens'][-1][:2]}"
+        )
+    plot_swap_sweeps(results, tokenizer, token_strs, title=f"{kind} (paper protocol)")
+    if out_png is not None:
+        plt.savefig(out_png, dpi=130, bbox_inches="tight")
+    return results
 
 
 def early_language_detection_supernode(

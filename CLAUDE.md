@@ -48,8 +48,7 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   - **`transcoders/`** — `registry.py` has frozen `ModelSpec` dataclass mapping family-prefixed keys (e.g. `qwen3-0.6b`, `qwen3-4b`) to HF repos; `circuit_tracer_loader.py` is the **only** file that imports from circuit-tracer
   - **`instrumentation/`** — Generic PyTorch hook utilities (`attach_hook` context manager, `ActivationRecorder`)
   - **`circuits/`** — Custom attribution graphs (`build_attribution_graph`), local/global replacement models, graph pruning, HTML visualization, and feature interventions (`run_feature_intervention` = circuit-tracer's `feature_intervention` on the real model: decoder delta with the M convention, M=0 no-change / -1 ablate / -2 flip; cross-verified in `verification/`).
-  - **`utils/`** — Path resolution, config loading, `seed_everything`
-- **`configs/`** — YAML configs per model size
+  - **`utils/`** — `seed_everything`
 - **`notebooks/`** — **The paper reproductions live here**, two files per behavior: `addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` + `multilingual_helper.py` (helpers are task-specific and stay out of the package). Verdicts vs the paper in each Summary + `DEVLOG.md`.
 - **`examples/`** — Two scripts only: `demo.py` (ONE end-to-end toolkit walkthrough on an addition example: load → replacement/local-replacement checks → graph → re-prune → labels → steer → end-layer sweep → progressive curve → explorer HTML; `sbatch hpc/run_demo.sbatch`) and `tpu_smoke_test.py` (device wiring). Not the paper reproduction.
 - **`src/llm_circuits/serve/`** — the interactive UI (FastAPI + static frontend): live build/re-prune/steer/sweep in the browser. Start with `uv run --group serve llm-circuits serve` (`--mock` for CPU dev; the `--group serve` is required at run time) or `hpc/run_interactive_server.sh` on a GPU allocation.

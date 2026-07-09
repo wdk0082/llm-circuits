@@ -1,1 +1,1 @@
-"""Shared utilities: seeding, path helpers."""
+"""Shared utilities: seeding."""

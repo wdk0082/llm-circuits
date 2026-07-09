@@ -46,7 +46,6 @@ src/llm_circuits/
   transcoders/          # Registry + circuit-tracer loader (the ONLY circuit-tracer import)
   instrumentation/      # Generic PyTorch hooks and activation recording
   circuits/             # Attribution graphs and interventions (our own impl)
-configs/                # YAML configs per model size
 examples/               # demo.py (one end-to-end toolkit walkthrough) + tpu_smoke_test.py
 tests/                  # pytest suite
 notebooks/              # The paper reproductions: <behavior>.ipynb + <behavior>_helper.py

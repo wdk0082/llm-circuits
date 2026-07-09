@@ -1,5 +1,11 @@
 # DEVLOG
 
+> **⏩ CURRENT STATE / HANDOFF — start here** (2026-07-09, end of the laptop session):
+> see the last section, "Handoff: paper-exact reproduction suites → run on A100".
+> Everything is committed on branch `tpu-iteration`; the suites are written and
+> lint/test-clean but have NOT been executed yet — the next session (A100 GPU node)
+> runs them and integrates results.
+
 Development log for the verification pass over the re-implementation (task 4) and the
 biology-paper reproductions (task 5), 2026-07-09. References: the methods paper
 ([methods.html](https://transformer-circuits.pub/2025/attribution-graphs/methods.html)),
@@ -182,3 +188,96 @@ genuine (and interesting) model difference**. Outcome by experiment:
 2. Add the unrelated-prompt baseline to the overlap-by-layer experiment.
 3. Addition: hunt input-side `_a+_b` lookup features in mid layers (upstream of the sum
    features) and try a Polymer-style cross-context reuse probe.
+
+---
+
+## Handoff: paper-exact reproduction suites → run on A100 (2026-07-09)
+
+**Directive:** the reproduction must cover **all and exactly the paper's experiments**
+(biology.html's Addition + Multilingual dives + the methods-supplement interventions
+quoted there; the methods paper's *global virtual-weights* analysis is explicitly out of
+scope). Protocol-deviating code was to be *modified*, not just reviewed. That code is now
+written (commit `8d2cc0a`) but **has not been executed** — GPU was unavailable and the
+TPU route was abandoned (below). The next session runs it on an **A100 node**.
+
+### What is already done (this session)
+
+1. **Faithfulness verified** (commit `a34df49`): our attribution graphs + steering are
+   numerically equivalent to circuit-tracer (11/11 checks + steering PASS; details in the
+   task-4 section above). Everything the suites compute rests on that verified stack.
+2. **Paper-exact protocol layer + suites written** (commit `8d2cc0a`):
+   - `examples/paper_multilingual_suite.py` — stages: `behavior, graphs, swap_operation,
+     swap_operand, swap_language, overlap`. Paper protocols: source supernodes suppressed
+     to **negative multiples** (antonym/language −5×, operand −0.5×; our `m = M_paper−1`),
+     donors at +6×/+1.5×, strengths **swept** with crossover detection (paper ≈4×), all
+     three language-swap directions, and the paper's overlap IOU (active-anywhere feature
+     sets, translated paragraphs, **unrelated-pair baseline**) to be run at two scales.
+   - `examples/paper_addition_suite.py` — stages: `accuracy, graphs, grids, interventions,
+     steer_compare, polymer, intermediate, introspection, corpus`. Paper's raw
+     `calc: a+b=` format (accuracy-gated chat fallback), lookup-point taxonomy class,
+     input `_6`/`_9`/magnitude supernode suppressions **with downstream feature readout**,
+     lookup-vs-sum −2× steering with smear metrics, Polymer reuse + suppression,
+     `assert (4+5)*3 ==`, introspection dialogue, C4 dataset examples.
+   - Support code: `notebooks/multilingual_helper.py` (paper_swap/paper_swap_sweep/
+     early_language_detection_supernode/overlap_curves_paper + parallel paragraphs),
+     `notebooks/addition_paper.py`, `notebooks/helper.py` (calc style, probe="last",
+     lookup class), and core `run_feature_intervention(readout_layers=...)` which now
+     fills `AblationResult.ablated_features` (the paper's "% of baseline" annotations).
+3. **Reference material committed** to `notes/`: `methods_digest.md` (exact algorithms +
+   circuit-tracer file:line cites) and `biology_digest.md` (every figure, quantitative
+   result, intervention protocol and conclusion of the two dives, plus a
+   model-specific-vs-generalizable checklist and figure URLs for visual comparison).
+4. **TPU decision:** the gcp/ lifecycle itself is verified end-to-end (smoke-tested on a
+   real v6e-1 this morning), but the suites were NOT run on TPU: Qwen3-4b's transcoder
+   encoders (~30 GB bf16) + model exceed v6e-1's 32 GB HBM, and the XLA behaviour of the
+   vmapped attribution backward is unresolved. Rather than engineering a lazy-encoder /
+   CPU-hybrid path, the TPU was **torn down** (zero resources left) in favour of an A100.
+   The TPU workflow remains available for forward-only workloads later.
+
+### To continue on the A100 node
+
+```bash
+git pull                                  # branch: tpu-iteration @ 8d2cc0a or later
+set -a; source .env; set +a               # HPC .env; do NOT set HF_HOME to an empty string
+uv sync --all-groups                      # datasets was added to the notebook group
+
+# Addition suite (~1-2 h; stages can be run separately / resumed — selections persist
+# in artifacts/paper_addition/4b/state.json):
+uv run python examples/paper_addition_suite.py --size 4b --stages all
+
+# Multilingual suite on 4b:
+uv run python examples/paper_multilingual_suite.py --size 4b --stages all
+
+# Overlap at the second scale (the paper's scale comparison; cheap):
+uv run python examples/paper_multilingual_suite.py --size 0.6b --stages overlap
+```
+
+Artifacts land under `artifacts/paper_{addition,multilingual}/<size>/` (JSON results,
+PNG figures, explorer HTMLs). Runtime notes: each 8000-target graph build took ~65 s on
+an A100 previously; the grids stage is 2×10,000 batched prompts; `corpus` streams C4
+(network needed) — trim with `--corpus-docs` if slow.
+
+### Then (the actual deliverable)
+
+1. Compare every stage's output against the paper values in `notes/biology_digest.md`
+   (§A.2/A.4 addition numbers + intervention table, §B.2/B.4 multilingual numbers +
+   protocol table, §C for what is model-specific vs expected to transfer). Check the
+   suite PNGs against the paper figures (URLs in the digest §D).
+2. Update `notebooks/addition.ipynb` + `notebooks/multilingual.ipynb` to reflect the
+   paper-exact results (either re-run them using the new helper protocols, or fold the
+   suite artifacts in), and extend this DEVLOG with a per-experiment
+   reproduced/partial/differs verdict table.
+3. Known open questions the runs should answer: does the operation swap reach top-1 with
+   the paper's −5×/+6× protocol (the m=−1 ablation didn't)? Does EN→FR language swap work
+   with early-layer detection features? Does the overlap curve become paper-shaped once
+   the baseline is subtracted (and does 4b > 0.6b hold, esp. for en-zh)? Does `calc:`
+   accuracy hold up (else the chat fallback is used and must be reported)? Does the
+   Polymer prompt complete "995"-style and reuse the calc lookup/sum features?
+
+### State of the world
+
+- Branch `tpu-iteration`, all work pushed. CI green (ruff + 86 tests) as of `8d2cc0a`.
+- TPU: no resources exist; bucket `gs://dis-2026-zw499-tpu-store/llm-circuits/` holds
+  only smoke-test artifacts. `.env` gotcha fixed this session: never set `HF_HOME=`
+  (empty) — it roots a `hub/` HF cache inside the repo (now gitignored).
+- Verification suites (`verification/`) run on CPU fp32 — see `verification/README.md`.

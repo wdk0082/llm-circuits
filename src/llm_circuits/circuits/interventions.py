@@ -1,11 +1,21 @@
 """Feature interventions (faithful to circuit-tracer's ``feature_intervention``).
 
 We steer/ablate a transcoder feature by adding its decoder delta to the **real**
-model's MLP output: with the **M convention**, a feature's new activation is
-``(1 + m) * clean``, so the delta is ``m * clean * W_dec`` (``m=0`` no change,
-``-1`` ablate, ``-2`` flip).  This runs the real model (no transcoder reconstruction,
-no error nodes), optionally freezing attention patterns and pinning MLP outputs to
-clean within a layer range — see :func:`run_feature_intervention`.
+model's MLP output: with our **m (additive-delta) convention**, a feature's new
+activation is ``(1 + m) * clean``, so the delta is ``m * clean * W_dec`` (``m=0``
+no change, ``-1`` ablate, ``-2`` flip).
+
+.. warning::
+
+    The Anthropic papers use a **multiplicative** steering factor M —
+    ``a_new = M * a_clean`` (``M=0`` ablate, ``M=-1`` flip, "steer at -2x" means
+    ``a_new = -2 * a_clean``).  The two conventions are off by one:
+    ``M_paper = 1 + m_ours``.  circuit-tracer's ``feature_intervention`` takes an
+    *absolute* target ``value`` instead (``value = M_paper * a_clean``).
+
+This runs the real model (no transcoder reconstruction, no error nodes),
+optionally freezing attention patterns and pinning MLP outputs to clean within a
+layer range — see :func:`run_feature_intervention`.
 
 This is the protocol used to *validate* attribution-graph edges: perturb a source
 feature, then check that the predicted downstream features / logits actually move.
@@ -49,13 +59,16 @@ log = get_logger(__name__)
 class FeatureIntervention:
     """Steer/clamp a single transcoder feature.
 
-    Uses circuit-tracer's / the paper's **M (additive-delta) convention**: the feature's
-    new activation is ``(1 + m) * clean``, so the decoder delta added to the MLP output is
+    Uses our **m (additive-delta) convention**: the feature's new activation is
+    ``(1 + m) * clean``, so the decoder delta added to the MLP output is
     ``m * clean * W_dec``.  Hence:
 
     * ``m == 0``  → no change,
     * ``m == -1`` → ablation (the default),
     * ``m == -2`` → negative steer (flip the sign: new activation = ``-clean``).
+
+    .. note:: The paper's multiplicative M is ``M_paper = 1 + m_ours`` (paper ``M=-1``
+       sign-flip == our ``m=-2``); circuit-tracer's API takes the absolute ``value``.
 
     ``value`` overrides ``m`` with an absolute target.  ``position=None`` applies at every
     (non-BOS) sequence position.

@@ -294,7 +294,17 @@ def build_attribution_graph(
         layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
 
     is_set = _is_transcoder_set(transcoder)
-    n_layers = len(transcoder) if is_set else transcoder.n_layers
+    if not is_set:
+        # Cross-layer transcoders would need every source feature's decoder contribution
+        # summed over ALL its output layers (a_s * sum_l W_dec^{l_s->l} . grad_l), not just
+        # the self-layer term — the paper's edge formula.  The Phase-4 code below only
+        # takes offset 0, which silently under-counts CLT edges, and with the registry now
+        # Qwen3-only (per-layer) there is no CLT model left to validate a fix against.
+        raise NotImplementedError(
+            "build_attribution_graph supports per-layer transcoders (TranscoderSet) only; "
+            "cross-layer transcoder edges (sum over output layers) are not implemented."
+        )
+    n_layers = len(transcoder)
 
     # Ensure input_ids has batch dim
     if input_ids.dim() == 1:
@@ -539,12 +549,10 @@ def build_attribution_graph(
     for layer in sorted(feat_nodes_by_layer):
         layer_nodes = feat_nodes_by_layer[layer]
         feat_indices = torch.tensor([n.feature_idx for _, n in layer_nodes], dtype=torch.long)
-        if is_set:
-            # Load W_dec once for this layer (handles lazy loading internally)
-            dec_vecs = transcoder.transcoders[layer]._get_decoder_vectors(feat_indices)
-        else:
-            # CLT: shape (n_feats, n_target_layers, d_model); take offset 0 (self-layer)
-            dec_vecs = transcoder._get_decoder_vectors(layer, feat_indices)[:, 0, :]
+        # Load W_dec once for this layer (handles lazy loading internally).
+        # Per-layer transcoders only (CLT rejected above): the decoder writes to its
+        # own layer, so the source contribution is a_s * W_dec at that layer.
+        dec_vecs = transcoder.transcoders[layer]._get_decoder_vectors(feat_indices)
 
         for k, (node_idx, node) in enumerate(layer_nodes):
             act_val = features[node.layer][node.position, node.feature_idx]

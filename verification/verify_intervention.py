@@ -96,7 +96,6 @@ def main() -> None:
         tc,
         input_ids,
         [FeatureIntervention(layer, fid, position=last, m=M)],
-        mode="steering-base-model",
         patch_end_layer=layer,
         freeze_attention=True,
         n_bos_tokens=1,

@@ -15,7 +15,7 @@ verdicts vs the paper are in each notebook's Summary and in `../DEVLOG.md`. Arti
 Helpers are deliberately kept out of `src/llm_circuits/` — they are task-specific (prompt
 formats, operand-grid probes, swap-sweep protocols) and don't generalise.
 
-Execute on a GPU (A100 ≈ 35 min addition, ≈ 55 min multilingual; install deps with
+Execute on a GPU (A100 ≈ 40 min addition, ≈ 60 min multilingual; install deps with
 `uv sync --group notebook`):
 
 ```bash

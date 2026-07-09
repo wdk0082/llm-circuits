@@ -65,6 +65,17 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
 - `HF_TOKEN` required for gated models (see `.env.example`)
 - `LLM_CIRCUITS_DEVICE` overrides auto-detected device
 
+## Performance notes
+
+- **Decoder loading:** `load_transcoder()` defaults to `lazy_decoder=True`, which re-reads
+  `W_dec` from disk on every decode — ~500× slower for repeated forwards (steering,
+  attribution jobs). Pass `lazy_decoder=False` when VRAM allows (Qwen3-4b bf16:
+  ~60 GB transcoders + 8 GB model fits an A100-80GB); keep lazy for encode-only work
+  (e.g. the overlap analysis) or models whose eager load exceeds VRAM (8b: ~97 GB + model).
+- **Disk cache:** the mwhanna transcoder repos store bf16 weights; `cache_transcoder(...,
+  dtype=torch.bfloat16)` halves the on-disk cache vs circuit-tracer's fp32 default with
+  no precision loss (fp32 caching is a pure upcast of bf16 source data).
+
 ## Additional Requirements
 
 - Always run the `.github/workflows/ci.yml` to check CIs.

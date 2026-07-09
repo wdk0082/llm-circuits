@@ -7,8 +7,11 @@
 > vs the paper in each notebook's Summary. See "A100 session: suites executed +
 > per-experiment verdicts" for the full comparison and "Repo cleanup" for the layout
 > change (the former `examples/paper_*.py` suites are folded into the notebooks).
-> Artifacts (JSON/PNG/HTML, gitignored) live on the A100 node under
-> `artifacts/paper_{addition,multilingual}/<size>/`.
+> Artifacts (JSON/PNG/HTML, gitignored) are per-node scratch under
+> `artifacts/paper_{addition,multilingual}/<size>/` — regenerate by executing the
+> notebooks (the first A100 node's copies did not survive it). Note the "Repo cleanup"
+> section below predates the final `examples/` trim: `examples/` now holds only
+> `demo.py` + `tpu_smoke_test.py`.
 
 Development log for the verification pass over the re-implementation (task 4) and the
 biology-paper reproductions (task 5), 2026-07-09. References: the methods paper

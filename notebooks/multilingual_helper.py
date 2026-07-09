@@ -398,18 +398,23 @@ def plot_overlap_curves(curves, *, ax=None, title="Cross-language feature overla
 # ---------------------------------------------------------------------------
 
 
-def position_supernode(model, tc, prompt, tokenizer, position, top_n: int = 10):
-    """Top-``top_n`` features (across all layers) by activation at ``position``.
+def position_supernode(model, tc, prompt, tokenizer, position, top_n: int = 10, *, max_layer=None):
+    """Top-``top_n`` features by activation at ``position`` (layers ``< max_layer`` if given).
 
     ``position`` is an int index or ``"final"``.  Returns ``([(layer, idx, act)], input_ids)``.
+
+    ``max_layer`` restricts the CANDIDATE POOL, not just the result: early-layer
+    activations are much smaller than late-layer ones, so filtering a global top-``top_n``
+    after the fact (as callers previously did) returns an empty set.
     """
     device = next(model.parameters()).device
     ids = tokenize(tokenizer, prompt, device)
     pos = ids.shape[1] - 1 if position == "final" else position
     cap = _capture_mlp_inputs(model, tc, ids)
+    n_scan = len(tc) if max_layer is None else max(1, min(int(max_layer), len(tc)))
     cands: list[tuple[int, int, float]] = []
     with torch.no_grad():
-        for L in range(len(tc)):
+        for L in range(n_scan):
             vec = tc.transcoders[L].encode(cap[L])[0][pos]  # (d_t,)
             v, i = vec.topk(top_n)
             cands.extend(
@@ -660,10 +665,17 @@ def early_language_detection_supernode(
     finals: dict[str, list[tuple[int, int, float]]] = {}
     sets: dict[str, set[tuple[int, int]]] = {}
     for lg in LANGS:
+        # max_layer restricts the candidate pool itself — a global top-k is dominated by
+        # late-layer activations and filtering it to early layers yields an EMPTY set.
         node, _ = position_supernode(
-            model, tc, antonym_prompt(concept, lg), tokenizer, "final", top_n=top_k
+            model,
+            tc,
+            antonym_prompt(concept, lg),
+            tokenizer,
+            "final",
+            top_n=top_k,
+            max_layer=lmax,
         )
-        node = [(L, i, a) for (L, i, a) in node if lmax > L]
         finals[lg] = node
         sets[lg] = {(L, i) for (L, i, _) in node}
     out: dict[str, list[tuple[int, int, float]]] = {}

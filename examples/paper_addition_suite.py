@@ -4,7 +4,11 @@ Stages (all use the paper's raw ``calc: a+b=`` format unless its accuracy collap
 in which case the chat fallback is used and reported):
 
   accuracy      — the paper's 10,000-prompt grid (a,b in [0,99]).
-  graphs        — attribution graphs for calc: 36+59= (magnitude digit + ones digit).
+  graphs        — attribution graphs for the studied prompt (magnitude digit + ones
+                  digit). Default calc: 36+59= (the paper's); if the model answers it
+                  incorrectly, the nearest CORRECT pair with the same digit classes
+                  (a%10, b%10, a+b preserved) is studied instead — the paper's premise
+                  is a correctly-completed prompt.
   grids         — operand-grid heatmaps + taxonomy for answer features, mid-layer
                   features (add-function / lookup hunt) and operand-token input
                   features (the _6 / _9 / ~magnitude supernodes). (Fig A1/A2)
@@ -58,7 +62,6 @@ ALL_STAGES = [
     "introspection",
     "corpus",
 ]
-A0, B0 = 36, 59
 T0 = time.perf_counter()
 
 
@@ -72,10 +75,36 @@ def save_json(out_dir: Path, name: str, obj) -> None:
     log(f"wrote {path}")
 
 
+def pick_studied_pair(a0: int, b0: int, correct: np.ndarray) -> tuple[int, int, bool]:
+    """The paper studies a prompt the model answers CORRECTLY (Haiku: 36+59 -> 95).
+
+    If the model answers (a0, b0) correctly, keep it.  Otherwise pick the nearest
+    two-digit pair with the SAME digit classes — a % 10, b % 10 and a + b all equal to
+    the requested pair's (preserving the paper's ``_6 + _9 -> sum = _95`` lookup/sum
+    structure) — that the model does answer correctly.
+    """
+    if correct[a0, b0]:
+        return a0, b0, False
+    cands = [
+        (a, b)
+        for a in range(10, 100)
+        for b in range(10, 100)
+        if a % 10 == a0 % 10 and b % 10 == b0 % 10 and a + b == a0 + b0 and correct[a, b]
+    ]
+    if not cands:
+        raise SystemExit(
+            f"model answers {a0}+{b0} incorrectly and no correct same-class pair exists"
+        )
+    a, b = min(cands, key=lambda ab: abs(ab[0] - a0) + abs(ab[1] - b0))
+    return a, b, True
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--size", default="4b")
     ap.add_argument("--stages", default="all")
+    ap.add_argument("--a", type=int, default=36, help="left operand of the studied prompt")
+    ap.add_argument("--b", type=int, default=59, help="right operand of the studied prompt")
     ap.add_argument("--dtype", default="bf16", choices=["bf16", "fp32"])
     ap.add_argument("--graph-feature-nodes", type=int, default=8000)
     ap.add_argument("--grid-batch", type=int, default=256)
@@ -119,6 +148,28 @@ def main() -> None:
         save_json(out_dir, "state", state)
         log(f"using style={style!r} for all subsequent stages")
     style = state.get("style", "calc")
+
+    # ------------------------------------------------------------------
+    # studied pair — must be a prompt the model answers correctly (paper premise)
+    # ------------------------------------------------------------------
+    if "pair" in state and [args.a, args.b] == state.get("pair_requested", [args.a, args.b]):
+        A0, B0 = state["pair"]  # resume: reuse the pair earlier stages selected
+    else:
+        A0, B0 = args.a, args.b
+        acc_path = out_dir / f"accuracy_{style}.npy"
+        if acc_path.exists():
+            A0, B0, switched = pick_studied_pair(args.a, args.b, np.load(acc_path))
+            if switched:
+                log(
+                    f"NOTE: model answers {args.a}+{args.b} INCORRECTLY in style={style!r}; "
+                    f"studying the nearest correct same-class pair {A0}+{B0}={A0 + B0} instead"
+                )
+        else:
+            log(f"WARNING: no {acc_path.name}; using pair {A0}+{B0} unverified")
+        state["pair_requested"] = [args.a, args.b]
+        state["pair"] = [A0, B0]
+        save_json(out_dir, "state", state)
+    log(f"studied pair: {A0}+{B0}={A0 + B0}")
 
     # ------------------------------------------------------------------
     # graphs — calc: 36+59= (both digit circuits)
@@ -169,14 +220,24 @@ def main() -> None:
         mid.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
         groups["midlayer"] = [(n["layer"], n["feature_idx"]) for n in mid[:16]]
 
-        # input supernodes: features on the operand digit tokens (ONES graph positions)
+        # input supernodes: EARLY-layer features on the operand digit tokens (ONES graph
+        # positions).  The layer cap matters: the paper's _6/_9/~magnitude input features
+        # are detokenization-level, and without it late-layer aggregation features at the
+        # operand positions win the influence ranking (leaving _9 empty).
         pos = P.digit_token_positions(tokenizer, ids["ones"], A0, B0)
         state["digit_positions"] = pos
+        lmax_input = max(1, n_layers // 4)
         groups["input_a"] = [
-            (L, i) for (L, i, _) in P.position_features(graphs["ones"], pos["a_digits"], 12)
+            (L, i)
+            for (L, i, _) in P.position_features(
+                graphs["ones"], pos["a_digits"], 16, max_layer=lmax_input
+            )
         ]
         groups["input_b"] = [
-            (L, i) for (L, i, _) in P.position_features(graphs["ones"], pos["b_digits"], 12)
+            (L, i)
+            for (L, i, _) in P.position_features(
+                graphs["ones"], pos["b_digits"], 16, max_layer=lmax_input
+            )
         ]
 
         all_feats = sorted({f for g in groups.values() for f in g})
@@ -203,15 +264,42 @@ def main() -> None:
             probe="ones",
             style=style,
         )
+        # Input features live ON the operand digit tokens, not the final position: probe
+        # them at their peak over prompt positions (with style="calc", grids_first reads
+        # the "=" token, where input-token features are silent).
+        grids_peak = (
+            grids_first
+            if probe_first == "first"
+            else H.feature_grids(
+                model,
+                tc,
+                all_feats,
+                A_VALS,
+                B_VALS,
+                tokenizer,
+                batch_size=args.grid_batch,
+                probe="first",
+                style=style,
+            )
+        )
+
+        def grids_for(gname: str):
+            if gname in ("answer_ones", "midlayer"):
+                return grids_ones
+            if gname in ("input_a", "input_b"):
+                return grids_peak
+            return grids_first
+
         np.savez_compressed(
             out_dir / "grids.npz",
             **{f"first_L{L}_f{i}": grids_first[(L, i)] for (L, i) in all_feats},
             **{f"ones_L{L}_f{i}": grids_ones[(L, i)] for (L, i) in all_feats},
+            **{f"peak_L{L}_f{i}": grids_peak[(L, i)] for (L, i) in all_feats},
         )
 
         taxonomy: dict[str, dict] = {}
         for gname, feats in groups.items():
-            grids = grids_ones if gname in ("answer_ones", "midlayer") else grids_first
+            grids = grids_for(gname)
             taxonomy[gname] = {
                 f"L{L}f{i}": H.periodicity_report(grids[(L, i)], A_VALS, B_VALS) for (L, i) in feats
             }
@@ -226,7 +314,7 @@ def main() -> None:
         for gname, feats in groups.items():
             if not feats:
                 continue
-            grids = grids_ones if gname in ("answer_ones", "midlayer") else grids_first
+            grids = grids_for(gname)
             cols = 4
             rows = (len(feats) + cols - 1) // cols
             fig, axes = H.plt.subplots(rows, cols, figsize=(3.6 * cols, 3.1 * rows))

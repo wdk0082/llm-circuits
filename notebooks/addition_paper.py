@@ -123,11 +123,21 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
     return {"a_digits": a_pos[-len(a_str) :], "b_digits": b_pos[-len(b_str) :], "eq": eq_pos}
 
 
-def position_features(pruned_dict, positions, top_n: int = 12):
-    """Influence-ranked feature nodes at any of ``positions`` -> ``[(layer, idx, act)]``."""
+def position_features(pruned_dict, positions, top_n: int = 12, *, max_layer: int | None = None):
+    """Influence-ranked feature nodes at any of ``positions`` -> ``[(layer, idx, act)]``.
+
+    ``max_layer`` keeps only layers ``< max_layer`` — the paper's INPUT supernodes
+    (``_6`` / ``_9`` / ``~magnitude``) are detokenization-level features at the bottom of
+    the graph; without the cap, late-layer aggregation features at the operand positions
+    dominate the influence ranking and crowd them out.
+    """
     pos = set(positions)
     feats = [
-        n for n in pruned_dict["nodes"] if n["node_type"] == "feature" and n["position"] in pos
+        n
+        for n in pruned_dict["nodes"]
+        if n["node_type"] == "feature"
+        and n["position"] in pos
+        and (max_layer is None or n["layer"] < max_layer)
     ]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
     return [(n["layer"], n["feature_idx"], float(n.get("activation", 0.0))) for n in feats[:top_n]]

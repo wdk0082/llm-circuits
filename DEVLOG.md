@@ -1,10 +1,13 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE / HANDOFF — start here** (2026-07-09, end of the laptop session):
-> see the last section, "Handoff: paper-exact reproduction suites → run on A100".
-> Everything is committed on branch `tpu-iteration`; the suites are written and
-> lint/test-clean but have NOT been executed yet — the next session (A100 GPU node)
-> runs them and integrates results.
+> **⏩ CURRENT STATE** (2026-07-09, end of the A100 session): the paper-exact suites
+> have been **executed on a local A100-80GB** (not TPU/Slurm) and compared against the
+> paper — see "A100 session: suites executed + per-experiment verdicts" below.
+> Four selection/protocol bugs were found by the first runs and fixed; two addendum
+> scripts (`examples/paper_addition_polymer_probe.py`,
+> `examples/paper_addition_swap_addendum.py`) complete the paper's intervention table.
+> Artifacts (JSON/PNG/HTML, gitignored) live on the A100 node under
+> `artifacts/paper_{addition,multilingual}/<size>/`.
 
 Development log for the verification pass over the re-implementation (task 4) and the
 biology-paper reproductions (task 5), 2026-07-09. References: the methods paper
@@ -281,3 +284,119 @@ an A100 previously; the grids stage is 2×10,000 batched prompts; `corpus` strea
   only smoke-test artifacts. `.env` gotcha fixed this session: never set `HF_HOME=`
   (empty) — it roots a `hub/` HF cache inside the repo (now gitignored).
 - Verification suites (`verification/`) run on CPU fp32 — see `verification/README.md`.
+
+---
+
+## A100 session: suites executed + per-experiment verdicts (2026-07-09)
+
+Environment: a **local A100-SXM4-80GB node** (no Slurm/TPU; fresh `.env` with all TPU
+vars dropped — Qwen3 + mwhanna transcoder repos are public, so no `HF_TOKEN` needed).
+`uv sync --all-groups`; 96 tests pass. Qwen3-4b bf16 (8 GB) + per-layer transcoders
+(117 GB fp32 on disk → ~32 GB loaded) fit comfortably; each 8000-target graph build
+takes ~95–125 s; a full 10,000-prompt grid probe ~2 min. Everything below is
+Qwen3-4b + `mwhanna/qwen3-4b-transcoders` unless stated; paper = Claude 3.5 Haiku
+(CLT), reference values in `notes/biology_digest.md`.
+
+### Protocol/selection fixes made before the final runs (all four found by the first
+### execution, not by review — each invalidated a paper experiment silently)
+
+1. **Studied pair must be answered correctly** (suite premise, paper studies
+   `36+59 → 95` which Haiku gets right). Qwen3-4b answers `calc: 36+59=` with `?\n\n`
+   (the `_6+_9` class is only 46% correct in calc format; 77.7% overall), so the
+   magnitude graph attributed a non-digit. `paper_addition_suite.py` now auto-switches
+   to the **nearest correct pair with identical digit classes** (a%10, b%10, a+b all
+   preserved → same `_6+_9 → sum=_95` structure): **46+49=95**. Persisted in
+   `state.json` (`pair`, `pair_requested`).
+2. **Input-feature operand grids probed at the wrong position.** With `style="calc"`
+   the grids stage probed every group at the `=` token, where operand-token features
+   are silent — `_6`/`_9` selections came out empty and both suppression experiments
+   were skipped. Input groups are now probed at their **peak over prompt positions**
+   (`grids_peak`); answer/midlayer groups keep the functional-position probes.
+3. **Input supernodes must be selected from EARLY layers.** Influence-top-12 at the
+   operand digit positions is dominated by late-layer aggregation features (L24–L35),
+   which crowd out the paper's detokenization-level `_6`/`_9`/`~magnitude` features
+   (L0–L7); `_9` was empty and `inhibit_magnitude` was polluted (it flipped the ones
+   digit — an artifact). `position_features` gained a `max_layer` cap; the suite uses
+   `n_layers//4` with a 16-deep pool.
+4. **Language-detection supernodes were EMPTY** — `early_language_detection_supernode`
+   filtered a *global* activation-top-40 (all late layers) down to early layers,
+   leaving zero features per language, so the first language-swap run intervened on
+   nothing (baselines unmoved, p_expected = 0). `position_supernode` gained a
+   `max_layer` argument restricting the candidate pool itself; rerun below.
+
+Two paper experiments needed new scripts (the digit-split adaptation makes them
+position-sensitive):
+
+- **`examples/paper_addition_polymer_probe.py`** — the polymer reuse test at the
+  citation's **ones moment**. Haiku predicts `995` as one token; Qwen3 emits digits
+  one at a time, so the `_6+_9 → _5` lookup can only fire when predicting the final
+  `5`, i.e. on `"…Polymer, 36, 837, 199"`. (The suite's pruned-graph-membership test
+  at the bare prompt — predicting the first `9` — is the wrong moment and finds
+  nothing; the probe also confirms that negative directly.)
+- **`examples/paper_addition_swap_addendum.py`** — the Fig A5 lookup swap needs a
+  verified `_9+_9` donor. The 46+49 selection has none (its auto-labelled (9,9)
+  candidate is really an ends-in-0/5 sum feature — operand-grid inspection, not
+  labels, is the arbiter). The addendum builds the `calc: 49+49=` ones graph,
+  grid-verifies its mid-layer candidates (3 clean `lookup(9,9)` point-lattices:
+  L25f42677, L25f127159, L23f25848), and runs the swap with those donors.
+
+### Addition verdicts (paper §A vs Qwen3-4b, studied pair 46+49=95)
+
+| Experiment | Paper (Haiku) | Qwen3-4b (this session) | Verdict |
+|---|---|---|---|
+| `calc:` accuracy (10,000 prompts) | implied high | 77.7% overall — format usable, no chat fallback; but 36+59 itself wrong (`?\n\n`), `_6+_9` class 46% → pair switched to 46+49 | **partial** (format holds; weaker arithmetic) |
+| Two-pathway graph (Fig A2) | input → add-function → lookup → sum, one token | two per-digit circuits (digit-split adaptation): first-digit graph answers `9`, teacher-forced ones graph answers `5`; 1167-feature pruned ones graph | **reproduced** (adapted) |
+| Operand-plot taxonomy (Fig A1) | diagonals=sum, points=lookup, repeating=mod-10, smears=low-precision, stripes=operand | all classes found: 4 clean `sum=_5` anti-diagonals + `sum=_95`-like single diagonals (answer panel); 5 lookup point-lattices incl. (9,9), (5,9), (6,6), (3,3) + a clean `a+b≈95` band (midlayer); `_6` mod-10 lattices, `~46` magnitude bands, exact-46/49 crosses (input panel) | **reproduced** |
+| Suppress `_6` input | output 98 (ones = 9+9→8) | m=−1: ones digit → **`8`** @ 0.36 (exactly the 9+9 phenomenology); ones-path readout: lookups 21–46%, two sum feats 0% | **reproduced** |
+| Suppress `_9` input | output 91 ("not 92 — grain of salt") | m=−1: `5` stays top but 0.999→0.52 (sum=_5 feats → 0%; redundancy resists); m=−2: → `3` @ 0.96. Like the paper, does NOT follow 6+6-numerology | **reproduced** (same caveat) |
+| Inhibit `~30`/`~59` magnitude | low-precision path suppressed, **ones path intact** | early-layer `~46`-band supernode, m=−1: ones digit **unchanged** (`5` @ 0.995), all ones-path readouts 101–133% | **reproduced** |
+| Neg-steer lookup vs sum (−2× = m=−3) | lookup smears result over ~5; sum smears wider | lookup: digit width 1.0→2.0 (top `7` 0.67 / `3` 0.19); sum: width ~1.03, flips sharply to `3` @ 0.99 | **partial/differs** (lookup smears less; sum flips instead of smearing) |
+| Polymer completion (Fig A4) | `995` @ 98.6% | `995.` greedy; ones moment `5` @ 0.984 | **reproduced** |
+| Polymer reuse of calc features | same `_6+_9` lookup active in citation graph | at the **ones moment**: 8/10 calc lookup/sum features active (`sum=_5` L34f51125 @ 74.5, lookup L24f163113 @ 12.8, …); at the bare-prompt magnitude moment: none | **reproduced** (needs the per-digit position) |
+| Polymer −2× suppression (Fig A5) | 995 → 997 top @ 54.8%, sum/say-995 → 0% | m=−3 on the 8 active: `5` @ 0.984 → **`1`** @ 0.56 (correct year destroyed) | **reproduced** (analog) |
+| Polymer lookup swap `_6+_9`→`_9+_9` (Fig A5) | 995 → **998** @ 66.6% | flip 3 active (6,9) lookups + inject 3 verified (9,9) donors at 1×: `5` @ 0.982 → **`8`** @ 0.845 (= …1998) | **reproduced** |
+| Intermediate `assert (4+5)*3==` (Fig A6) | `27`; computed-9 intermediate features | completes ` 27`; label-based hunt finds only 2–3 digit-logit features at influence ≤ 0.003 — no compelling computed-9 story (paper hedged its own suppression mechanism here) | **partial** (behavior ✓, feature story weak) |
+| Introspection dialogue | narrates the carry algorithm it doesn't use | answers `95`, then *"I added 46 and 49 together: 46 + 49 = 95."* — a non-explanation; no carry narration | **partial** (mismatch motif trivially holds — no metacognitive insight; the specific carry-narration behavior is absent) |
+| Corpus examples (Fig A3) | lookup feature fires on citations/tables/dates | C4 scan: lookup L24f163113 on dates/totals ("April 25, 2⟦0⟧10", "1⟦,⟧016,650"), L25f145046 on journal page ranges ("pp. 43⟦-⟧58") and prices, L27f77434 on complementary percentages ("46.4% … ⟦ ⟧53.6%") | **reproduced** |
+
+### Multilingual verdicts (paper §B vs Qwen3-4b)
+
+| Experiment | Paper (Haiku) | Qwen3-4b (this session) | Verdict |
+|---|---|---|---|
+| Behavior | big/grand/大 | antonym large/Grand/大 ✓; hot-antonym cold/F(roid)/冷 ✓; synonym: EN `tiny` ✓ but FR/ZH **echo the operand** (petit→petit, 小→小) — degenerate synonym mode | **reproduced** (antonym); synonym degenerate in FR/ZH |
+| Shared supernodes (20/27, 10/27 in pruned graphs) | multilingual antonym/say-large core | **107 features in all three pruned graphs** (437–621 per graph); say-big trio in all three: L30f27666 (巨大/giant), L31f11436 (large/big/大), L32f100307 (bigger/太大/大); task-circuit pairwise: en∩zh 244 > en∩fr 139 > fr∩zh 114 | **reproduced** (structure) |
+| Operation swap −5×/+6×, crossover ≈4× | little/min./微 top-1, upstream intact | at moderate strengths the answer flips to the model's **own synonym-mode output**: FR `pet`+`Pet` 0.65 top-1 @ 1×, EN `small` (echo) 0.98 @ 2×, ZH 小 0.358 (2nd) @ 1.5×; technical crossovers 1–3× (paper ≈4×); at the paper's full ±5–6× all languages **degenerate to junk** (Haiku stayed coherent) | **partial** (operation independently editable ✓; full paper strength over-drives the 4B model) |
+| Operand swap −0.5×/+1.5× (Fig B4) | cold / f[roid] / 冷 | EN `cold` @ 0.924 (crossover 0.625×), FR **`f`** @ 0.986 (1.0×; the paper's own figure shows "f[roid]"), ZH `冷` @ 0.998 (0.875×) | **reproduced** (all three) |
+| Language swap −5×/+6× (Fig B5) | EN→ZH 大, FR→EN big, ZH→FR grand; operation+operand preserved | with **populated** early-layer detection supernodes (12/lang, L6–11 — after fix #4): **no effect in any direction** — baselines stay top-1 (large 0.948 / Grand 0.996 / 大 1.0), p_expected = 0.000 at every strength. The old notebook's any-layer language-specific final features DID move EN→ZH (大 top-1 @ 0.726 at ×3; EN→FR failed) → on Qwen3-4b output language is set by **late say-X-in-language features**, not early detection features. Format caveat: our chat-template final token is not the paper's content-bearing open quote | **differs** (causal handle sits later than in Haiku) |
+| Overlap-by-layer IOU + baseline (Fig B7) | mid-layer peak (0.2–0.3), baselines much lower, ends low | 4b: mid-layer peak ✓ (mean 0.348 @ L22 vs baseline 0.277); baseline-subtracted curve is paper-shaped (mid ≈ 0.10 vs ends ≈ 0.02) and ordering **en-fr > en-zh > fr-zh = the paper's** (the old top-k method's en-zh anomaly disappears under the paper protocol) | **reproduced** (4b) |
+| Scale claim (Haiku ≫ 18L, esp. EN-ZH) | overlap grows with scale | **inverted on our pair**: 0.6b ≥ 4b (baseline-subtracted mid-mean 0.105 vs 0.091; raw peaks 0.48–0.52 vs 0.33–0.39). Caveat: 0.6b uses the `-lowl0` transcoder recipe (different sparsity/dictionary) — granularity confounds IOU, so treat as **inconclusive**, not a contradiction | **not reproduced** (confounded) |
+
+### Answers to the handoff's open questions
+
+1. *Operation swap top-1 with −5×/+6×?* Yes at moderate strengths for FR (petit @ 1×)
+   and effectively EN (`small` echo @ 2×); ZH reaches 2nd place — but the swap lands on
+   Qwen3-4b's own (echo) synonym behavior, and the full paper strengths destroy the
+   distribution. The m=−1-only ablation of the old notebook was indeed the weaker
+   protocol.
+2. *EN→FR language swap with early detection features?* No — and with the paper's
+   early-layer supernodes populated, **no direction works at all** (verdict row above).
+   The language swap is the one paper intervention that does not transfer to Qwen3-4b
+   chat prompts; the causal handle is late say-X features (any-layer selection moved
+   EN→ZH previously), not early language detection.
+3. *Overlap paper-shaped after baseline?* Yes — and the pair ordering becomes the
+   paper's (en-fr strongest). 4b > 0.6b does **not** hold (inverted; dictionary
+   confound noted).
+4. *`calc:` accuracy?* 77.7% → format kept, no chat fallback; but the paper's exact
+   pair 36+59 is wrong (46% class accuracy) → studied pair auto-switched to 46+49.
+5. *Polymer "995" + reuse?* Completion yes; reuse **yes at the ones moment** (8/10
+   features, causal at m=−3), invisible at the bare-prompt magnitude moment.
+
+### Not attempted / instrumentation gaps (scope, not contradictions)
+
+- The paper's magnitude-inhibition readout covers the *low-precision* features
+  themselves; our readout list covers the ones-path lookup/sum features only (the
+  low-precision side is evidenced by the unchanged ones digit + the first-digit
+  circuit's existence, not by a % table).
+- "Add-function" features (operand-stripe class at the `+`/`=` positions) were not
+  probed as their own group.
+- The introspection prompt was asked once (greedy); no sampling over phrasings.

@@ -29,6 +29,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib import font_manager as _fm
 
 from llm_circuits.circuits.attribution_graph import build_attribution_graph
 from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
@@ -37,6 +38,17 @@ from llm_circuits.circuits.interventions import FeatureIntervention, run_feature
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 from llm_circuits.transcoders.registry import get_spec
+
+# ZH tick/legend labels (大/小/冷) need a CJK font; matplotlib >=3.6 falls back per glyph
+# across a **font.family list of concrete families** (the sans-serif alias list does NOT
+# trigger fallback), so Latin text keeps the DejaVu look and CJK glyphs fill in.  Guarded:
+# no CJK font installed -> unchanged rcParams (no findfont warnings).
+_cjk_names = {f.name for f in _fm.fontManager.ttflist if "CJK" in f.name}
+_cjk = (
+    "Noto Sans CJK SC" if "Noto Sans CJK SC" in _cjk_names else next(iter(sorted(_cjk_names)), None)
+)
+if _cjk:
+    plt.rcParams["font.family"] = ["DejaVu Sans", _cjk]
 
 N_BOS = 1  # Qwen3 chat template prepends one BOS-like token
 

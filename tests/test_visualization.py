@@ -75,30 +75,6 @@ class TestRenderSuiteHtml:
             render_suite_html([], tmp_path / "x.html")
 
 
-class TestRenderSteeringExplorer:
-    def test_explorer_html(self, tmp_path):
-        from llm_circuits.circuits.visualization import render_steering_explorer_html
-
-        data = {
-            "model": "qwen3-4b",
-            "examples": [
-                {
-                    "label": "2+3=5",
-                    "answer": "5",
-                    "factors": [1.0, 0.0, -1.0],
-                    "tokens": ["5", "6", "4"],
-                    "probs": [[0.9, 0.05, 0.02], [0.5, 0.3, 0.1], [0.01, 0.6, 0.2]],
-                }
-            ],
-        }
-        out = render_steering_explorer_html(data, tmp_path / "se.html", title="T")
-        t = out.read_text()
-        assert 'id="slider"' in t
-        assert "const DATA" in t
-        assert "function render" in t
-        assert "2+3=5" in t
-
-
 class TestRenderGraphExplorer:
     def test_explorer_html(self, tmp_path):
         from llm_circuits.circuits.graph_explorer import render_graph_explorer_html

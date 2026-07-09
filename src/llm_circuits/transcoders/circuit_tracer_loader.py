@@ -119,7 +119,9 @@ def load_transcoder(
     return LoadedTranscoder(transcoder=transcoder_obj, config=config, repo_id=repo_id)
 
 
-def cache_transcoder(repo_id: str, cache_dir: str | None = None) -> None:
+def cache_transcoder(
+    repo_id: str, cache_dir: str | None = None, *, dtype: Any | None = None
+) -> None:
     """Download and cache transcoder weights to a local directory.
 
     Args:
@@ -127,6 +129,10 @@ def cache_transcoder(repo_id: str, cache_dir: str | None = None) -> None:
             ``"mwhanna/qwen3-0.6b-transcoders-lowl0"``.
         cache_dir: Local directory to save cached files. Defaults to
             :func:`~llm_circuits.settings.transcoder_cache_dir`.
+        dtype: Dtype of the cached safetensors (circuit-tracer's default is
+            fp32). The mwhanna Qwen3 repos store bf16 weights, so caching at
+            ``torch.bfloat16`` halves the on-disk size losslessly — the fp32
+            default is a pure upcast of bf16 source data.
     """
     from circuit_tracer.utils.caching import save_transcoders_to_cache
 
@@ -134,4 +140,5 @@ def cache_transcoder(repo_id: str, cache_dir: str | None = None) -> None:
 
     resolved = cache_dir if cache_dir is not None else str(transcoder_cache_dir())
     log.info("Caching transcoders from %s -> %s", repo_id, resolved)
-    save_transcoders_to_cache(repo_id, resolved)
+    kwargs = {} if dtype is None else {"dtype": dtype}
+    save_transcoders_to_cache(repo_id, resolved, **kwargs)

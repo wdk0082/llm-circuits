@@ -1,0 +1,406 @@
+% =============================================================================
+% Reproduction report: attribution graphs on Qwen3.
+% Build: `make` (latexmk -pdf). Word count: `make count` (texcount).
+%
+% WORD BUDGET (limit: 4,000 words total, texcount "words in text"):
+%   Abstract                    ~150   (written)
+%   1 Introduction              ~640   (written)
+%   2 Method                    ~1,450 (written; display math excluded by texcount)
+%   3 Experiments and Results   ~1,150 (PLACEHOLDER -- see budget comment in situ)
+%   4 Discussion                ~350   (PLACEHOLDER)
+%   Slack                       ~250
+% Keep the placeholders inside their budgets or trim Sections 1-2 to compensate.
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.4cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=BrickRed,citecolor=NavyBlue,urlcolor=NavyBlue]{hyperref}
+
+% ----- notation macros -------------------------------------------------------
+\newcommand{\enc}{W_{\mathrm{enc}}}
+\newcommand{\dec}{W_{\mathrm{dec}}}
+\newcommand{\enci}[2]{W_{\mathrm{enc},#2}^{#1}}   % encoder row #2 at layer #1
+\newcommand{\deci}[2]{W_{\mathrm{dec},#2}^{#1}}   % decoder column #2 at layer(s) #1
+\newcommand{\bdec}{\bm{b}_{\mathrm{dec}}}
+\newcommand{\benc}{\bm{b}_{\mathrm{enc}}}
+\newcommand{\jrelu}{\operatorname{JumpReLU}}
+\newcommand{\stopgrad}{\bar{J}}          % frozen (stop-gradient) Jacobian
+\newcommand{\placeholder}[1]{\begin{quote}\itshape\color{gray!60!black}#1\end{quote}}
+
+\title{Tracing Circuits in Qwen3: A Faithful Reimplementation and Reproduction of Attribution Graphs\thanks{Code: \texttt{llm-circuits} repository. Reference method: \citet{ameisen2025circuit}; reference implementation: \citet{hanna2025circuittracer}.}}
+\author{Zixuan Wang\\ \small \texttt{zw499@cam.ac.uk}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% ~150 words -----------------------------------------------------------------
+\begin{abstract}
+\noindent
+Attribution graphs decompose a language model's forward pass on a single prompt into
+causal, weighted interactions between sparse dictionary features, and have been used to
+map the ``biology'' of a frontier model. We reimplement the full methodology from
+scratch for the Qwen3 model family --- local replacement models, batched edge
+attribution, influence-based pruning, and constrained-patching interventions --- using
+the open-source \mbox{circuit-tracer} library only to load pretrained per-layer
+transcoders. The reimplementation is verified numerically equivalent to
+circuit-tracer: identical node sets, matching edge weights, identical pruned graphs,
+and matching constrained-steering effects on shared inputs. We then reproduce two case studies
+from \citet{lindsey2025biology} on Qwen3-4B --- two-digit addition and multilingual
+antonyms --- following the paper's intervention protocols, and add a same-recipe
+cross-scale comparison (4B vs.\ 8B).
+% TODO(results): sync this sentence with Section 4 once it is written.
+The core circuit structures reproduce; several interventions reproduce only at reduced
+steering strength; and one causal claim (the language swap) localises differently in
+Qwen3, which we characterise mechanistically.
+\end{abstract}
+
+% =============================================================================
+\section{Introduction}\label{sec:intro}
+% ~640 words. Related work is folded in here (no separate section).
+% =============================================================================
+
+Mechanistic interpretability aims to reverse-engineer the computations of neural
+networks into human-understandable algorithms~\citep{olah2020zoom,elhage2021mathematical}.
+For large language models a central obstacle is that the natural unit of computation is
+not the neuron: models appear to represent many more concepts than they have neurons,
+storing them in \emph{superposition}, so individual neurons are polysemantic and
+resist interpretation~\citep{elhage2022superposition}. Explaining a behaviour
+mechanistically therefore requires both a better feature basis and a way to trace, on
+concrete prompts, how those features causally interact.
+
+Dictionary learning addresses the first requirement. Sparse autoencoders (SAEs)
+decompose activations into an overcomplete basis of sparsely-firing, substantially more
+monosemantic features~\citep{bricken2023monosemanticity,cunningham2024sparse}, scale to
+frontier models~\citep{templeton2024scaling}, and benefit from discontinuous activation
+functions such as JumpReLU~\citep{rajamanoharan2024jumprelu}. An SAE, however, only
+re-describes the representation at one point in the network: it says what is encoded,
+not how it is computed. \emph{Transcoders}~\citep{dunefsky2024transcoders} instead
+train the same sparse dictionary architecture to imitate an MLP's input--output map, so
+that each feature has both an input action (its encoder row) and an output action (its
+decoder column) and the MLP's computation factors through an interpretable sparse
+bottleneck. Cross-layer variants let one feature write to all subsequent
+layers~\citep{ameisen2025circuit}.
+
+The second requirement --- tracing interactions --- has traditionally been met with
+causal patching. Manual activation patching over attention heads and MLPs isolated,
+e.g., the indirect-object-identification circuit in GPT-2~\citep{wang2023ioi};
+ACDC automated the search~\citep{conmy2023acdc}; attribution patching replaced
+interventions with cheap gradient approximations~\citep{syed2024attribution}; and
+sparse feature circuits lifted patching from model components to SAE
+features~\citep{marks2025sparse}. \emph{Attribution
+graphs}~\citep{ameisen2025circuit} sharpen this line of work into a per-prompt causal
+graph over transcoder features. Replacing MLPs with transcoders, freezing attention
+patterns and normalisation denominators at their on-prompt values, and inserting error
+nodes yields a \emph{local replacement model} that reproduces the underlying model's
+forward pass exactly while being linear in the feature activations; \emph{direct}
+effects between features are then exact linear coefficients obtained by
+backpropagation rather than approximations, and the resulting dense graph is pruned to
+an interpretable subgraph whose hypotheses are validated by steering interventions on
+the real model. The companion paper applies the method across dozens of behaviours of
+Claude~3.5 Haiku~\citep{lindsey2025biology}, and the circuit-tracer
+library~\citep{hanna2025circuittracer} open-sources the pipeline for open-weight
+models. Together these form the reference for the present work.
+
+This report makes two contributions. \textbf{First}, we reimplement the entire
+pipeline from scratch for HuggingFace Qwen3 models~\citep{yang2025qwen3}: capture of
+frozen constants, the local replacement forward pass, batched edge attribution via
+\texttt{autograd}, influence-based graph pruning, an interactive graph explorer, and
+constrained-patching feature interventions. circuit-tracer is used \emph{only} to load
+pretrained per-layer transcoders~\citep{hanna2025qwen3tc}; no attribution, pruning, or
+intervention machinery is imported. A dedicated verification suite establishes
+numerical equivalence with circuit-tracer on shared inputs --- identical node sets,
+edge weights matching to floating-point noise, identical influence rankings and pruned
+graphs, and matching constrained-steering deltas (Section~\ref{sec:experiments}). \textbf{Second},
+we reproduce two case studies of \citet{lindsey2025biology} on Qwen3-4B: two-digit
+\emph{addition} (parallel lookup-table and sum pathways, the operand-plot feature
+taxonomy, causal input suppressions, and cross-context reuse of arithmetic features)
+and \emph{multilingual antonyms} (a shared cross-lingual ``say-large'' core with
+language-specific output stages, operation/operand/language swap interventions, and
+cross-lingual feature overlap as a function of scale, compared against Qwen3-8B with
+same-recipe transcoders). Where Qwen3's tokenisation or capacity forces protocol
+adaptations --- digit-by-digit arithmetic, chat templates, steering strengths at which
+a 4B model degrades --- we document the adaptation explicitly and separate model
+differences from method failures.
+
+Section~\ref{sec:method} presents the method; Section~\ref{sec:experiments} reports
+the verification and the two reproductions; Section~\ref{sec:discussion} discusses
+what transfers across models and what does not.
+
+% =============================================================================
+\section{Method}\label{sec:method}
+% ~1,450 words. Describes the REFERENCE method (Ameisen et al. 2025 +
+% circuit-tracer v0.3.1), which our reimplementation follows and is verified
+% against. Only: transcoders, attribution-graph generation, pruning,
+% interventions.
+% =============================================================================
+
+Throughout, the underlying model is a pre-norm decoder-only transformer with $L$
+layers. We write $\bm{x}^{\ell}_{c}\in\mathbb{R}^{d}$ for the residual stream at token
+position $c$ before layer $\ell$'s MLP, $\tilde{\bm{x}}^{\ell}_{c}$ for the normalised
+MLP input,\footnote{In Qwen3, RMSNorm: $\tilde{\bm{x}} = \bm{x} \oslash
+\sigma(\bm{x})\odot\bm{\gamma}$ with $\sigma(\bm{x})=\smash{\sqrt{\lVert \bm{x}
+\rVert^2/d+\varepsilon}}$.} and $\bm{y}^{\ell}_{c}=\mathrm{MLP}^{\ell}(\tilde{\bm{x}}^{\ell}_{c})$
+for the MLP output added back into the stream. Logits are
+$\mathrm{logit}_{t} = \bm{u}_{t}^{\top}\,\mathrm{norm}(\bm{x}^{L+1})$ with unembedding
+rows $\bm{u}_{t}$.
+
+\subsection{Transcoders: sparse dictionaries for MLP computation}\label{sec:method:tc}
+
+An SAE learns an overcomplete sparse code
+$\bm{f}(\bm{x})=\sigma(\enc\bm{x}+\benc)$ with linear decoder
+$\hat{\bm{x}}=\dec\bm{f}+\bdec$, trained to reconstruct its own input under a sparsity
+penalty. A \emph{transcoder} keeps this architecture but changes the target: it is
+trained to predict the MLP's \emph{output} from the MLP's \emph{input}, so that the
+learned features mediate the layer's computation rather than merely re-encode its
+input. In the per-layer form (PLT) used in this work, layer $\ell$ has feature
+activations and reconstruction
+\begin{equation}
+\bm{a}^{\ell}_{c} \;=\; \jrelu\!\big(\enc^{\ell}\,\tilde{\bm{x}}^{\ell}_{c}+\benc^{\ell}\big),
+\qquad
+\hat{\bm{y}}^{\ell}_{c} \;=\; {\dec^{\ell}}^{\top} \bm{a}^{\ell}_{c}+\bdec^{\ell},
+\qquad
+\jrelu(z)_i \;=\; z_i\,\mathbb{1}[z_i>\theta_i],
+\label{eq:plt}
+\end{equation}
+i.e.\ a linear map on either side of a hard sparse gate. The reference method's
+default is the \emph{cross-layer} transcoder (CLT), in which a feature encoded at
+layer $\ell'$ writes to the MLP outputs of \emph{all} later layers through separate
+decoders, $\hat{\bm{y}}^{\ell}_{c}=\sum_{\ell'\le\ell} {\dec^{\ell'\to\ell}}^{\top}
+\bm{a}^{\ell'}_{c}+\bdec^{\ell}$; the PLT is the special case
+$\dec^{\ell'\to\ell}=0$ for $\ell'\neq\ell$. Training minimises reconstruction error
+with a tanh sparsity penalty,
+\begin{equation}
+\mathcal{L} \;=\; \sum_{\ell=1}^{L}\big\lVert \hat{\bm{y}}^{\ell}-\bm{y}^{\ell} \big\rVert_2^2
+\;+\; \lambda \sum_{\ell,i} \tanh\!\big(c\,\lVert \deci{\ell}{i}\rVert\, a^{\ell}_{i}\big),
+\end{equation}
+with the JumpReLU thresholds $\theta$ trained through a straight-through estimator.
+The pretrained Qwen3 transcoders used here are per-layer JumpReLU dictionaries with
+$163{,}840$ features per layer and no skip connection~\citep{hanna2025qwen3tc}.
+
+\subsection{Attribution-graph generation}\label{sec:method:attr}
+
+\paragraph{Local replacement model.}
+Substituting every MLP by its transcoder yields the \emph{replacement model}, which
+only approximates the underlying model. The attribution graph is instead built on the
+\emph{local replacement model} for a specific prompt $p$: (i)~MLPs are replaced by
+transcoders; (ii)~attention patterns and normalisation denominators are \emph{frozen}
+at the values they take in the underlying model's forward pass on $p$, making
+attention and normalisation linear maps of the residual stream; and (iii)~an
+\emph{error node} is added at every (position, layer),
+\begin{equation}
+\bm{e}^{\ell}_{c} \;=\; \bm{y}^{\ell}_{c} - \hat{\bm{y}}^{\ell}_{c},
+\end{equation}
+injected as a constant so that every activation and logit of the local replacement
+model \emph{exactly} equals the underlying model's. By construction the only remaining
+nonlinearities are the JumpReLU gates on feature pre-activations: between any feature's
+(constant-scaled) output and any downstream pre-activation, the map is affine.
+
+\paragraph{Nodes.}
+The graph has four node types: one \emph{embedding} node per prompt token; one
+\emph{feature} node per active feature instance $s=(c_s,\ell_s,i_s)$ with activation
+$a_s>0$; one \emph{error} node per (position, layer); and \emph{logit} nodes for the
+smallest set of candidate output tokens whose cumulative probability reaches $0.95$,
+capped at $10$, at the final position. Embedding and error nodes have no incoming
+edges; logit nodes have no outgoing edges.
+
+\paragraph{Edges.}
+Edge weights are the \emph{direct} linear effects of source on target within the local
+replacement model. Let $\stopgrad_{(c_s,\ell)\to(c_t,\ell_t)}$ denote the Jacobian of
+the residual stream at $(c_t,\ell_t)$ with respect to the stream at $(c_s,\ell)$
+computed with stop-gradients on all MLP/transcoder outputs, attention patterns, and
+normalisation denominators --- i.e.\ the sum over all paths through the residual
+stream and the frozen attention OV circuits, but through no other feature's
+nonlinearity. For a feature source $s$ and a feature target $t$ with encoder row
+$\enci{\ell_t}{i_t}$, the edge weight is
+\begin{equation}
+A_{s\to t} \;=\; a_s \sum_{\ell_s \le \ell < \ell_t}
+\big(\deci{\ell_s\to\ell}{i_s}\big)^{\top}\,
+\stopgrad_{(c_s,\ell)\to(c_t,\ell_t)}\;
+\enci{\ell_t}{i_t},
+\label{eq:edge}
+\end{equation}
+which for the PLT collapses to the single $\ell=\ell_s$ term. Embedding and error
+sources use their output vectors ($\bm{E}_{\mathrm{tok}}$ and $\bm{e}^{\ell}_c$) in
+place of $a_s\deci{}{i_s}$. For a logit target the input vector is the
+\emph{vocabulary-demeaned} unembedding direction $\bm{u}_t-\bar{\bm{u}}$, applied at
+the (frozen-)normalised final residual --- the demeaned logit is the component that
+affects the softmax, which is invariant to uniform shifts. Because the local
+replacement model is affine in the source outputs, incoming edges are \emph{complete}:
+the pre-activation of any feature node satisfies $h_t=\sum_{s}A_{s\to t}+\text{const}$,
+where the constant collects bias-path terms ($\benc$, $\bdec$) that are not
+represented as nodes. Attention QK circuits are deliberately outside the graph: nodes
+influence one another through frozen attention outputs, but effects \emph{on} the
+patterns themselves are not modelled.
+
+\paragraph{Computation.}
+Edges are computed target-by-target with one backward pass per batch of targets: the
+target's input vector is injected as the gradient seed at its (layer, position), the
+backward pass runs through the frozen-linear graph, and every source's edge weight is
+the inner product of the resulting gradient at the source's write location with the
+source's output vector, as in Eq.~\eqref{eq:edge}. The cost is linear in the number of
+attributed targets and independent of the number of sources; on dense prompts, targets
+can be selected adaptively in decreasing order of an incrementally re-estimated
+influence on the logits, so that the most explanatory feature nodes are attributed
+first.
+
+\subsection{Graph pruning}\label{sec:method:prune}
+
+Raw graphs contain $10^4$--$10^6$ edges, most irrelevant to the output. Pruning keeps
+the subgraph that carries the bulk of the influence on the logits. Let $A$ be indexed
+$[t,s]$ (rows = targets) and define the normalised unsigned adjacency
+\begin{equation}
+\hat{A}_{ts} \;=\; \frac{\lvert A_{ts}\rvert}{\sum_{s'} \lvert A_{ts'}\rvert},
+\qquad
+B \;=\; \sum_{k\ge1} \hat{A}^{k} \;=\; (I-\hat{A})^{-1} - I,
+\end{equation}
+where the Neumann series converges because the graph is a DAG ($\hat A$ is nilpotent);
+$B_{tv}$ sums the strengths of all directed paths $v\!\to\!t$, a path's strength being
+the product of its normalised edge weights. Each node $v$ receives the
+probability-weighted logit influence
+\begin{equation}
+I_v \;=\; \sum_{t\,\in\,\mathrm{logits}} p_t\, B_{tv},
+\label{eq:influence}
+\end{equation}
+with $p_t$ the model's output probability for logit node $t$. \textbf{Node pruning}
+keeps the minimal set of nodes, in decreasing $I_v$, whose cumulative share of
+$\sum_v I_v$ reaches $\tau_{\mathrm{node}}=0.8$; embedding and logit nodes are always
+kept.\footnote{The paper's prose also protects error nodes; the reference
+implementation (and ours, verified equivalent to it) lets error nodes be pruned.}
+\textbf{Edge pruning} recomputes $\hat{A}'$ and $I'$ on the pruned graph and scores
+each surviving edge by the influence it feeds into its target,
+\begin{equation}
+s_{ts} \;=\; \hat{A}'_{ts}\,\big(I'_t + p_t\big),
+\end{equation}
+($p_t=0$ for non-logit targets, and $I'_t=0$ for logit nodes, so the parenthesis is
+the target's score in either case), again keeping the minimal set with cumulative
+share $\tau_{\mathrm{edge}}=0.98$. Finally, internal nodes left dangling --- features
+without both an incoming and an outgoing kept edge, error nodes without an outgoing
+one --- are removed iteratively. Typical graphs shrink by roughly an order of
+magnitude in nodes and two in edges while retaining $\approx\!80\%$ of the logit
+influence.
+
+\subsection{Interventions}\label{sec:method:interv}
+
+Attribution graphs are hypotheses; they are validated by steering features in the
+\emph{underlying} model and checking that downstream features and logits move as the
+graph predicts. Steering feature $s$ multiplicatively by $M$ --- $a_s \mapsto M a_s$,
+so $M{=}0$ ablates and $M{=}-1$ flips the sign\footnote{Our code parameterises the
+same operation by the additive multiple $m = M-1$ of the clean activation
+($m{=}{-}1$ ablate, $m{=}{-}2$ flip); circuit-tracer's API takes the absolute target
+value $Ma_s$. All strengths in this report are quoted in the paper's multiplicative
+$M$ convention.} --- adds the corresponding decoder delta to every MLP output the
+feature writes to:
+\begin{equation}
+\Delta \bm{y}^{\ell}_{c_s} \;=\; (M-1)\,a_s\, \deci{\ell_s\to\ell}{i_s},
+\qquad \ell_s \le \ell \le \ell_e .
+\end{equation}
+Under \textbf{constrained patching} over a layer range $[\ell_s,\ell_e]$, all MLP
+outputs within the range are pinned to their clean recorded values before the deltas
+are added, so the intervention itself is the \emph{only} change to any MLP output in
+the range (no second-order effects within it, matching the graph's direct-effect
+semantics); computation resumes normally after $\ell_e$. Attention patterns are frozen
+to their clean values throughout, consistent with the graph's frozen-attention
+assumption; normalisation denominators are frozen only when the range spans the whole
+model, in which case the intervention measures a pure direct (linear) effect on the
+logits. The alternative, \textbf{iterative patching}, lets downstream features
+re-encode their perturbed inputs and take new values, propagating knock-on effects
+through the real MLPs at the price of compounding reconstruction errors. Effects are
+read out both as changes in the output distribution and as downstream feature
+activations re-encoded from the perturbed forward pass, reported as percentages of
+their clean baselines. Because feature dictionaries are imperfect (reconstruction
+error, incomplete feature recruitment), steering at $\lvert M\rvert$ beyond the
+observed activation is often required before behavioural effects appear; the paper
+typically suppresses source features to $M=-1$ or beyond and drives donor features at
+several times their donor-prompt activation.
+
+\paragraph{Reimplementation.}
+Our implementation realises the above for HuggingFace Qwen3 checkpoints with per-layer
+transcoders: a capture pass records attention patterns, RMSNorm denominators and MLP
+outputs; hooks then replace MLPs with transcoder reconstructions plus constant error
+nodes, substitute frozen-pattern attention (V/O only) and frozen-denominator norms;
+batched \texttt{autograd} computes Eq.~\eqref{eq:edge} for hundreds of targets per
+backward pass. Pruning follows Section~\ref{sec:method:prune} exactly, and
+interventions follow circuit-tracer's constrained semantics. Numerical equivalence
+with circuit-tracer is established in Section~\ref{sec:experiments}.
+
+% =============================================================================
+\section{Experiments and Results}\label{sec:experiments}
+% =============================================================================
+% PLACEHOLDER -- NOT YET WRITTEN. Budget: ~1,150 words + 2--3 figures/tables.
+% Planned narrative (source material: notebooks/addition.ipynb,
+% notebooks/multilingual.ipynb, DEVLOG.md, notes/biology_digest.md):
+%
+%   3.1 Setup (~150 w): Qwen3-4B (36 layers, bf16) + mwhanna per-layer JumpReLU
+%       transcoders (163,840 features/layer); A100-80GB; ~8,000-target graph in
+%       ~1-2 min; two notebooks re-executed end-to-end with bf16 parity across
+%       three A100 variants.
+%
+%   3.2 Faithfulness verification (~150 w): 11/11 checks vs circuit-tracer on
+%       Qwen3-0.6B (forward exactness 1.2e-5; linearity identity 1.7e-5;
+%       200 edge spot-checks vs plain autograd 3.7e-5; salient-logit parity;
+%       node-set Jaccard 1.0; edge cosine/Pearson 1.0 over 2.4M shared pairs;
+%       influence Spearman 1.0; pruned-set Jaccard 1.0) + steering parity
+%       (max |dOurs - dCT| = 6e-5, noise floor). One table.
+%
+%   3.3 Addition (~450 w): digit-split adaptation (Qwen3 tokenises digits
+%       individually -> two per-digit circuits); studied pair 46+49=95 (paper's
+%       36+59 answered wrong by the 4B model; digit-class-preserving switch);
+%       operand-grid taxonomy reproducing the paper's classes (sum
+%       anti-diagonals, lookup-table lattices, mod-10, magnitude bands,
+%       operand crosses); input-suppression strength ladder (ablation /
+%       paper -1x / paper figure -2x) -- phenomenology at reduced strength,
+%       two-band magnitude supernode giving the clean ones/magnitude
+%       dissociation at full paper strength; lookup-vs-sum steering; polymer
+%       citation reuse (8/10 features at the ones moment) + verified-donor
+%       lookup swap (8 @ 0.715, paper 998 @ 66.6%); lookups-only suppression
+%       silencing all sum features (indirect-effect architecture); computed-9
+%       negative-weight screen (measured negative); introspection sampling
+%       (carry narration in ~half of samples = paper's mismatch motif).
+%
+%   3.4 Multilingual (~400 w): shared say-big core across en/fr/zh (107
+%       features in all three pruned graphs; trio L30/L31/L32); operation swap
+%       (top-1 in all three languages at 1-2x in the paper's raw format;
+%       over-drive at full +/-5-6x -- capacity difference); operand swap
+%       (cold/f/cold-zh at crossovers 0.625x/1.0x/0.875x -- cleanest
+%       reproduction); language swap null on raw prompts with populated early
+%       supernodes + Fig-B5-style say-large readouts (say-large-zh never
+%       activates; causal handle sits in late say-X features -- an earned
+%       model difference); overlap-by-layer IoU with unrelated-pair baseline
+%       (paper-shaped, en-fr strongest); same-recipe scale check: 8b > 4b on
+%       every language pair (paper's scale claim reproduced once the
+%       transcoder-recipe confound is removed).
+% =============================================================================
+\placeholder{[Placeholder --- to be written; budgeted at $\approx$1,150 words.
+Verification of the reimplementation against circuit-tracer, then the addition and
+multilingual reproductions from \texttt{notebooks/}, with per-experiment verdicts
+against \citet{lindsey2025biology}.]}
+
+% =============================================================================
+\section{Discussion}\label{sec:discussion}
+% =============================================================================
+% PLACEHOLDER -- NOT YET WRITTEN. Budget: ~350 words.
+% Planned content: verdict synthesis (what reproduced / at reduced strength /
+% differs); model-vs-method attribution of the differences (4B capacity ->
+% over-drive at paper strengths; EN/ZH-trained Qwen3 -> shared mechanistic
+% default; late say-X features carry output language); limitations (PLT vs
+% CLT, one model family, two case studies, chat-format sensitivity, feature
+% dictionaries' unexplained variance); what the faithfulness verification
+% does and does not license; future work (CLT edges, more behaviours,
+% global weights analysis).
+% =============================================================================
+\placeholder{[Placeholder --- to be written; budgeted at $\approx$350 words.]}
+
+\bibliographystyle{unsrtnat}
+\bibliography{refs}
+
+\end{document}

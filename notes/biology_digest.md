@@ -103,6 +103,16 @@ Behavior: prompt `calc: 36+59=` → model completes `95`. Biology-paper section 
 | calc: 36+59= (methods paper) | inhibit `~30`, `~59` | low-precision lookup/magnitude-sum/sum features suppressed; ones-digit path intact |
 | calc: 36+59= (methods paper) | negative steer `_6+_9` vs `sum=_95` | smears output over range ~5 vs a wider band |
 
+**Strength of the calc supernode inhibitions (added 2026-07-10):** the methods-paper
+prose says each supernode is perturbed "to the **negative of its original value**"
+(−1×), but its own intervention figure (slug `patching-arithmetic-svg`, title "Effect of
+inhibiting a supernode (−2×) on others") is annotated **−2×** — a paper-internal
+inconsistency. The output-logit figure for these suppressions (incl. the smear-steering
+rows, which have no multiple in prose) is slug `arithmetic-logit-perturb-svg` ("Target
+prediction logits for different interventions", panels: baseline / suppress `_6+_9` /
+`_6` / `_9` / `sum=_95`). A reproduction should treat −1×…−2× (our m=−2…−3) as the
+paper-matched range — ablation (0×, our m=−1) is strictly weaker than either reading.
+
 ---
 
 # B. Multilingual circuits (§ "Multilingual Circuits", anchor `#dives-multilingual`)
@@ -214,6 +224,9 @@ Figures in `notes/figures/` (SVG unless noted; source URL = `https://transformer
 - `addition_polymer_journal_context.svg` (polymer-svg)
 - `addition_polymer_journal_intervention.svg` (arithmetic-polymer-intervention-svg)
 - `addition_intermediate_4plus5times3.svg` (addition-intermediate-svg)
+- (methods paper, added 2026-07-10) `patching-arithmetic-svg` — supernode-inhibition
+  effect matrix, title annotates **−2×**; `arithmetic-logit-perturb-svg` — output-logit
+  panels for the `_6+_9`/`_6`/`_9`/`sum=_95` suppressions (the "smear" figure)
 - `multilingual_overview_part1.svg` (multilingual-overview-hover-1-svg)
 - `multilingual_overview_part2.svg` (multilingual-overview-2-svg)
 - `multilingual_swap_operation_antonym_to_synonym.svg` (multilingual-swap-operator-svg)

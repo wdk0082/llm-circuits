@@ -549,17 +549,24 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
     * ``s_conc`` / ``a_conc`` / ``b_conc`` — peak-to-mean ratio of activation grouped by
       ``(a+b)%10`` / ``a%10`` / ``b%10``.  >~1.5 ⇒ concentrated on one residue (ends-in-d).
     * ``s_std`` — spread of ``a+b`` over strongly-active cells (small ⇒ one diagonal).
-    * ``a_std`` / ``b_std`` (+ ``a_mean`` / ``b_mean``) — spread/center of a / b over
-      strongly-active cells.  A clean one-operand BAND (the paper's magnitude-input
-      features, ``~30`` / ``~59``) is narrow in its own operand and broad in the other:
-      a ±5 band has std ≈ 3, mod-10 stripes ≈ 28, uniform ≈ 29.  An exact-value cross
-      (a=46 OR b=46) is wide in BOTH (union of two stripes) and correctly stays
-      ``mixed`` — the paper's magnitude intervention targets the ``~30``/``~59`` bands,
-      not the exact-value features.
+    * ``a_std`` / ``b_std`` (+ ``a_mean`` / ``b_mean``) — spread/center of a / b over the
+      **bright core** (> 0.7·max; the other stats use the 0.5 threshold).  A clean
+      one-operand BAND (the paper's magnitude-input features, ``~30`` / ``~59``) is
+      narrow in its own operand and broad in the other: core std ≈ 1-6 vs ≈ 20-29 for
+      stripes/lattices/uniform.  The stricter core matters because real band features
+      carry a WEAK cross-arm in the other operand that sits above 0.5·max (measured on
+      qwen3-4b: ``L4f148151``'s arm inflates b-at-0.5 to std ≈ 21 but exits the 0.7
+      core), while an exact-value cross (a=46 OR b=46, both arms equally bright) stays
+      wide in both and is correctly excluded — the paper's magnitude intervention
+      targets the ``~30``/``~59`` bands, not the exact-value features.
     * ``label`` — derived family: ``lookup(a%10=M,b%10=N)`` (jointly residue-selective
-      points — the paper's lookup-table signature) / ``mod10-sum(rN)`` / ``mod10-a(rN)`` /
-      ``mod10-b(rN)`` / ``band-a(~M)`` / ``band-b(~M)`` (one-operand magnitude bands) /
+      points — the paper's lookup-table signature) / ``mod10-sum(rN)`` / ``band-a(~M)`` /
+      ``band-b(~M)`` (one-operand magnitude bands) / ``mod10-a(rN)`` / ``mod10-b(rN)`` /
       ``magnitude-diag`` / ``sparse`` (fires in <1% of cells) / ``mixed`` / ``inactive``.
+      Bands are checked BEFORE the single-operand mod-10 stripes: a near-value band
+      concentrates on ~5 residues and can hair-trigger the stripe test (measured:
+      b_conc 1.52 on a razor b≈49 band), while a true periodic stripe can never have a
+      small core std — the two signatures are disjoint under the core statistic.
     """
     g = np.nan_to_num(np.asarray(grid, dtype=float), nan=0.0)
     A = np.repeat(np.asarray(a_vals, int)[:, None], len(b_vals), axis=1)
@@ -588,10 +595,11 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
 
     on = gn > 0.5
     s_std = float(S[on].std()) if on.any() else 1e9
-    a_std = float(A[on].std()) if on.any() else 1e9
-    b_std = float(B[on].std()) if on.any() else 1e9
-    a_mean = float(A[on].mean()) if on.any() else float("nan")
-    b_mean = float(B[on].mean()) if on.any() else float("nan")
+    core = gn > 0.7  # bright core: weak band cross-arms sit above 0.5·max but below this
+    a_std = float(A[core].std()) if core.any() else 1e9
+    b_std = float(B[core].std()) if core.any() else 1e9
+    a_mean = float(A[core].mean()) if core.any() else float("nan")
+    b_mean = float(B[core].mean()) if core.any() else float("nan")
     frac_on = float(on.mean())
 
     rep = dict(
@@ -618,15 +626,17 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
         rep["label"] = f"lookup(a%10={a_top},b%10={b_top})"
     elif sum_ac10 > 0.4 and s_conc > 1.3:
         rep["label"] = f"mod10-sum(r{s_top})"
+    elif a_std < 8 and b_std > 15:
+        # Narrow core in a, broad in b: a one-operand magnitude band (paper's "~30").
+        # Checked before the mod-10 stripes — a near-value band concentrates on ~5
+        # residues (can trip a/b_conc), but no periodic stripe has a small core std.
+        rep["label"] = f"band-a(~{round(a_mean)})"
+    elif b_std < 8 and a_std > 15:
+        rep["label"] = f"band-b(~{round(b_mean)})"
     elif a_conc > 1.5:
         rep["label"] = f"mod10-a(r{a_top})"
     elif b_conc > 1.5:
         rep["label"] = f"mod10-b(r{b_top})"
-    elif a_std < 8 and b_std > 15:
-        # Narrow in a, broad in b: a one-operand magnitude band (paper's "~30").
-        rep["label"] = f"band-a(~{round(a_mean)})"
-    elif b_std < 8 and a_std > 15:
-        rep["label"] = f"band-b(~{round(b_mean)})"
     elif s_std < 8:
         rep["label"] = "magnitude-diag"
     else:

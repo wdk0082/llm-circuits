@@ -527,19 +527,19 @@ netted out by the paper's unrelated-pair baseline.
 
 ### Addition: three instrumentation gaps closed + a consolidation bug caught by the recheck
 
-addition.ipynb re-executed end-to-end twice (~40 min each; the second run after the bug
-fix below). Stability: studied pair re-selects **46+49** (77.7% / 46.0% accuracies
-identical), suppressions/steering/polymer/corpus reproduce the previous session's
-committed outputs essentially exactly.
+addition.ipynb re-executed end-to-end three times (~40 min each; the second run after
+the donor fix below, the third after the selection dedup). Stability: studied pair
+re-selects **46+49** (77.7% / 46.0% accuracies identical); the first re-run reproduced
+the previous session's committed outputs essentially exactly — including, it turned
+out, two of its protocol defects.
 
 1. **Magnitude-inhibition low-precision readout** (the paper's actual readout, previously
    missing): the same `input_mag` suppression run on the *first-digit* graph with the
-   magnitude-class answer features as readout. At the paper's level (m=−1) the double
-   dissociation is directional but graded — ones path fully intact (101–133%, `5` @
-   0.995) while the low-precision features are only mildly dented (5/8 at 82–97%, two
-   up) and the first digit weakens but survives (`9` 0.99→0.70). Full suppression needs
-   m=−2, which kills all low-precision readouts to 0% and destroys the prediction —
-   the same redundancy motif as the `_9` suppression.
+   magnitude-class answer features as readout. At the paper's level (m=−1), with the
+   selection dedup below in place, the dissociation is clean on both halves: the three
+   magnitude-band features drop to **54–66%** and the first digit weakens `9` 0.99→0.40,
+   while the ones path stays 85–116% intact (`5` @ 0.998) — the paper's claim at matched
+   strength.
 2. **Add-function group** (paper's remaining input class, previously unprobed): 16
    influence-top features at the `+`/`=` operator tokens; **15/16 grid as operand-
    uniform** (a/b concentration ≈ 1.00–1.17 — fire regardless of operands), mostly
@@ -561,13 +561,21 @@ happened to contain only (9,9) lookups). The notebook had therefore been injecti
 consolidation — including in the previous session's committed outputs (`8` @ 0.39,
 flattered by the (4,4)→8 donor) — while this DEVLOG's table quoted the addendum's 0.845
 (which also rested on the retired suite's `state.json` selections; not recoverable in
-the notebook pipeline). With donor purity restored the honest result is: `5` 0.982 →
-≤0.04, **`8` tie-top-1 @ 0.237** (`7` @ 0.237, `1` @ 0.18) — direction reproduces
-(correct digit destroyed, donor-implied digit reaches top), margin far below the
-paper's 66.6%. The addition verdict table's row is downgraded reproduced → **partial**
-accordingly. (Cosmetic nit for a future pass: `sel["lookup"]` carries a duplicate —
-L24f163113 classifies as lookup in two panels; m-clamps resolve against clean
-activations, so the double entry is idempotent.)
+the notebook pipeline). With donor purity restored the swap first read `8` tie-top-1 @
+0.237 — still short of the paper. The remaining culprit was what the recheck initially
+filed as cosmetic: `sel["lookup"]` (and `sel["input_mag"]`) carried a **duplicate** —
+a feature can classify into the same class from two grid panels — and duplicates are
+**not idempotent**: real-model steering applies *additive* decoder deltas, so a doubled
+entry doubles the flip (effective m=−4/−6 on L24f163113). Deduping the selections (one
+line in cell 8) moved four measurements, all toward the paper: the lookup swap becomes
+**`8` @ 0.715 top-1 — the paper's 66.6% margin matched** (verdict back to
+**reproduced**); lookup neg-steering reads `1` @ 0.88 at width 1.26 (the earlier "width
+2.0 smear onto 7" was the double-flip artifact — the smear row is now a clean
+"differs: flips rather than smears, both classes"); the polymer suppression is `1` @
+0.75 on the 7 distinct active features; and the magnitude readouts are the gap-1
+numbers above. The duplicate predates this session (the previous session's committed
+outputs carry it), so those four numbers in the first-A100-session table each reflect
+one feature steered at double strength.
 
 ### State of the world
 

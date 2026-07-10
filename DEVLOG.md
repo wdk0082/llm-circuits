@@ -14,8 +14,12 @@
 > executed end-to-end on a fresh A100-80GB with zero cell errors; bf16 parity exact on
 > every continuity number (lookup swap `8` @ 0.7148; polymer all-7 `1` @ 0.7467 and
 > lookups-only `1` @ 0.7708 with sums → 0%; smears 1.26/1.03; operand crossovers
-> 0.625×/1.0×/0.875×; scale 8b > 4b). **Nothing queued.** See "Third A100 session"
-> below.
+> 0.625×/1.0×/0.875×; scale 8b > 4b). **One item queued for the next session:** the
+> constrained-patching pass — biology.html states all its interventions use
+> "constrained patching" up to a chosen intervention layer, so the reproductions adopt
+> it as the headline protocol (propagate kept as the no-pinning robustness variant);
+> the executable spec lives in `DEVLOG_EXTRA.md` §0, row 3.1's Status cell. See
+> "Third A100 session" below.
 >
 > Previous state (2026-07-10, after the VERIFICATION RECHECK session, branch
 > `verify/paper-recheck`): both notebooks re-audited against the papers' own HTML +
@@ -1096,6 +1100,14 @@ end-to-end afterwards, zero cell errors):
   flagship multi-layer cases (this run's own selections): lookup swap —
   propagate **`8` @ 0.7148** (the committed, paper-margin result) vs constrained-to-l_max **`1` @ 0.7321** — the swap does not land (`8` drops out of the top-4); polymer 7-feature
   suppression — propagate `1` @ 0.7467 vs constrained `1` @ 0.3525 (same flip, half the mass). The protocol choice is material on coupled stacks: the injected donors need the downstream recompute to reach the answer, so the notebooks' results — including the paper-margin swap match — are propagate-mode results and are now described as such everywhere. (The paper's own range-choosing step exists as `sweep_patch_end_layer` for anyone wanting the constrained picture per case.)
+  **Decision (same day, after verifying biology.html):** the paper's dives all run
+  under constrained patching ("Our interventions in this paper use the 'constrained
+  patching' technique" — clamped prior to a chosen intervention layer), so the
+  reproductions will adopt it: constrained numbers with a swept, stated ℓ become the
+  headline results; propagate-mode results remain as the no-pinning robustness
+  variant. Queued for the next session — the executable spec (helper plumbing,
+  ℓ-sweep policy, scope, pinned-readout caveat, presentation rule, expected deltas)
+  is `DEVLOG_EXTRA.md` §0 row 3.1's Status cell.
 - **§4.1 (MED) — fixed.** `verify_intervention.py` now exits 1 on FAIL.
 - **§4.3 (MED) — closed.** New `tests/test_notebook_helpers.py` puts the
   verdict-carrying helper logic under pytest (position parsing incl. the §1.1
@@ -1115,8 +1127,10 @@ end-to-end afterwards, zero cell errors):
   pre-report-scan fixes with both notebooks re-executed). ruff clean, **110 tests
   pass** (notebook-helper suite added), CI lint/format now covers `notebooks/` +
   `verification/`, zero cell errors on every execution. All five HANDOFF items are
-  closed; the remaining recorded-but-unfixed scan findings (`DEVLOG_EXTRA.md` §3.2,
-  §3.3, §5, §6) are library/serve/housekeeping items outside the reproductions.
+  closed. **Queued: the constrained-patching pass** (scan §3.1's follow-through —
+  spec in `DEVLOG_EXTRA.md` §0 row 3.1); the remaining recorded-but-unfixed scan
+  findings (`DEVLOG_EXTRA.md` §3.2, §3.3, §5, §6) are library/serve/housekeeping
+  items outside the reproductions.
 - Node state: bf16 transcoder caches (57 + 91 GB) + ~45 GB feature-label cache under
   `.cache/`; both models under `.cache/models/`; artifacts regenerated under
   `artifacts/paper_{addition,multilingual}/{4b,8b}/` (node-local, gitignored).

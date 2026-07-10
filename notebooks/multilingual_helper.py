@@ -460,24 +460,35 @@ def plot_overlap_curves(curves, *, ax=None, title="Cross-language feature overla
 
 
 def position_supernode(
-    model, tc, prompt, tokenizer, position, top_n: int = 10, *, max_layer=None, raw: bool = False
+    model,
+    tc,
+    prompt,
+    tokenizer,
+    position,
+    top_n: int = 10,
+    *,
+    max_layer=None,
+    min_layer=None,
+    raw: bool = False,
 ):
-    """Top-``top_n`` features by activation at ``position`` (layers ``< max_layer`` if given).
+    """Top-``top_n`` features by activation at ``position`` (layers ``< max_layer`` /
+    ``>= min_layer`` if given).
 
     ``position`` is an int index or ``"final"``.  Returns ``([(layer, idx, act)], input_ids)``.
 
-    ``max_layer`` restricts the CANDIDATE POOL, not just the result: early-layer
-    activations are much smaller than late-layer ones, so filtering a global top-``top_n``
-    after the fact (as callers previously did) returns an empty set.
+    ``max_layer``/``min_layer`` restrict the CANDIDATE POOL, not just the result:
+    early-layer activations are much smaller than late-layer ones, so filtering a global
+    top-``top_n`` after the fact (as callers previously did) returns an empty set.
     """
     device = next(model.parameters()).device
     ids = _tokenize(tokenizer, prompt, device, raw)
     pos = ids.shape[1] - 1 if position == "final" else position
     cap = _capture_mlp_inputs(model, tc, ids)
     n_scan = len(tc) if max_layer is None else max(1, min(int(max_layer), len(tc)))
+    l_lo = 0 if min_layer is None else max(0, min(int(min_layer), n_scan - 1))
     cands: list[tuple[int, int, float]] = []
     with torch.no_grad():
-        for L in range(n_scan):
+        for L in range(l_lo, n_scan):
             vec = tc.transcoders[L].encode(cap[L])[0][pos]  # (d_t,)
             v, i = vec.topk(top_n)
             cands.extend(
@@ -509,18 +520,40 @@ def run_graft(model, tc, recipient_ids, source_node, donor_node, position, *, sc
 
 
 def lang_specific_final_features(
-    model, tc, tokenizer, concept: str = "small", top_k: int = 40, keep: int = 12
+    model,
+    tc,
+    tokenizer,
+    concept: str = "small",
+    top_k: int = 40,
+    keep: int = 12,
+    *,
+    raw: bool = False,
+    min_layer_frac: float | None = None,
 ):
     """Language-DETECTION supernode per language: features in that language's antonym-prompt
     final position that are NOT in the other languages' final-position top-``top_k``.
 
+    ``raw=True`` builds them on the paper's raw open-quote prompts;
+    ``min_layer_frac=0.5`` restricts the candidate pool to layers ``>= n_layers/2`` —
+    the LATE language-unique features (the say-large-in-language-X analogues used as
+    Fig B5-style readouts), as opposed to the early detection supernodes.
+
     Returns ``{lang: [(layer, idx, act)]}`` (the language-specific output features).
     """
+    l_lo = None if min_layer_frac is None else max(1, int(len(tc) * min_layer_frac))
+    prompt_fn = raw_antonym_prompt if raw else antonym_prompt
     finals: dict[str, list[tuple[int, int, float]]] = {}
     sets: dict[str, set[tuple[int, int]]] = {}
     for lg in LANGS:
         node, _ = position_supernode(
-            model, tc, antonym_prompt(concept, lg), tokenizer, "final", top_n=top_k
+            model,
+            tc,
+            prompt_fn(concept, lg),
+            tokenizer,
+            "final",
+            top_n=top_k,
+            min_layer=l_lo,
+            raw=raw,
         )
         finals[lg] = node
         sets[lg] = {(L, i) for (L, i, _) in node}
@@ -597,12 +630,18 @@ def paper_swap(
     *,
     source_mult: float,
     donor_mult: float,
+    readout_layers: list[int] | None = None,
 ):
     """One paper-protocol swap: source at ``source_mult x clean``, donor at ``donor_mult x donor``.
 
     ``source_node``/``donor_node`` are ``[(layer, idx, act)]`` lists (``act`` = clean/donor
     activation); ``position`` is an int or ``"final"``.  Donor features also present in the
     source are dropped from the suppression set so the inject isn't cancelled.
+
+    ``readout_layers`` is passed through to :func:`run_feature_intervention`, filling the
+    result's ``ablated_features`` with the perturbed activations at those layers — the
+    paper's Fig B3-B5 supernode "% of baseline" annotations (e.g. does say-large-zh move
+    under an en→zh language swap?).
     """
     pos = recipient_ids.shape[1] - 1 if position == "final" else position
     donor_keys = {(L, idx) for (L, idx, _) in donor_node}
@@ -615,7 +654,9 @@ def paper_swap(
         FeatureIntervention(L, idx, position=pos, value=donor_mult * act)
         for (L, idx, act) in donor_node
     ]
-    return run_feature_intervention(model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS)
+    return run_feature_intervention(
+        model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS, readout_layers=readout_layers
+    )
 
 
 def paper_swap_sweep(

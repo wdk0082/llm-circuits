@@ -549,10 +549,17 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
     * ``s_conc`` / ``a_conc`` / ``b_conc`` — peak-to-mean ratio of activation grouped by
       ``(a+b)%10`` / ``a%10`` / ``b%10``.  >~1.5 ⇒ concentrated on one residue (ends-in-d).
     * ``s_std`` — spread of ``a+b`` over strongly-active cells (small ⇒ one diagonal).
+    * ``a_std`` / ``b_std`` (+ ``a_mean`` / ``b_mean``) — spread/center of a / b over
+      strongly-active cells.  A clean one-operand BAND (the paper's magnitude-input
+      features, ``~30`` / ``~59``) is narrow in its own operand and broad in the other:
+      a ±5 band has std ≈ 3, mod-10 stripes ≈ 28, uniform ≈ 29.  An exact-value cross
+      (a=46 OR b=46) is wide in BOTH (union of two stripes) and correctly stays
+      ``mixed`` — the paper's magnitude intervention targets the ``~30``/``~59`` bands,
+      not the exact-value features.
     * ``label`` — derived family: ``lookup(a%10=M,b%10=N)`` (jointly residue-selective
       points — the paper's lookup-table signature) / ``mod10-sum(rN)`` / ``mod10-a(rN)`` /
-      ``mod10-b(rN)`` / ``magnitude-diag`` / ``sparse`` (fires in <1% of cells) /
-      ``mixed`` / ``inactive``.
+      ``mod10-b(rN)`` / ``band-a(~M)`` / ``band-b(~M)`` (one-operand magnitude bands) /
+      ``magnitude-diag`` / ``sparse`` (fires in <1% of cells) / ``mixed`` / ``inactive``.
     """
     g = np.nan_to_num(np.asarray(grid, dtype=float), nan=0.0)
     A = np.repeat(np.asarray(a_vals, int)[:, None], len(b_vals), axis=1)
@@ -581,6 +588,10 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
 
     on = gn > 0.5
     s_std = float(S[on].std()) if on.any() else 1e9
+    a_std = float(A[on].std()) if on.any() else 1e9
+    b_std = float(B[on].std()) if on.any() else 1e9
+    a_mean = float(A[on].mean()) if on.any() else float("nan")
+    b_mean = float(B[on].mean()) if on.any() else float("nan")
     frac_on = float(on.mean())
 
     rep = dict(
@@ -593,6 +604,10 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
         s_conc=s_conc,
         sum_ac10=sum_ac10,
         s_std=s_std,
+        a_std=a_std,
+        b_std=b_std,
+        a_mean=a_mean,
+        b_mean=b_mean,
         frac_on=frac_on,
     )
     if frac_on <= 0.01:
@@ -607,6 +622,11 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
         rep["label"] = f"mod10-a(r{a_top})"
     elif b_conc > 1.5:
         rep["label"] = f"mod10-b(r{b_top})"
+    elif a_std < 8 and b_std > 15:
+        # Narrow in a, broad in b: a one-operand magnitude band (paper's "~30").
+        rep["label"] = f"band-a(~{round(a_mean)})"
+    elif b_std < 8 and a_std > 15:
+        rep["label"] = f"band-b(~{round(b_mean)})"
     elif s_std < 8:
         rep["label"] = "magnitude-diag"
     else:
@@ -771,6 +791,40 @@ def digit_distribution(row, tokenizer) -> dict:
         "width": round(width, 3),
         "entropy_bits": round(entropy, 3),
     }
+
+
+# ---------------------------------------------------------------------------
+# Direct output-weight screen (the paper's computed-9 signature)
+# ---------------------------------------------------------------------------
+
+
+@torch.no_grad()
+def direct_token_weights(model, tc, feats, token_id: int) -> dict[tuple[int, int], float]:
+    """Demeaned direct unembedding weight of each feature's decoder on ``token_id``.
+
+    Mirrors ``multilingual_helper.direct_logit_effect`` — ``(g * W_dec[feature]) .
+    (W_U[token] - mean_t W_U)``, the decoder written through the final RMSNorm weight
+    ``g`` and read against the **vocab-demeaned** unembedding row — but batched per
+    layer via ``_get_decoder_vectors`` so a whole graph's feature nodes screen in one
+    pass.  The paper's "computed 9, intermediate step" feature is defined by its
+    strongest *negative* weight on "9" (a suppressive output effect that a top-logit
+    label scan cannot find).  Returns ``{(layer, feature_idx): weight}``.
+    """
+    device = next(model.parameters()).device
+    gamma = model.get_submodule("model.norm").weight.float()
+    wu = model.get_submodule("lm_head").weight.float()  # (vocab, d_model)
+    # (W_U @ x)[t] - mean_v (W_U @ x)[v] == (W_U[t] - mean-row) @ x — fold the demean
+    # into a single probe vector, then dot with each decoder direction.
+    probe = (wu[token_id] - wu.mean(dim=0)) * gamma  # (d_model,)
+    by_layer: dict[int, list[int]] = defaultdict(list)
+    for L, i in feats:
+        by_layer[L].append(i)
+    out: dict[tuple[int, int], float] = {}
+    for L, idxs in sorted(by_layer.items()):
+        dec = tc.transcoders[L]._get_decoder_vectors(torch.tensor(idxs, device=device)).float()
+        for i, w in zip(idxs, (dec @ probe).tolist(), strict=True):
+            out[(L, i)] = float(w)
+    return out
 
 
 # ---------------------------------------------------------------------------

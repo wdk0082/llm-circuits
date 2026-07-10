@@ -565,6 +565,65 @@ def lang_specific_final_features(
     return out
 
 
+def supernode_readout_pct(res, node, position, *, ref: str = "baseline"):
+    """Fig B3-B5-style supernode %-readout: **per-feature ratio first, then mean**.
+
+    Each feature's ratio is ``steered_activation / reference * 100`` and the
+    supernode number is the mean of those individual ratios (NOT the ratio of summed
+    or averaged activations — a big feature must not drown out the others).
+
+    ``node`` is ``[(layer, idx)]`` or ``[(layer, idx, act)]``; ``position`` is an int
+    or ``"final"``.  ``ref`` picks each feature's denominator:
+
+    * ``"baseline"`` — its clean activation on the recipient prompt (the paper's
+      "% of baseline" for source/upstream/say-X supernodes);
+    * ``"stored"`` — the ``act`` carried in the node list (its donor-prompt / own-
+      prompt activation), for supernodes whose recipient baseline is ~0.
+
+    **What the number means** (DEVLOG_EXTRA §2.3): readouts re-encode the perturbed
+    MLP *inputs*, and a decoder delta at a feature's own layer only affects layers
+    *after* it — so a steered feature's own readout is blind to its commanded steer
+    (lowest-layer members of a steered supernode read ~clean / ~0).  For **steered**
+    supernodes (sources, injected donors) the readout is therefore the network's
+    *propagated response*, NOT a verification of the commanded value; only for
+    supernodes **disjoint from the intervened sets** (downstream say-X, recruited
+    counterparts) does it correspond to the paper's Fig B3-B5 node annotations
+    (Fig B5's "new say-large-Y 76-105%" is a *downstream recruited* reading).
+
+    Features whose reference is ~0 cannot form a ratio and are excluded (counted in
+    ``n_skipped``).  Requires the swap to have run with ``readout_layers`` covering
+    every layer in ``node``.  Returns ``{"mean_pct", "n_used", "n_skipped",
+    "per_feature"}`` (``mean_pct`` is ``None`` when no feature has a usable
+    reference).
+    """
+    per: dict[str, float | None] = {}
+    ratios: list[float] = []
+    skipped = 0
+    for entry in node:
+        L, i = entry[0], entry[1]
+        act = float(entry[2]) if len(entry) > 2 else 0.0
+        if L not in res.ablated_features:
+            raise KeyError(
+                f"layer {L} missing from ablated_features — pass readout_layers "
+                "covering every readout supernode to paper_swap/run_feature_intervention"
+            )
+        b, a = res.baseline_features[L], res.ablated_features[L]
+        b2 = b[0] if b.dim() == 3 else b
+        a2 = a[0] if a.dim() == 3 else a
+        pos = b2.shape[0] - 1 if position == "final" else int(position)
+        steered = float(a2[pos, i])
+        reference = float(b2[pos, i]) if ref == "baseline" else act
+        if abs(reference) < 1e-6:
+            per[f"L{L}f{i}"] = None
+            skipped += 1
+            continue
+        pct = steered / reference * 100.0
+        per[f"L{L}f{i}"] = round(pct, 1)
+        ratios.append(pct)
+    mean_pct = round(sum(ratios) / len(ratios), 1) if ratios else None
+    return {"mean_pct": mean_pct, "n_used": len(ratios), "n_skipped": skipped, "per_feature": per}
+
+
 def top_token_probs(logit_row, tokenizer, k: int = 6):
     p = logit_row.float().softmax(-1)
     v, i = p.topk(k)

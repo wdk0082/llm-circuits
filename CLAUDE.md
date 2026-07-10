@@ -69,9 +69,14 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
 
 - **Decoder loading:** `load_transcoder()` defaults to `lazy_decoder=True`, which re-reads
   `W_dec` from disk on every decode — ~500× slower for repeated forwards (steering,
-  attribution jobs). Pass `lazy_decoder=False` when VRAM allows (Qwen3-4b bf16:
-  ~60 GB transcoders + 8 GB model fits an A100-80GB); keep lazy for encode-only work
-  (e.g. the overlap analysis) or models whose eager load exceeds VRAM (8b: ~97 GB + model).
+  attribution jobs). Measured on an A100-80GB (2026-07-10): one `run_feature_intervention`
+  call 9.3 s lazy → 0.18 s eager (the clean-baseline LocalReplacementModel forward decodes
+  all 36 layers every call); `multilingual.ipynb` end-to-end ~50 → ~15 min. **Both
+  reproduction notebooks load the 4b eagerly** (`lazy_decoder=False`; ~57 GB bf16
+  transcoders + 8 GB model, graph-build peak ~68 GiB). Keep lazy for encode-only work —
+  e.g. the overlap analysis, which only calls `transcoder.encode()` and never touches
+  `W_dec` (that is what keeps the 8b §H section feasible) — or models whose eager load
+  exceeds VRAM (8b: ~91 GB bf16 + model).
 - **Disk cache:** the mwhanna transcoder repos store bf16 weights; `cache_transcoder(...,
   dtype=torch.bfloat16)` halves the on-disk cache vs circuit-tracer's fp32 default with
   no precision loss (fp32 caching is a pure upcast of bf16 source data).

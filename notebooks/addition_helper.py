@@ -466,6 +466,12 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
     ``{"a_digits": [...], "b_digits": [...], "eq": [pos_of_=], "plus": [pos_of_+]}``
     (positions past N_BOS).  ``plus``/``eq`` are the operator positions where the paper's
     add-function features live.
+
+    Digit collection STOPS at the ``=`` token: on teacher-forced ones prompts the
+    sequence continues with forced ANSWER digits, and without the stop the trailing
+    ``len(b_str)`` slice kept the forced first answer digit and dropped b's tens digit
+    — so ``suppress_9`` steered the predict-ones position instead of the operand's
+    ones digit (DEVLOG_EXTRA §1.1; found by the 2026-07-10 pre-report scan).
     """
     toks = [tokenizer.decode([int(t)]) for t in input_ids[0]]
     a_str, b_str = str(a), str(b)
@@ -474,6 +480,7 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
     eq_pos: list[int] = []
     plus_pos: list[int] = []
     plus_seen = False
+    eq_seen = False
     for i, t in enumerate(toks):
         if i < N_BOS:
             continue
@@ -482,11 +489,12 @@ def digit_token_positions(tokenizer, input_ids, a: int, b: int) -> dict[str, lis
             plus_seen = True
             plus_pos.append(i)
         elif s == "=":
+            eq_seen = True
             eq_pos.append(i)
-        elif s.isdigit():
+        elif s.isdigit() and not eq_seen:
             (b_pos if plus_seen else a_pos).append(i)
     # keep only the trailing len(a_str)/len(b_str) digit tokens (guards against digits
-    # appearing elsewhere in the prompt).
+    # appearing earlier in the prompt, e.g. in a preamble).
     return {
         "a_digits": a_pos[-len(a_str) :],
         "b_digits": b_pos[-len(b_str) :],

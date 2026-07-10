@@ -24,10 +24,10 @@ jobs:
         run: uv sync --all-groups
 
       - name: Lint
-        run: uv run ruff check src tests examples
+        run: uv run ruff check src tests examples notebooks verification
 
       - name: Format check
-        run: uv run ruff format --check src tests examples
+        run: uv run ruff format --check src tests examples notebooks verification
 
       - name: Test
         run: uv run pytest

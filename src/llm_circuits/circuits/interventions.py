@@ -1,9 +1,22 @@
-"""Feature interventions (faithful to circuit-tracer's ``feature_intervention``).
+"""Feature interventions (clean-anchored decoder-delta steering on the real model).
 
 We steer/ablate a transcoder feature by adding its decoder delta to the **real**
 model's MLP output: with our **m (additive-delta) convention**, a feature's new
 activation is ``(1 + m) * clean``, so the delta is ``m * clean * W_dec`` (``m=0``
 no change, ``-1`` ablate, ``-2`` flip).
+
+.. note:: **Protocol scope** (see DEVLOG_EXTRA §3.1). Deltas are computed ONCE from
+    the *clean* activations and applied as fixed hooks while the real model
+    propagates (attention patterns frozen). In **constrained mode**
+    (``patch_end_layer`` set) this is verified equivalent to circuit-tracer's
+    ``feature_intervention``, which uses the same clean anchoring there. In the
+    default **propagate mode** (``patch_end_layer=None``) it matches circuit-tracer's
+    unconstrained *clamp* exactly for single-layer or causally-uncoupled
+    interventions (the first steered layer sees an unperturbed input, so
+    clean == current); for multi-layer coupled stacks circuit-tracer re-anchors each
+    delta on the *perturbed* pass (``value - current``) where we keep
+    ``value - clean`` — a deliberate, coherent protocol choice (fixed-delta
+    steering), but not bit-identical to the clamp there.
 
 .. warning::
 
@@ -337,18 +350,22 @@ def run_feature_intervention(
 ) -> AblationResult:
     """Steer/clamp features on the REAL model and compare logits to the clean baseline.
 
-    Faithful to circuit-tracer's ``feature_intervention`` (per-layer transcoders): adds the
-    decoder delta ``m * clean * W_dec`` to each feature's *real* MLP output — no transcoder
+    Clean-anchored decoder-delta steering (per-layer transcoders): adds the fixed delta
+    ``m * clean * W_dec`` to each feature's *real* MLP output — no transcoder
     reconstruction, no error nodes.  **M convention**: new activation = ``(1 + m) * clean``
-    (``m=0`` no change, ``-1`` ablate, ``-2`` flip).
+    (``m=0`` no change, ``-1`` ablate, ``-2`` flip).  Equivalence to circuit-tracer's
+    ``feature_intervention`` is verified for constrained mode and holds exactly in
+    propagate mode for single-layer/uncoupled interventions; for multi-layer coupled
+    stacks in propagate mode the deltas stay clean-anchored where circuit-tracer's
+    unconstrained clamp re-anchors per pass — see the module note and DEVLOG_EXTRA §3.1.
 
     ``freeze_attention=True`` freezes attention **patterns** on every layer (V/O still
     respond); a constrained range forces this too.  ``patch_end_layer=L`` pins MLP outputs
     to their clean recorded values for layers ``[0, L]`` (within-range MLPs don't recompute)
     and runs the real model after L; if L is the last layer, LayerNorm is frozen too (pure
-    direct/linear effect).  ``patch_end_layer=None`` pins nothing — the delta propagates
-    through the real downstream MLPs + LayerNorm.  Defaults to the last steered layer (max
-    downstream recompute); must be in ``[max steered layer, n_layers-1]``.
+    direct/linear effect).  ``patch_end_layer=None`` — the **default** — pins nothing: the
+    delta propagates through the real downstream MLPs + LayerNorm.  When set, it must be
+    in ``[max steered layer, n_layers-1]``.
 
     ``readout_layers`` captures the intervened forward's MLP inputs at those layers and
     fills :attr:`AblationResult.ablated_features` with the perturbed feature activations —

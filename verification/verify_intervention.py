@@ -21,6 +21,8 @@ Run on a GPU node:
 
 from __future__ import annotations
 
+import sys
+
 import torch
 
 from llm_circuits.circuits.interventions import FeatureIntervention, run_feature_intervention
@@ -135,6 +137,8 @@ def main() -> None:
     print(
         f"\n{'PASS' if ok else 'FAIL'}: delta_diff {delta_diff:.5f} <= tol {tol:.5f} and cos>0.99"
     )
+    if not ok:  # a FAIL must be a failing exit code so this can gate regressions (DEVLOG_EXTRA 4.1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

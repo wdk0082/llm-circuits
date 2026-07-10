@@ -704,6 +704,14 @@ Input suppressions across the strength ladder (ones-digit answer; baseline `5` @
 | inhibit magnitude (paper: ones intact) | `5` @ 0.998, ones-path 85–116% — clean dissociation | `3` @ 0.54, sums 0–23% — broken | junk (flat, top `""` 0.08) |
 | … first-digit readout | `9` 0.99→0.40, mag features 54–66% | `1` @ 0.21, mag 0% | flat (`1` @ 0.09) |
 
+> ⚠️ 2026-07-10, pre-report scan (`DEVLOG_EXTRA.md` §1.1/§1.2): the suppress-`_9` row
+> here (and everywhere before the third session's addendum) was steered at the
+> **teacher-forced answer position**, not the operand's ones digit — a
+> `digit_token_positions` defect, since fixed; the re-measured operand-position ladder
+> is in the third-session addendum. And the first-digit readout row's `0.99` baseline
+> is the *ones*-prompt value; the first-digit graph's own baseline is `9` @ **0.5626**
+> (steered values in the row are correct).
+
 Reading: the paper's qualitative phenomenology lives at **ablation** strength on
 Qwen3-4B and progressively shatters at the paper's −1×/−2× — the same
 over-drive-at-paper-strength pattern as the multilingual grafts. This is now the
@@ -860,12 +868,18 @@ recheck table exactly:
 | Experiment | m=−1 (ablation) | m=−2 (prose −1×) | m=−3 (figure −2×) |
 |---|---|---|---|
 | suppress `_6` | **`8` @ 0.285** (9+9 story), lookups 18–45% | `2` @ 0.986, lookups ≤23% | `2` @ 0.990, all 0% |
-| suppress `_9` | `5` @ 0.516, readouts 30–118% | `3` @ 0.961 | junk (`,` 0.39 / `""` 0.35) |
+| suppress `_9` ⚠️ wrong position (see below) | `5` @ 0.516, readouts 30–118% | `3` @ 0.961 | junk (`,` 0.39 / `""` 0.35) |
 | inhibit magnitude (loose) | `5` @ 0.998, ones-path 85–116% | `3` @ 0.537, sums 0–111% | junk (flat, top `""` 0.078) |
-| … low-precision readout (first digit) | `9` 0.99→0.395, bands 53–66% | `1` @ 0.214, bands → 0% | flat (`1` @ 0.086) |
+| … low-precision readout (first digit) | `9` **0.5626**→0.376, three most-affected readouts 51–64% | `1` @ 0.230, those three → 0% | flat (`1` @ 0.074) |
 
 The Summary's three suppression rows now cite the notebook's own ladder (they had
-cited the recheck's standalone run).
+cited the recheck's standalone run). ⚠️ Post-scan corrections (`DEVLOG_EXTRA.md`): the
+suppress-`_9` row above is the **wrong-position** measurement (§1.1 — steered at the
+teacher-forced answer token; the fixed, operand-position ladder is in the addendum
+below); the first-digit readout row originally quoted the ones-prompt baseline 0.99
+(§1.2) and summarized 3 of 8 readouts as "bands 53–66%" (§1.4) — corrected in place
+(those three most-affected readouts are `mixed`/`magnitude-diag`-class, not band-class;
+the other five hold ≥97% or rise, one reaching 174.8% at m=−2).
 
 ### Item 2 — band-criterion `input_mag`: the paper-strength dissociation breakdown was selection pollution; verdict upgraded
 
@@ -895,12 +909,14 @@ readouts 94–103% at m=−1, m=−2, **and m=−3** (the paper's full −2×). 
 catch-all still breaks at m=−2 exactly as before (ones flips to `3`; sign-flipping an
 always-on feature injects a global bias delta). The paper's other half is present but
 shallower than Haiku's: on the first-digit graph the answer weakens progressively
-(`9` 0.99 → 0.54 / 0.51 / 0.43 across the ladder) yet the low-precision feature
+(`9` 0.5626 → 0.54 / 0.51 / 0.43 across the ladder — mild; the 0.99 first quoted
+here was the ones-prompt baseline, `DEVLOG_EXTRA.md` §1.2) yet the low-precision feature
 readouts dip only mildly (97–101% at m=−1 → 80–105% at m=−3), where the paper
 annotates its low-precision features as suppressed outright — with only two thin
 bands driven, Qwen3's low-precision stage keeps most of its activation (the loose
-supernode does produce the deep 51–66% → 0% suppression, at the cost of breaking the
-ones path). Magnitude verdict upgraded: the dissociation ("ones untouched, magnitude
+supernode drops its three most-affected readouts to 51–64% at ablation and 0% at
+m=−3 — five others hold ≥97% or rise (`DEVLOG_EXTRA.md` §1.4) — at the cost of
+breaking the ones path). Magnitude verdict upgraded: the dissociation ("ones untouched, magnitude
 path degraded") now holds at the paper's own strengths with the paper-shaped
 supernode.
 
@@ -951,9 +967,12 @@ zh-unique supernodes on the same perturbed forward. Result, vs the paper's Fig B
 annotations (say-large-multilingual ≈100%, old say-large-X 18–39%, new say-large-Y
 **76–105%**):
 
-- **say-large-zh never comes online**: 10/12 late zh-unique features read exactly
-  0.00 at baseline and at every strength; one (`L31f104452`) wakes to ~4 — an order
-  of magnitude below the active scale (15–70); one weakly-en-active member wobbles.
+- **say-large-zh never comes online**: 9/12 late zh-unique features read exactly
+  0.00 at baseline and at every strength; one baseline-zero member (`L31f104452`)
+  wakes to ~4 — an order of magnitude below the active scale (15–70); of the two
+  baseline-active members, `L31f21719` wobbles (15.3 → 20 / 9.5 / 12.8) and
+  `L29f56902` falls 81% at 6× (4.7 → 0.9). (Tally corrected per `DEVLOG_EXTRA.md`
+  §2.1 — originally miscounted as "10/12 at every strength".)
 - the say-big trio holds ≈100% at 1×/3× (`L30f27666` 28→27–29 throughout); at 6× two
   of three degrade (29%/55%) — the familiar over-drive erosion;
 - the late **en**-say supernode only partially weakens (≈half its features drop to
@@ -969,12 +988,135 @@ gains its mechanism** — on Qwen3-4B, early language detection does not feed th
 say stage, so swapping it cannot move the output language. Added to the language-swap
 Summary row.
 
+### Same-session addendum 1 — Fig B3/B4 supernode %-readouts (mean of per-feature ratios)
+
+Recheck F8's remaining soft note ("Fig B3–B5's supernode %-readouts were not reproduced
+as readouts anywhere") is now closed for all three swap figures. New
+`multilingual_helper.supernode_readout_pct`: each feature's ratio ``steered / reference
+× 100`` is computed **individually, then averaged** (mean of ratios — a big feature must
+not drown the others; NOT the ratio of summed/averaged activations); ~0-reference
+features are excluded and counted. Reference = the recipient-prompt clean activation
+(`baseline`) or the stored donor-/own-prompt activation (`stored`). The operation,
+operand and raw-operation cells rerun each swap at the paper endpoint and at each
+language's crossover with these readouts; the language-swap readout cell prints
+supernode means. **Reading the numbers** (per the pre-report scan, `DEVLOG_EXTRA.md`
+§2.2/2.3, folded into the design): encoder-side readouts are blind to a feature's
+own-layer decoder delta, so steered supernodes (sources, injected donors) report the
+network's *propagated response*, not the commanded steer; the paper-comparable
+annotation numbers come only from supernodes **disjoint from the steered sets** — for
+the operation swaps that is the new `downstream_say_large` supernode (late
+language-unique say features + unsteered say-big members; the say-big trio itself sits
+inside the steered source there), for the operand swap the (unsteered) say-big trio and
+the steered-feature-excluded say-cold supernode.
+
+Results vs the paper's annotations:
+
+- **Operand swap (Fig B4: say-large ≈0–12%, say-cold recruited, upstream ≈100%)** — at
+  the +1.5× endpoint the downstream pattern lands: say-large (trio, genuinely
+  downstream here) **0.0% / 0.0% / 0.0%** (2.3–8.9% already at the crossovers) in the three languages vs the paper's ≈0–12%; the
+  say-cold supernode reaches **110% / 148% / 65%** of its own-prompt level ("recruited",
+  with the caveat that it contains task-general members pre-active on the recipients).
+  The final-position operation proxy falls to 41–58% where the paper's
+  upstream stays ≈100% — partly definitional (it retains say-side members that
+  legitimately drop when large→cold).
+- **Operation swap (Fig B3: upstream ≈100%, downstream say-large ~11/10/13% and
+  0/0/20%)** — the disjoint `downstream_say_large` supernode reads **69.0% (EN) / 1.0% (FR) / 83.9% (ZH)** at the
+  raw format's full 6× (chat: 74.4 / 6.5 / 40.6% at 6×); the trio row (inside the steered source)
+  reads 11.2/0.0/46.0 raw @6× but mixes commanded steer with propagation and is not
+  the paper's annotation. `upstream_operand` is 99.8–100.2% everywhere — matching the
+  paper's ≈100%, though causally guaranteed under frozen attention patterns (no
+  evidential weight). Donor rows: propagated response 89–106% of donor level at
+  6× (their lowest-layer members necessarily read ~0% of stored).
+- **Language swap** — supernode means compress the item-5 finding: say-large-zh stays
+  **≤7.6%** of its own-prompt level at every strength (paper's new-language target:
+  76–105%) vs say-big 90/85/60% and en-say 99/94/74%.
+
+### Same-session addendum 2 — eager decoders: the notebooks' load-bearing step removed
+
+Profiling the runs (artifact-mtime timeline) showed the dominant cost was not the
+graphs or the grids but the **intervention volume × the lazy-decoder clean baseline**:
+every `run_feature_intervention` call rebuilds `capture_constants` + a full
+LocalReplacementModel forward, and with `lazy_decoder=True` that forward re-streams all
+36 decoder matrices (~28 GB) — ~9.3 s per call, ~195 calls per multilingual run ≈ 30 of
+its ~50 minutes. Both notebooks now load the 4b transcoders with **`lazy_decoder=False`**
+(cell 1). Pre-flight measured: one `paper_swap` 9.3 s → **0.18 s (~52×)**; 8000-node
+graph-build peak **68.0 GiB** — inside the A100-80GB with headroom. Measured
+end-to-end: `multilingual.ipynb` ~50 min → **14 m 40 s**, `addition.ipynb` ~21 min →
+**17 m 50 s** (its grid probes are encode-only and keep their ~10 min). The §H 8b load
+deliberately stays lazy: the overlap analysis is **encode-only** (it only reads feature
+activations via `transcoder.encode()`; nothing is written back through `W_dec`), so
+laziness costs it nothing — and eager 8b decoders (+encoders + model ≈ 107 GB) would
+not fit the card. Determinism check: the chat-format B3/B4 readout JSONs from the lazy
+and eager runs are identical to the printed digit. CLAUDE.md's performance note
+updated with the measured numbers.
+
+### Same-session addendum 3 — pre-report scan (`DEVLOG_EXTRA.md`) response
+
+An independent adversarial scan (recorded in `DEVLOG_EXTRA.md`, no code changed there)
+landed mid-session; its findings were addressed as follows (both notebooks re-executed
+end-to-end afterwards, zero cell errors):
+
+- **§1.1 (HIGH) — fixed + re-measured.** `digit_token_positions` collected the
+  teacher-forced answer digits into `b_digits`, so `suppress_9` steered the
+  predict-ones position (10) instead of the operand's ones digit (8), and the
+  `input_b` pool mixed in answer-position nodes. Fix: digit collection stops at `=`
+  (regression-tested against the real tokenizer and in
+  `tests/test_notebook_helpers.py`). Re-measured operand-position ladder:
+  suppress-`_9` m=−1 → **`8` @ 0.711**; m=−2 (paper prose −1×) → **`8` @ 0.678**;
+  m=−3 (figure −2×) → `2` @ 0.347 (readouts: all 4 sums → 0% from m=−1 on; lookups
+  ≤10% except `L24f163113` surviving at 54% → 42% → 4%). The corrected experiment is
+  *stronger* than the wrong-position one had suggested: a crisp ones-digit
+  substitution (`5`→`8`) that **survives the paper's −1×** — where suppress-`_6`'s
+  9+9 story collapses to `2` — degrading only at −2×. Both operand suppressions now
+  land on `8`, consistent with the surviving multi-pair lattices (receptive fields
+  include (9,9)→8); like the paper's own 91 ("not 92 — grain of salt"), the
+  substituted digit resists simple numerology. `input_b`'s pool now draws from the
+  true operand positions {7, 8}. Selection stability: `input_9` keeps its 6 features
+  and the band pair is unchanged; the loose catch-all swaps one member (the
+  answer-position artifact `L0f108251` exits, position-7 `L0f147779` enters), so its
+  ladder numbers shift once more (ones flip at m=−2 now `3` @ 0.535; three
+  most-affected low-precision readouts 52–64% at ablation, first digit
+  0.5626 → 0.362) — same phenomenology, and the band-supernode rows are untouched. Historical tables carry ⚠️
+  notes; the Summary row is rewritten from the fixed run.
+- **§1.2–1.5, §2.1 (MED/LOW) — corrected in place.** First-digit baseline 0.99 →
+  0.5626 (ones-prompt value had been copied); "sum feats → 0%" and "deep 51–64%
+  suppression" rewordings (partial, mixed-sign readouts); answer_pos_pool "15 mixed" →
+  14 mixed + the visually-rejected band flag; the zh-unique tally 10/12 → 9 always-zero
+  + 1 waker + 2 baseline-active (one falling 81% at 6×).
+- **§2.2/2.3 (MED) — readouts redesigned** (see addendum 1): `downstream_say_large`
+  added as the paper-comparable annotation; trio/source/donor rows relabeled as
+  propagated response; `supernode_readout_pct` docstring now states the encoder-side
+  blindness to own-layer steers.
+- **§3.1 (HIGH) — documented + quantified; semantics unchanged.** The module header no
+  longer claims unqualified circuit-tracer faithfulness: propagate mode is documented
+  as clean-anchored fixed-delta steering (exact vs the clamp for single-layer/uncoupled
+  interventions; deliberate protocol for coupled stacks), and the
+  `run_feature_intervention` docstring's false "defaults to the last steered layer"
+  sentence is fixed (the default is `None` = propagate). Quantification on the
+  flagship multi-layer cases (this run's own selections): lookup swap —
+  propagate **`8` @ 0.7148** (the committed, paper-margin result) vs constrained-to-l_max **`1` @ 0.7321** — the swap does not land (`8` drops out of the top-4); polymer 7-feature
+  suppression — propagate `1` @ 0.7467 vs constrained `1` @ 0.3525 (same flip, half the mass). The protocol choice is material on coupled stacks: the injected donors need the downstream recompute to reach the answer, so the notebooks' results — including the paper-margin swap match — are propagate-mode results and are now described as such everywhere. (The paper's own range-choosing step exists as `sweep_patch_end_layer` for anyone wanting the constrained picture per case.)
+- **§4.1 (MED) — fixed.** `verify_intervention.py` now exits 1 on FAIL.
+- **§4.3 (MED) — closed.** New `tests/test_notebook_helpers.py` puts the
+  verdict-carrying helper logic under pytest (position parsing incl. the §1.1
+  regression, the band-criterion classifier, `direct_token_weights` vs the reference,
+  `supernode_readout_pct` mean-of-ratios/refs/skips) — 110 tests pass; CI's lint and
+  format steps now also cover `notebooks/` and `verification/`.
+- **Left as recorded findings (no code change):** §3.2 (attribution "all"-mode sink
+  semantics — library/serve exposure only; notebooks unaffected), §3.3 and §5.x
+  periphery items, §6 housekeeping. These remain documented in `DEVLOG_EXTRA.md` for
+  a future hygiene pass.
+
 ### State of the world (after the third A100 session)
 
 - Branch `handoff/a100-80gb-queue`: `756b771` (items as code), `4c2780d` (band-core
-  fix), `a955ff1` (executed notebooks + refreshed Summaries), plus this DEVLOG
-  commit. ruff clean, 98 tests pass, both notebooks executed end-to-end with zero
-  cell errors on this node. All five HANDOFF items are closed; nothing queued.
+  fix), `a955ff1` (executed notebooks + refreshed Summaries), `1ee7ce5` (DEVLOG),
+  then the same-session addenda commits (Fig B3/B4 readouts + eager decoders +
+  pre-report-scan fixes with both notebooks re-executed). ruff clean, **110 tests
+  pass** (notebook-helper suite added), CI lint/format now covers `notebooks/` +
+  `verification/`, zero cell errors on every execution. All five HANDOFF items are
+  closed; the remaining recorded-but-unfixed scan findings (`DEVLOG_EXTRA.md` §3.2,
+  §3.3, §5, §6) are library/serve/housekeeping items outside the reproductions.
 - Node state: bf16 transcoder caches (57 + 91 GB) + ~45 GB feature-label cache under
   `.cache/`; both models under `.cache/models/`; artifacts regenerated under
   `artifacts/paper_{addition,multilingual}/{4b,8b}/` (node-local, gitignored).

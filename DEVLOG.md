@@ -405,7 +405,7 @@ position-sensitive):
   probed as their own group.
 - The introspection prompt was asked once (greedy); no sampling over phrasings.
 
-### Next-session queue
+### Next-session queue (both items resolved — see the second-A100-session section below)
 
 - **Language swap: rerun on RAW open-quote prompts before trusting the "differs"
   verdict.** The paper's recipient position is a content-bearing open-quote token
@@ -455,3 +455,124 @@ pipeline, not the paper protocol). Updated pointers: `CLAUDE.md` (architecture b
 `README.md`, `notebooks/README.md`, both notebook sbatch wrappers (artifact paths are now
 `artifacts/paper_{addition,multilingual}/<size>/`). The historical sections above refer to
 the retired `examples/paper_*.py` paths; their logic lives on in the two helpers.
+
+---
+
+## Second A100 session: queue items resolved (language-swap control, 4b-vs-8b scale) + addition gaps closed (2026-07-09/10)
+
+Environment: a **fresh A100-80GB node** (Lightning studio, no Slurm) — no `.env`, no
+`.venv`, no HF cache, and the previous node's `artifacts/` gone. Rebuilt from scratch:
+`uv sync --all-groups` (ruff clean, 95 passed / 1 skipped), minimal `.env`, ~180 GB of
+weights re-downloaded. Branch `feat/next-session`.
+
+**Infra findings (durable):**
+
+- The mwhanna transcoder repos store **bf16** weights; circuit-tracer's cache converts
+  to fp32 by default — a pure upcast that doubles disk (8b: 97 → 193 GB) and would not
+  have fit alongside the 4b set. `cache_transcoder()` now takes `dtype=`; both sets are
+  cached bf16 (60 + 97 GB), which also halves lazy-decoder disk reads (multilingual
+  notebook wall time dropped ~55 → ~48 min for the old sections; ~60 min with the two
+  new ones).
+- circuit-tracer's `save_transcoders_to_cache` takes the snapshot path for these repos
+  (no `transcoders:` key in config.yaml) and therefore **never deletes the hub-side
+  copy** — delete `~/.cache/huggingface/hub/models--mwhanna--*` manually after caching
+  or pay 2× disk. Feature labels are unaffected (separate `.cache/feature_labels`).
+- Both dictionaries are **163,840 features/layer** (4b and 8b, per safetensors headers)
+  and both models are 36 layers — the same-recipe scale pair is granularity-matched by
+  construction.
+- Determinism: the re-executed chat-format sections reproduced the previous session
+  **exactly** (identical pruned node sets 621/437/544 with 107 shared, identical
+  crossovers, identical overlap curves and direct-effect values) — no bf16 drift.
+- TODO.md removed (stale); its eager-decoder lesson moved to CLAUDE.md "Performance
+  notes".
+
+### Queue item 1 — language swap rerun on RAW open-quote prompts: null SURVIVES; "differs" is earned
+
+Raw behavior first (new `tokenize_raw` + `raw=` path in `multilingual_helper`, sink-token
+prepend, `n_bos_tokens=1`): the paper's exact prompts work — antonym **large / grand / 大
+@ 0.77 / 0.99 / 0.99** (single tokens; no task-quality penalty for dropping the chat
+template). The FR synonym echo persists raw (`pet` 0.86 — a model behavior, not a chat
+artifact); ZH echo is borderline (小 0.57 vs 微 0.31).
+
+The control (multilingual.ipynb §G): language-unique early supernodes built on the raw
+prompts are **well populated** (en 9 / fr 12 / zh 12 features, L4–L11, acts 2–4.6) and sit
+on a content-bearing final `"` token — exactly the paper's recipient. The −5×/+6× sweep
+still does **nothing in any direction**: p(target-language answer) = 0.000 at every
+strength. en→zh *strengthens* `large` (0.77→0.94); fr→en leaves `grand` at 0.97; zh→fr
+at ≥4.5× degrades toward literal quote tokens (`"` 0.40) — breaking the "inside a quote"
+representation rather than switching language. With the format confound eliminated, the
+verdict is now an earned **differs**: on Qwen3-4b, output language is causally carried by
+late say-X-in-language features (the any-layer variant moved EN→ZH previously), not the
+paper's early detection features.
+
+Bonus from the same infrastructure — **operation swap in the paper's raw format** (its
+synonym donor prompt is raw EN `A synonym of "small" is "`): reaches **top-1 in all three
+languages** at 1–2× (EN `small` 0.885 @ 2×, FR `pet` 0.730 @ 1×, ZH 小 0.911 @ 1.5×),
+landing on the model's own echo-mode synonym; the paper's full ±5–6× still over-drives
+into junk in both formats. Verdict upgraded partial → **reproduced** (adapted), with the
+robustness gap retained as a genuine 4B-vs-Haiku capacity difference.
+
+### Queue item 2 — scale claim de-confounded: 8b > 4b, paper direction reproduced
+
+multilingual.ipynb §H swaps the 0.6b comparison for the same-recipe
+`qwen3-8b-transcoders` (lazy decoders; encode-only overlap fits comfortably).
+Baseline-subtracted mid-third IOU: **8b > 4b on every pair** — en-fr 0.132 vs 0.107,
+en-zh 0.098 vs 0.089, fr-zh 0.082 vs 0.077 (mean 0.104 vs 0.091). The previous
+"0.6b ≥ 4b" inversion was therefore the `-lowl0` recipe confound, and the paper's
+overlap-grows-with-scale claim **reproduces on a clean pair**. Caveats recorded: the
+gain concentrates on en-fr (+23%) rather than the paper's emphasized non-alphabet pairs
+(en-zh +10%, fr-zh +6%), and 8b activates more features per layer (median 1206 vs 935;
+`overlap_curves_paper` now logs `set-size`) — the mechanical IOU component of that is
+netted out by the paper's unrelated-pair baseline.
+
+### Addition: three instrumentation gaps closed + a consolidation bug caught by the recheck
+
+addition.ipynb re-executed end-to-end twice (~40 min each; the second run after the bug
+fix below). Stability: studied pair re-selects **46+49** (77.7% / 46.0% accuracies
+identical), suppressions/steering/polymer/corpus reproduce the previous session's
+committed outputs essentially exactly.
+
+1. **Magnitude-inhibition low-precision readout** (the paper's actual readout, previously
+   missing): the same `input_mag` suppression run on the *first-digit* graph with the
+   magnitude-class answer features as readout. At the paper's level (m=−1) the double
+   dissociation is directional but graded — ones path fully intact (101–133%, `5` @
+   0.995) while the low-precision features are only mildly dented (5/8 at 82–97%, two
+   up) and the first digit weakens but survives (`9` 0.99→0.70). Full suppression needs
+   m=−2, which kills all low-precision readouts to 0% and destroys the prediction —
+   the same redundancy motif as the `_9` suppression.
+2. **Add-function group** (paper's remaining input class, previously unprobed): 16
+   influence-top features at the `+`/`=` operator tokens; **15/16 grid as operand-
+   uniform** (a/b concentration ≈ 1.00–1.17 — fire regardless of operands), mostly
+   L0–L5. The paper's "this is addition" class exists on Qwen3 with the expected
+   signature.
+3. **Introspection sampling** (6 phrasings × 2 seeds, T=0.7; answer turn stays greedy):
+   the greedy-only conclusion was **wrong** — about half the sampled explanations
+   narrate the schoolbook place-value algorithm ("add the tens: 40+40=80, add the ones:
+   6+9=15, …"), which the circuits (parallel lookup/sum features) do not implement.
+   That is the paper's mismatch motif, hidden by greedy decoding. Verdict upgraded
+   partial → reproduced.
+
+**Lookup-swap discrepancy found by the verdict recheck** (donor filter fixed,
+`e8cf4a9`): the consolidated Fig A5 cell tags any active `lookup`-class candidate as a
+donor — its own comment says "verified `_9+_9`" but the (9,9) grid check was never in
+the filter (the retired addendum's filter was equally loose; its candidate pool just
+happened to contain only (9,9) lookups). The notebook had therefore been injecting
+(8,7)/(4,4)/(2,2) lookups alongside the three verified (9,9) features since the
+consolidation — including in the previous session's committed outputs (`8` @ 0.39,
+flattered by the (4,4)→8 donor) — while this DEVLOG's table quoted the addendum's 0.845
+(which also rested on the retired suite's `state.json` selections; not recoverable in
+the notebook pipeline). With donor purity restored the honest result is: `5` 0.982 →
+≤0.04, **`8` tie-top-1 @ 0.237** (`7` @ 0.237, `1` @ 0.18) — direction reproduces
+(correct digit destroyed, donor-implied digit reaches top), margin far below the
+paper's 66.6%. The addition verdict table's row is downgraded reproduced → **partial**
+accordingly. (Cosmetic nit for a future pass: `sel["lookup"]` carries a duplicate —
+L24f163113 classifies as lookup in two panels; m-clamps resolve against clean
+activations, so the double entry is idempotent.)
+
+### State of the world
+
+- Branch `feat/next-session` (session commits `3441e31..ceed332`); ruff clean, 95
+  tests pass; both notebooks executed end-to-end on this node with zero cell errors.
+  Artifacts regenerated under `artifacts/paper_{addition,multilingual}/{4b,8b}/`.
+- Verdict tables live in each notebook's Summary (updated in place); this section
+  resolves both items of the "Next-session queue" above.

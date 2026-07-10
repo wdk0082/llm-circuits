@@ -220,3 +220,5 @@ gcp/keys/
 scratch/
 # HF cache accidentally rooted in the repo when HF_HOME is set-but-empty
 hub/
+# Claude Code session state / persistent memory (agent-local, not project content)
+.claude/

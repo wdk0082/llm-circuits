@@ -1,6 +1,13 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-09, end of the A100 session): the paper-exact
+> **⏩ CURRENT STATE** (2026-07-10, after the SECOND A100 session): both "Next-session
+> queue" items are resolved — language-swap null survives the raw-format control
+> (*differs* earned), and the 4b-vs-8b same-recipe run **reproduces the paper's scale
+> claim**. Addition gaps closed; a non-idempotent duplicate-selection defect was found
+> and fixed (four first-session numbers superseded — see the second-session section and
+> the caution note on the first verdict table). Start at "Second A100 session".
+>
+> Previous state (2026-07-09, end of the first A100 session): the paper-exact
 > reproduction is **executed and consolidated under `notebooks/`** — two files per
 > behavior (`addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` +
 > `multilingual_helper.py`), both executed end-to-end on a local A100-80GB with verdicts
@@ -346,6 +353,14 @@ position-sensitive):
 
 ### Addition verdicts (paper §A vs Qwen3-4b, studied pair 46+49=95)
 
+> ⚠️ **Four rows below are superseded** — this session's selections carried a
+> non-idempotent duplicate (features steered at double strength) and the lookup-swap
+> donor filter was loose. Corrected numbers (second A100 session): lookup swap
+> **`8` @ 0.715** (not 0.845); lookup neg-steering **flips to `1` @ 0.88, width 1.26**
+> (not "smears to width 2.0"); polymer suppression `1` @ 0.75 on 7 distinct features;
+> magnitude-inhibition readout re-measured with the paper's low-precision readout.
+> The rest of the table stands (re-executed identically).
+
 | Experiment | Paper (Haiku) | Qwen3-4b (this session) | Verdict |
 |---|---|---|---|
 | `calc:` accuracy (10,000 prompts) | implied high | 77.7% overall — format usable, no chat fallback; but 36+59 itself wrong (`?\n\n`), `_6+_9` class 46% → pair switched to 46+49 | **partial** (format holds; weaker arithmetic) |
@@ -577,7 +592,7 @@ numbers above. The duplicate predates this session (the previous session's commi
 outputs carry it), so those four numbers in the first-A100-session table each reflect
 one feature steered at double strength.
 
-### State of the world
+### State of the world (after the second A100 session)
 
 - Branch `feat/next-session` (session commits `3441e31..ceed332`); ruff clean, 95
   tests pass; both notebooks executed end-to-end on this node with zero cell errors.

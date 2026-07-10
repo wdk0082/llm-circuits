@@ -284,6 +284,29 @@ def _steer_base_model(
     )
 
 
+def _warn_duplicate_interventions(interventions: list[FeatureIntervention]) -> dict:
+    """Warn on duplicate (layer, position, feature) entries — they are NOT idempotent.
+
+    Decoder deltas are summed, so a doubled entry steers at double strength (a real
+    defect once caught in the wild — see DEVLOG, second A100 session). Warn rather
+    than dedup: stacking the same feature twice is legal if genuinely intended.
+    Returns the duplicate counts (empty dict if none) for testability.
+    """
+    seen: dict[tuple[int, int | None, int], int] = {}
+    for iv in interventions:
+        key = (iv.layer, iv.position, iv.feature_idx)
+        seen[key] = seen.get(key, 0) + 1
+    dups = {k: c for k, c in seen.items() if c > 1}
+    if dups:
+        log.warning(
+            "Duplicate interventions on the same (layer, position, feature) — deltas SUM, "
+            "so these features are steered at multiplied strength: %s. "
+            "Dedup your selection unless this is intentional.",
+            {f"L{L}f{f}@p{p}": c for (L, p, f), c in dups.items()},
+        )
+    return dups
+
+
 def run_feature_intervention(
     model: nn.Module,
     transcoder: TranscoderSet | CrossLayerTranscoder,
@@ -323,6 +346,8 @@ def run_feature_intervention(
         input_ids = input_ids.unsqueeze(0)
     if layernorm_templates is None:
         layernorm_templates = list(_QWEN3_LAYERNORM_TEMPLATES)
+
+    _warn_duplicate_interventions(interventions)
 
     is_set = _is_transcoder_set(transcoder)
     if not is_set:

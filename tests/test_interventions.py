@@ -148,3 +148,33 @@ class TestLayerSweepResult:
     def test_best_end_layer_is_max_suppression(self):
         # layer 22 has the lowest logit (-3.0) -> largest suppression
         assert self._res().best_end_layer == 22
+
+
+class TestDuplicateWarning:
+    def test_duplicates_detected_and_warned(self, caplog):
+        import logging
+
+        from llm_circuits.circuits.interventions import (
+            _warn_duplicate_interventions,
+            steer,
+        )
+
+        ivs = [steer(3, 42, m=-1.0, position=5), steer(3, 42, m=-1.0, position=5)]
+        with caplog.at_level(logging.WARNING, logger="llm_circuits.circuits.interventions"):
+            dups = _warn_duplicate_interventions(ivs)
+        assert dups == {(3, 5, 42): 2}
+        assert any("deltas SUM" in r.message for r in caplog.records)
+
+    def test_distinct_entries_silent(self, caplog):
+        import logging
+
+        from llm_circuits.circuits.interventions import (
+            _warn_duplicate_interventions,
+            steer,
+        )
+
+        ivs = [steer(3, 42, m=-1.0, position=5), steer(3, 42, m=-1.0, position=6)]
+        with caplog.at_level(logging.WARNING, logger="llm_circuits.circuits.interventions"):
+            dups = _warn_duplicate_interventions(ivs)
+        assert dups == {}
+        assert not caplog.records

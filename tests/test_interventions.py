@@ -178,3 +178,18 @@ class TestDuplicateWarning:
             dups = _warn_duplicate_interventions(ivs)
         assert dups == {}
         assert not caplog.records
+
+    def test_broadcast_position_overlap_flagged(self, caplog):
+        import logging
+
+        from llm_circuits.circuits.interventions import (
+            _warn_duplicate_interventions,
+            steer,
+        )
+
+        # position=None steers every position, so it overlaps the specific entry.
+        ivs = [steer(3, 42, m=-1.0, position=None), steer(3, 42, m=-1.0, position=5)]
+        with caplog.at_level(logging.WARNING, logger="llm_circuits.circuits.interventions"):
+            dups = _warn_duplicate_interventions(ivs)
+        assert (3, 5, 42) in dups
+        assert any("deltas SUM" in r.message for r in caplog.records)

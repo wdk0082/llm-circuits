@@ -293,10 +293,22 @@ def _warn_duplicate_interventions(interventions: list[FeatureIntervention]) -> d
     Returns the duplicate counts (empty dict if none) for testability.
     """
     seen: dict[tuple[int, int | None, int], int] = {}
+    broadcast: set[tuple[int, int]] = set()  # (layer, feature) entries with position=None
     for iv in interventions:
         key = (iv.layer, iv.position, iv.feature_idx)
         seen[key] = seen.get(key, 0) + 1
+        if iv.position is None:
+            broadcast.add((iv.layer, iv.feature_idx))
     dups = {k: c for k, c in seen.items() if c > 1}
+    # position=None applies at EVERY position, so it also overlaps any
+    # specific-position entry for the same (layer, feature).
+    dups.update(
+        {
+            (L, p, f): seen[(L, p, f)] + seen[(L, None, f)]
+            for (L, p, f) in seen
+            if p is not None and (L, f) in broadcast
+        }
+    )
     if dups:
         log.warning(
             "Duplicate interventions on the same (layer, position, feature) — deltas SUM, "

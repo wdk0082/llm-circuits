@@ -1,11 +1,22 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-10, after the SECOND A100 session): both "Next-session
+> **⏩ CURRENT STATE** (2026-07-10, after the VERIFICATION RECHECK session, branch
+> `verify/paper-recheck`): both notebooks were re-audited against the papers' own HTML
+> + figure SVGs. Verdict prose corrected (markdown-only; biggest fix: the input
+> suppressions had been compared at ablation strength — the paper's protocol is
+> −1×/−2×, where the phenomenology partly breaks → "reproduced at reduced strength");
+> the paper's indirect-effect claim (Fig A5 panel 2) was measured paper-faithfully and
+> **reproduces** (lookups-only → sum features 0%). All committed numbers verified
+> (exact bf16 parity on a different A100). **Next session (A100-80GB): start at
+> "HANDOFF — next A100-80GB session" in the recheck section** — five specced items,
+> then re-execute both notebooks end-to-end.
+>
+> Previous state (2026-07-10, after the SECOND A100 session): both "Next-session
 > queue" items are resolved — language-swap null survives the raw-format control
 > (*differs* earned), and the 4b-vs-8b same-recipe run **reproduces the paper's scale
 > claim**. Addition gaps closed; a non-idempotent duplicate-selection defect was found
 > and fixed (four first-session numbers superseded — see the second-session section and
-> the caution note on the first verdict table). Start at "Second A100 session".
+> the caution note on the first verdict table).
 >
 > Previous state (2026-07-09, end of the first A100 session): the paper-exact
 > reproduction is **executed and consolidated under `notebooks/`** — two files per
@@ -707,19 +718,102 @@ Polymer-suppression verdict upgraded from "analog" to **reproduced**; the smear-
 "differs" gains a sharper statement (the flip to `1` happens with the sum stage fully
 silenced).
 
-### Queued for the next full A100-80GB execution
+### HANDOFF — next A100-80GB session: five queued items (specs, no code written yet)
 
-1. Fold the recheck code into the notebook: cell-11 strength loop `(-1, -2, -3)`,
-   lookups-only polymer suppression with sum readout (keep the all-7 line as a
-   robustness variant), sum-readout on the cell-13 lookup steer.
-2. Re-select `input_mag` with a band criterion (drop `mixed`) and re-run the
-   magnitude dissociation at m=−2/−3.
-3. Hunt the paper's actual Add Function class: one-operand-condition stripe grids
-   read at the answer position (mid-layers, between inputs and lookups).
-4. Intermediate computation: re-hunt with *bottom*-logit / negative-output-weight
-   screening for computed-9-intermediate candidates.
-5. Multilingual: add Fig B5-style say-large-X readouts to the language-swap null
-   (does say-large-zh move at all under en→zh?).
+The session's job: implement the five items below (small, localized edits — the heavy
+machinery all exists), execute **both notebooks end-to-end**, eyeball the new panels,
+refresh the Summary verdict rows and extend this DEVLOG. Reference numbers to reproduce
+are in the two recheck tables above (bf16 parity across A100 variants was exact, so the
+notebook's numbers should match them to the printed digit).
+
+**Bootstrap on a fresh node** (~30–40 min, mostly downloads): `uv sync --all-groups`;
+minimal `.env` (never set an empty `HF_HOME`); pre-cache both transcoder sets at bf16 —
+`cache_transcoder("mwhanna/qwen3-4b-transcoders", dtype=torch.bfloat16)` and the same
+for `qwen3-8b` (multilingual §H needs it) — then delete
+`~/.cache/huggingface/hub/models--mwhanna--*` or pay 2× disk (60+97 GB cached).
+Execution: `addition.ipynb` ~45 min, `multilingual.ipynb` ~60 min on an A100-80GB.
+Note the recheck 40GB node auto-cached the 4b set at fp32 (113 GB) — the auto-cache
+path inside `load_transcoder` does not take the bf16 shortcut; use `cache_transcoder`
+explicitly first.
+
+**Item 1 — fold the paper-strength ladder into `addition.ipynb` cell 11.**
+Extend the strength loop from `(-1.0, -2.0)` to `(-1.0, -2.0, -3.0)` for all three
+suppressions AND the magnitude low-precision readout block (m=−1 ablation / m=−2 paper
+prose −1× / m=−3 paper figure −2×). Expected outputs (recheck §4.1 table above):
+suppress-`_6` `8`@0.29 / `2`@0.99 / `2`@0.99; suppress-`_9` `5`@0.52 / `3`@0.96 / junk;
+magnitude `5`@0.998 / `3`@0.54 / junk. Then update the three Summary rows to cite the
+notebook's own numbers (currently they cite the recheck) and keep the
+reproduced-at-reduced-strength framing unless item 2 changes the magnitude story.
+
+**Item 2 — band-criterion `input_mag`, then re-run the magnitude dissociation.**
+Motivation (recheck F4): `sel["input_mag"]` = the `magnitude-diag`+`mixed` catch-all,
+which includes an always-on flat feature (`L0f116505`) and broadband ripples; the paper's
+supernode is two clean one-operand bands (`~30`, `~59`). Spec: add band detection to
+`periodicity_report` in `addition_helper.py` — compute `a_std`/`b_std` (std of a/b over
+strongly-active cells, same 0.5·max threshold `s_std` uses) and label
+`band-a(~mean_a)` when `a_std < 8 and b_std > 15` (symmetrically `band-b`), placed
+after the mod-10 checks and before `magnitude-diag`. Threshold sanity: a ±5 band has
+std≈3, mod-10 lines ≈28, uniform ≈29, an exact-46 cross stays `mixed` (its union of two
+stripes has large std — correctly excluded: the paper's magnitude intervention targets
+`~30`/`~59`, not the exact-value features). In cell 8 select `input_mag` =
+band-labelled features only, keep the old selection as `input_mag_loose`, and run BOTH
+through cell 11's ladder. Expected: `L4f148151` in the band set, `L0f116505` only in
+loose; if the band set comes out empty, the 0.5 threshold clipped the band's weak
+cross-arm — lower it or pick visually from `grids_input_*.png`. Acceptance: if the
+ones path survives m=−2 with the clean supernode, the dissociation breakdown was
+selection pollution → upgrade the magnitude verdict accordingly; if it still breaks,
+the reduced-strength framing is confirmed clean.
+
+**Item 3 — hunt the paper's actual Add Function class (stripe/band plots at the
+answer position).** Motivation (recheck F3): the operator-token probe found the
+*Mostly Active* signature; the paper's Add Function features (`add _9`, `add ~57`) are
+one-operand conditions read where the computation happens. Spec: in cell 7 add a pool
+`answer_pos_pool` = influence-top ~24 features of the ones graph **at the final
+(predict-ones) position**, layers < 3·N/4 (`position_features(graphs["ones"],
+[last_ones], 24, max_layer=...)`), probed with the existing ones-moment grids
+(`grids_ones`; route it in `grids_for`); the panel plot then lands in
+`grids_answer_pos_pool.png` automatically. In cell 8 select candidates with labels in
+{`mod10-a`, `mod10-b`, `band-a`, `band-b`} (needs item 2's band labels). Acceptance:
+genuine one-operand stripes/bands at the answer position = the `add _9`/`add ~57`
+analogues found → flip the taxonomy row's add-function gap to reproduced (optionally
+suppress them and check the lookups downstream); none → the scope-gap statement stands,
+record the negative result.
+
+**Item 4 — computed-9 screen by negative direct output weight (cell 18).**
+Motivation (recheck F6): the paper's "computed 9, intermediate step" feature is defined
+by its strongest *negative* direct effect on "9"; the current hunt scans label *top*
+logits and cannot find it. Spec: add a small helper (mirror
+`multilingual_helper.direct_logit_effect`, batched per layer via
+`_get_decoder_vectors`) computing each feature's **demeaned** unembedding weight on the
+`"9"` token through the final-norm scale; rank all intermediate-graph feature nodes
+most-negative-first and print the top ~8 with influence and position. Acceptance:
+clearly negative candidates at the final position → inspect labels/activations and
+report (keeping the paper's own hedge — its evidence was weak); nothing strongly
+negative → strengthen the "partial" verdict with "no suppressive computed-9 candidate
+under a direct-weight screen either".
+
+**Item 5 — Fig B5-style say-large-X readouts for the language-swap null
+(`multilingual.ipynb`, section G).** Motivation (recheck F8): the paper's Fig B5
+annotates say-large-multilingual ≈100%, original say-large-X 18–39%, new say-large-Y
+76–105%; our null reports output probabilities only — the missing diagnostic is whether
+say-large-zh moves *at all* under en→zh. Spec: extend the raw language-swap cell —
+readout features = the say-big trio (`L30f27666`, `L31f11436`, `L32f100307`) + each
+language's **late** language-unique final-position features (the
+`lang_specific_final_features` logic on the *raw* prompts, restricted to layers ≥ N/2);
+run the raw en→zh swap at 1×/3×/6× (`paper_swap` with `source_mult = 1 − s`,
+`donor_mult = s`, which hits the paper's −5×/+6× at s=6) passing
+`readout_layers`, and print base→steered activations at the final position
+(`run_feature_intervention` already returns `baseline_features`/`ablated_features`;
+`paper_swap` needs a `readout_layers` passthrough). Acceptance: if say-large-zh never
+rises while the early supernodes are driven at 6×, the "causal handle sits later"
+conclusion gains its mechanism (early detection does not feed the late say stage on
+Qwen3-4B) → add to the language-swap Summary row; if it rises without the output
+changing, that is a new puzzle — document it.
+
+**After execution:** confirm the continuity numbers (lookup swap `8` @ ~0.715; polymer
+lookups-only sums → 0%; smear widths 1.26/1.03; operand-swap crossovers
+0.625×/1.0×/0.875×); refresh both Summaries and append this DEVLOG with the
+per-item outcomes; `ruff check` + `ruff format --check` + `pytest` (the CI trio).
 
 ### State of the world (after the recheck session)
 

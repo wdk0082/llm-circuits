@@ -198,10 +198,11 @@ beyond the lookups (0.771 vs 0.747). The polymer-suppression verdict is upgraded
 mechanistic statement: the flip to `1` happens with the sum stage fully silenced.
 
 Raw numbers: `artifacts/paper_addition/4b/recheck_results.json` (node-local, gitignored).
-Follow-ups queued in the DEVLOG recheck section (fold the strength ladder + lookups-only
-runs into the notebook on the next full A100-80GB execution; band-criterion `input_mag`;
-add-function stripe hunt; bottom-logit intermediate hunt; Fig B5-style say-large-X
-readouts for the language-swap null).
+Follow-ups: five items fully specced (with acceptance criteria and reference numbers)
+in the DEVLOG section **"HANDOFF — next A100-80GB session"** — strength ladder,
+band-criterion `input_mag`, add-function stripe hunt, negative-weight computed-9
+screen, say-large-X readouts for the language-swap null. No code written yet by
+decision; the specs are implementation-ready.
 
 ## 5. Files changed on this branch
 

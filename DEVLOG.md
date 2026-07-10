@@ -1,35 +1,41 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-10, after the VERIFICATION RECHECK session, branch
-> `verify/paper-recheck`): both notebooks were re-audited against the papers' own HTML
-> + figure SVGs. Verdict prose corrected (markdown-only; biggest fix: the input
-> suppressions had been compared at ablation strength — the paper's protocol is
-> −1×/−2×, where the phenomenology partly breaks → "reproduced at reduced strength");
-> the paper's indirect-effect claim (Fig A5 panel 2) was measured paper-faithfully and
+> **⏩ CURRENT STATE** (2026-07-10, after the THIRD A100 session, branch
+> `handoff/a100-80gb-queue`): **all five HANDOFF items are implemented, executed and
+> written up.** The strength ladder lives in `addition.ipynb` cell 11 (recheck numbers
+> confirmed in-pipeline); `input_mag` is the paper-shaped two-band supernode
+> (`band-a(~45)` + `band-b(~49)`) and the magnitude/ones dissociation **survives full
+> paper strength** with it — the earlier m=−2 breakdown was selection pollution, and
+> the magnitude verdict is upgraded to reproduced; the add-function hunt at the answer
+> position is a measured negative; the computed-9 direct-weight screen finds no clean
+> candidate ("partial" strengthened); the Fig B5-style readouts give the language-swap
+> null its mechanism (the late zh say-stage never activates under full-strength
+> early-detection drive — en→zh consolidates `large` 0.79→0.94). Both notebooks
+> executed end-to-end on a fresh A100-80GB with zero cell errors; bf16 parity exact on
+> every continuity number (lookup swap `8` @ 0.7148; polymer all-7 `1` @ 0.7467 and
+> lookups-only `1` @ 0.7708 with sums → 0%; smears 1.26/1.03; operand crossovers
+> 0.625×/1.0×/0.875×; scale 8b > 4b). **Nothing queued.** See "Third A100 session"
+> below.
+>
+> Previous state (2026-07-10, after the VERIFICATION RECHECK session, branch
+> `verify/paper-recheck`): both notebooks re-audited against the papers' own HTML +
+> figure SVGs. Verdict prose corrected (biggest fix: the input suppressions had been
+> compared at ablation strength — the paper's protocol is −1×/−2×, where the
+> phenomenology partly breaks → "reproduced at reduced strength"); the paper's
+> indirect-effect claim (Fig A5 panel 2) was measured paper-faithfully and
 > **reproduces** (lookups-only → sum features 0%). All committed numbers verified
-> (exact bf16 parity on a different A100). **Next session (A100-80GB): start at
-> "HANDOFF — next A100-80GB session" in the recheck section** — five specced items,
-> then re-execute both notebooks end-to-end.
+> (exact bf16 parity on a different A100). Its "HANDOFF — next A100-80GB session"
+> section specced the five items resolved above.
 >
 > Previous state (2026-07-10, after the SECOND A100 session): both "Next-session
 > queue" items are resolved — language-swap null survives the raw-format control
 > (*differs* earned), and the 4b-vs-8b same-recipe run **reproduces the paper's scale
 > claim**. Addition gaps closed; a non-idempotent duplicate-selection defect was found
 > and fixed (four first-session numbers superseded — see the second-session section and
-> the caution note on the first verdict table).
->
-> Previous state (2026-07-09, end of the first A100 session): the paper-exact
-> reproduction is **executed and consolidated under `notebooks/`** — two files per
-> behavior (`addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` +
-> `multilingual_helper.py`), both executed end-to-end on a local A100-80GB with verdicts
-> vs the paper in each notebook's Summary. See "A100 session: suites executed +
-> per-experiment verdicts" for the full comparison and "Repo cleanup" for the layout
-> change (the former `examples/paper_*.py` suites are folded into the notebooks).
-> Artifacts (JSON/PNG/HTML, gitignored) are per-node scratch under
-> `artifacts/paper_{addition,multilingual}/<size>/` — regenerate by executing the
-> notebooks (the first A100 node's copies did not survive it). Note the "Repo cleanup"
-> section below predates the final `examples/` trim: `examples/` now holds only
-> `demo.py` + `tpu_smoke_test.py`.
+> the caution note on the first verdict table). Reproduction layout: two files per
+> behavior under `notebooks/` (`addition.ipynb` + helper, `multilingual.ipynb` +
+> helper); artifacts are per-node scratch under `artifacts/paper_*/<size>/` —
+> regenerate by executing the notebooks.
 
 Development log for the verification pass over the re-implementation (task 4) and the
 biology-paper reproductions (task 5), 2026-07-09. References: the methods paper
@@ -823,3 +829,156 @@ per-item outcomes; `ruff check` + `ruff format --check` + `pytest` (the CI trio)
   auto-cache path does not take the bf16 `dtype` shortcut; re-cache with
   `cache_transcoder(..., dtype=torch.bfloat16)` if disk matters). Recheck numbers:
   `artifacts/paper_addition/4b/recheck_results.json` (node-local).
+
+---
+
+## Third A100 session: the five handoff items executed (strength ladder, band supernode, add-function hunt, computed-9 screen, say-large readouts) (2026-07-10)
+
+Environment: a fresh **A100-80GB node** (Lightning studio, no Slurm), branch
+`handoff/a100-80gb-queue`. Bootstrap per the handoff: `uv sync --all-groups` (ruff
+clean, 98 passed / 1 skipped), minimal `.env`, both transcoder sets pre-cached at bf16
+via `cache_transcoder(..., dtype=torch.bfloat16)` (57 + 91 GB), hub copies deleted,
+both models pre-fetched into `.cache/models/`. One new first-run cost surfaced: the
+feature-LABEL cache (`.cache/feature_labels`, separate from weights) is ~45 GB for the
+4b set and downloads lazily during the first graph build (~10 min inside the first
+`addition.ipynb` execution). Items implemented as commits `756b771` + `4c2780d`, both
+notebooks executed end-to-end (addition twice — see item 2; zero cell errors; commit
+`a955ff1`). Wall times on this node are the best yet — addition ~25 min (first run,
+incl. the label download), multilingual ~35 min, addition rerun ~21 min — the bf16
+transcoder caches plus a hot label cache and fast local NVMe. **bf16 parity held again on this third A100 variant**: every re-checked
+committed number reproduced to the printed digit (studied pair re-selects 46+49 at
+77.7%/46.0%; lookup swap `8` @ 0.7148 top-1 with the same 3 clean (9,9) donors;
+polymer all-7 `1` @ 0.7467; smear widths 1.26/1.03 with `1` @ 0.8841 / `3` @ 0.9867;
+introspection 6/12 carry narrations; same corpus-reuse contexts).
+
+### Item 1 — the paper-strength ladder is in the notebook (cell 11): recheck numbers confirmed in-pipeline
+
+All input suppressions and the magnitude low-precision readout now run m=−1/−2/−3
+(ablation / paper prose −1× / paper figure −2×). The notebook's own numbers match the
+recheck table exactly:
+
+| Experiment | m=−1 (ablation) | m=−2 (prose −1×) | m=−3 (figure −2×) |
+|---|---|---|---|
+| suppress `_6` | **`8` @ 0.285** (9+9 story), lookups 18–45% | `2` @ 0.986, lookups ≤23% | `2` @ 0.990, all 0% |
+| suppress `_9` | `5` @ 0.516, readouts 30–118% | `3` @ 0.961 | junk (`,` 0.39 / `""` 0.35) |
+| inhibit magnitude (loose) | `5` @ 0.998, ones-path 85–116% | `3` @ 0.537, sums 0–111% | junk (flat, top `""` 0.078) |
+| … low-precision readout (first digit) | `9` 0.99→0.395, bands 53–66% | `1` @ 0.214, bands → 0% | flat (`1` @ 0.086) |
+
+The Summary's three suppression rows now cite the notebook's own ladder (they had
+cited the recheck's standalone run).
+
+### Item 2 — band-criterion `input_mag`: the paper-strength dissociation breakdown was selection pollution; verdict upgraded
+
+`periodicity_report` gained band detection — but the first execution produced an
+**empty band set**, the failure mode the handoff had anticipated. Measured cause (the
+saved run-#1 grids): genuine bands carry a weak cross-arm in the other operand that
+sits *above* the 0.5·max activity threshold (`L4f148151`'s arm inflates its b-std to
+21), and the razor `b≈49` band (`L7f69527`) concentrates on ~5 residues,
+hair-triggering the mod10-b concentration test (1.52 > 1.5) before any band check.
+Fix (`4c2780d`): band stats use the **bright core** (> 0.7·max — 0.75 would lose
+band-b) and band checks run **before** the single-operand stripe checks (safe: no
+periodic stripe can have a small core std). Validated offline against run #1's saved
+grids: exactly two label changes — `L4f148151` mixed → **band-a(~45)**, `L7f69527`
+mod10-b(r8) → **band-b(~49)** — 23/25 unchanged; synthetics (stripes, lattices,
+uniform, diagonal, equal-arm cross) keep their labels. `input_mag` is therefore the
+paper-shaped **two-band supernode, one band per operand** (`band-a(~45)` `L4f148151` +
+`band-b(~49)` `L7f69527` — the `~30`/`~59` analogue for 46+49; both visually verified
+as bright bands with weak cross-arms), with the old catch-all kept as
+`input_mag_loose` — note it grows 7 → 8 by definition (the newly-banded `L7f69527`
+enters the catch-all), so its run-#2 numbers shift slightly from the committed run
+(e.g. m=−2 ones flip `3` @ 0.70 vs 0.54; same phenomenology).
+
+**Ladder outcome — the acceptance's first branch fires: the paper-strength
+dissociation breakdown was selection pollution.** With the clean two-band supernode
+the ones-digit pathway survives **every** strength: `5` @ 0.999 with ones-path
+readouts 94–103% at m=−1, m=−2, **and m=−3** (the paper's full −2×). The loose
+catch-all still breaks at m=−2 exactly as before (ones flips to `3`; sign-flipping an
+always-on feature injects a global bias delta). The paper's other half is present but
+shallower than Haiku's: on the first-digit graph the answer weakens progressively
+(`9` 0.99 → 0.54 / 0.51 / 0.43 across the ladder) yet the low-precision feature
+readouts dip only mildly (97–101% at m=−1 → 80–105% at m=−3), where the paper
+annotates its low-precision features as suppressed outright — with only two thin
+bands driven, Qwen3's low-precision stage keeps most of its activation (the loose
+supernode does produce the deep 51–66% → 0% suppression, at the cost of breaking the
+ones path). Magnitude verdict upgraded: the dissociation ("ones untouched, magnitude
+path degraded") now holds at the paper's own strengths with the paper-shaped
+supernode.
+
+### Item 3 — the answer-position Add Function hunt: negative result (scope gap closed by measurement)
+
+New `answer_pos_pool` panel: influence-top-24 features of the ones graph at the
+predict-ones position (layers < 27), probed on the ones-moment grids
+(`grids_answer_pos_pool.png`). Taxonomy (run #2, core-stat classifier): **7 lookup
+lattices, 14 mixed, 1 mod10-sum, 1 magnitude-diag, and a single nominal band flag** —
+`L24f133804` labels `band-b(~4)`, but the crop shows a diffuse lower-triangular
+texture whose brightest cells sit at its low-b edge, not a bar on a quiet grid; the
+visual check (the handoff's own prescribed arbiter) rejects it. Otherwise the pool is
+the known lookup workhorses (L24f163113 (3,9), L25f90687 (5,9), L25f145046 (9,9), …),
+several `a+b≈95` anti-diagonals, and diffuse high-layer textures; **no horizontal or
+vertical one-operand bars** anywhere in the panel. The paper's stripe-like Add
+Function class (`add _9`, `add ~57` — one-addend conditions read where the computation
+happens) does **not** surface among the top-influence answer-position features of
+Qwen3-4B's ones circuit; its operator-token "this is addition" (mostly-active) class
+remains the only add-function-adjacent signature found. The taxonomy row's scope gap
+is now a measured negative, not an instrumentation hole. (The optional
+suppress-and-check follow-up is moot with no accepted candidates; `L24f133804` is only
+weakly active on the studied pair.)
+
+### Item 4 — computed-9 screen by negative direct output weight: no clean candidate; "partial" strengthened
+
+`direct_token_weights` (batched demeaned unembedding weight through the final-norm
+scale; per-feature identical to `multilingual_helper.direct_logit_effect`) screened
+all 1137 features of the `assert (4 + 5) * 3 ==` graph. The negative tail exists —
+min w9 = −0.388 vs max +0.476, median 0.000 — and includes two final-position
+features (`L30f12843` w9=−0.39, act 1.5, influence 0.0009; `L32f149033` w9=−0.27,
+act 22.1, influence 0.016) plus several at the intermediate `4 + 5` positions
+(`L31f4652@p4` −0.30, act 26). But none has the paper's computed-9 character: all
+top-logit labels are non-numeric junk (` Yay`, `ham`, `穿戴`, quote-fragments), and
+influences are marginal (≤0.016). With the instrument bias removed (the old scan
+could not see suppressive features by construction), the "partial" verdict is
+strengthened: **no suppressive computed-9 candidate under a direct-weight screen
+either** — Qwen3-4B computes 27 without a detectable flag-the-intermediate-9 feature
+in the pruned graph.
+
+### Item 5 — Fig B5-style say-large readouts: the language-swap null gains its mechanism
+
+`paper_swap` gained a `readout_layers` passthrough; `lang_specific_final_features`
+gained `raw`/`min_layer_frac` (late ≥ L18 language-unique final-position supernodes —
+the say-large-X analogues; they populate at L29–35 on the raw prompts, acts 15–200).
+The raw en→zh swap at 1×/3×/6× (source 0×/−2×/−5×, donor +1/+3/+6 — the paper's
+−5×/+6× endpoints at 6×) reads out the say-big trio + the late en-unique and
+zh-unique supernodes on the same perturbed forward. Result, vs the paper's Fig B5
+annotations (say-large-multilingual ≈100%, old say-large-X 18–39%, new say-large-Y
+**76–105%**):
+
+- **say-large-zh never comes online**: 10/12 late zh-unique features read exactly
+  0.00 at baseline and at every strength; one (`L31f104452`) wakes to ~4 — an order
+  of magnitude below the active scale (15–70); one weakly-en-active member wobbles.
+- the say-big trio holds ≈100% at 1×/3× (`L30f27666` 28→27–29 throughout); at 6× two
+  of three degrade (29%/55%) — the familiar over-drive erosion;
+- the late **en**-say supernode only partially weakens (≈half its features drop to
+  ~50% at 6×, the rest hold 90–105%) — directionally the paper's "old say-large-X
+  suppressed" but far shallower;
+- the output **consolidates on English**: `large` 0.79 → 0.86 → 0.94 (the committed
+  sweep's strengthening, now with its internals visible — the drive suppresses
+  competitors like `big` 0.20 → 0.05 rather than recruiting Chinese).
+
+Acceptance branch taken: say-large-zh never rises while the early supernodes are
+driven at the paper's full strength ⇒ **the "causal handle sits later" conclusion
+gains its mechanism** — on Qwen3-4B, early language detection does not feed the late
+say stage, so swapping it cannot move the output language. Added to the language-swap
+Summary row.
+
+### State of the world (after the third A100 session)
+
+- Branch `handoff/a100-80gb-queue`: `756b771` (items as code), `4c2780d` (band-core
+  fix), `a955ff1` (executed notebooks + refreshed Summaries), plus this DEVLOG
+  commit. ruff clean, 98 tests pass, both notebooks executed end-to-end with zero
+  cell errors on this node. All five HANDOFF items are closed; nothing queued.
+- Node state: bf16 transcoder caches (57 + 91 GB) + ~45 GB feature-label cache under
+  `.cache/`; both models under `.cache/models/`; artifacts regenerated under
+  `artifacts/paper_{addition,multilingual}/{4b,8b}/` (node-local, gitignored).
+- Continuity extra: the paper-faithful polymer lookups-only suppression, re-run
+  standalone on this run's own selections — 3 active lookups suppressed at m=−3 →
+  `5` @ 0.9824 → **`1` @ 0.7708** with **all 4 sum features at 0%** of baseline
+  (recheck's Fig A5 panel 2 resolution intact).

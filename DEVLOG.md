@@ -360,6 +360,15 @@ position-sensitive):
 > (not "smears to width 2.0"); polymer suppression `1` @ 0.75 on 7 distinct features;
 > magnitude-inhibition readout re-measured with the paper's low-precision readout.
 > The rest of the table stands (re-executed identically).
+>
+> ⚠️ **Strength annotation (recheck 2026-07-10):** the suppress-`_6`/`_9`/magnitude
+> rows below quote **m=−1 (ablation)** results — weaker than the paper's protocol (its
+> prose says "negative of its original value", −1× ⇒ m=−2; its figure
+> `patching-arithmetic-svg` is annotated −2× ⇒ m=−3). At m=−2 the phenomenology
+> differs (suppress-`_6` → `2` @ 0.99, not `8`; magnitude inhibition flips the ones
+> digit). Verdicts re-framed as "reproduced at reduced strength" — see the recheck
+> section. (Also: the `8 @ 0.36` here was the retired suite's number; the committed
+> notebook reads `8 @ 0.29`.)
 
 | Experiment | Paper (Haiku) | Qwen3-4b (this session) | Verdict |
 |---|---|---|---|
@@ -550,7 +559,10 @@ out, two of its protocol defects.
 
 1. **Magnitude-inhibition low-precision readout** (the paper's actual readout, previously
    missing): the same `input_mag` suppression run on the *first-digit* graph with the
-   magnitude-class answer features as readout. At the paper's level (m=−1), with the
+   magnitude-class answer features as readout. At ablation level (m=−1 — ⚠️ recheck
+   2026-07-10: this is *below* the paper's strength, not "the paper's level" as this
+   entry originally said; the methods prose is −1× ⇒ m=−2 and its figure −2× ⇒ m=−3,
+   see the recheck section), with the
    selection dedup below in place, the dissociation is clean on both halves: the three
    magnitude-band features drop to **54–66%** and the first digit weakens `9` 0.99→0.40,
    while the ones path stays 85–116% intact (`5` @ 0.998) — the paper's claim at matched
@@ -599,3 +611,121 @@ one feature steered at double strength.
   Artifacts regenerated under `artifacts/paper_{addition,multilingual}/{4b,8b}/`.
 - Verdict tables live in each notebook's Summary (updated in place); this section
   resolves both items of the "Next-session queue" above.
+
+---
+
+## Verification recheck: reproductions re-audited from the paper sources (2026-07-10)
+
+Branch `verify/paper-recheck`, fresh **A100-40GB** node. Independent audit of both
+notebooks + helpers against re-downloaded copies of biology.html, methods.html, and
+every figure SVG (Figma exports carry the intervention multiples and outcome
+percentages as vector text) — deliberately not trusting `notes/biology_digest.md` or
+the notebooks' own protocol notes. Every generated figure was compared against the
+paper's; every helper on the causal path re-read against the paper's protocol. Full
+report: **`notes/verification_recheck.md`**. Corrections were applied as
+**markdown-only** notebook edits (code/outputs untouched, the task-5 practice); the
+missing paper-strength measurements were re-run standalone (below).
+
+### What survives scrutiny (checked against the sources, not just re-read)
+
+The digest is accurate on every checked number; multilingual protocols are faithful
+end-to-end (endpoints, m = M_paper−1 conversions, sweeps/crossovers, raw-format
+control, same-recipe scale pair) — the operand swap, overlap(+baseline), scale
+direction, and the earned language-swap **differs** all stand. The paper's own Fig B3
+ZH panel shows the operand echo (小) rising under the operation swap — Qwen3's
+echo-synonym landing has a Haiku analogue (noted in the Summary). Addition: graphs,
+taxonomy geometry (panel-by-panel), polymer completion/reuse, the protocol-exact
+lookup swap, introspection, corpus reuse all stand.
+
+### Corrections (details + diffs in the report; notebook Summaries updated in place)
+
+1. **Input-suppression strength was mislabeled** (the biggest find). The methods prose
+   suppresses supernodes to the *negative of the original value* (−1× ⇒ m=−2); its
+   own figure `patching-arithmetic-svg` says **−2×** (⇒ m=−3); ablation (m=−1) is
+   weaker than either — yet the Summary quoted the m=−1 numbers as the reproduction
+   and this DEVLOG had called m=−1 "the paper's level" (inline-corrected above).
+   Verdicts re-framed **reproduced at reduced strength**.
+2. **The polymer "−2× suppression" cell steers lookups+sums together** — not Fig A5
+   panel 2 (lookups only, sum features as readout). Resolved by the recheck run below:
+   the paper's indirect-effect architecture **reproduces**.
+3. **"Add-function class" was a taxonomy mislabel** — operand-uniform operator-token
+   features are the paper's *Mostly Active* signature; the stripe-like Add Function
+   class (`add _9`) has not been hunted and is now recorded as a scope gap.
+4. **`input_mag` supernode pollution**: the `mixed` catch-all includes an always-on
+   flat feature (`L0f116505` — the very feature the duplicate-dedup caught) and
+   ripple features; less surgical than the paper's clean `~30`/`~59` bands.
+   Band-criterion re-selection queued.
+5. **"(6,9) lookups" wording**: the suppressed lookup features auto-label
+   (3,9)/(5,9)/(6,6) — Qwen3's lookups are coarser **multi-pair lattices** whose
+   receptive fields include (6,9); Haiku's read as single-pair. Wording fixed; the
+   model nuance is worth keeping.
+6. **Intermediate-computation hunt bias**: scanning label *top* logits cannot find
+   the paper's computed-9 feature, whose signature is a *negative* "9" output weight.
+   Caveat added (verdict stays partial).
+7. Doc staleness: first-session table's `8 @ 0.36` was the retired suite's number
+   (notebook: 0.285); its default-language means were pre-consolidation (notebook:
+   zh 0.766 / en 0.664 / fr 0.309, same ordering). Digest gained the −2× figure
+   annotation + the two methods-figure slugs.
+8. Multilingual Summary now also notes: crossovers are early and language-dependent
+   (1–3×) vs the paper's "fairly consistent ≈4×".
+
+### Recheck measurements (A100-40GB; selections reconstructed from committed outputs)
+
+Selections rebuilt feature-by-feature from the committed notebook (cell-8 sizes,
+cell-11 readout keys, cell-9 panel labels); m-mode steering needs no stored
+activations. **Parity is exact**: every number that overlaps the committed run
+reproduces to the printed precision (e.g. suppress-`_6` m=−1 `8` @ 0.285; magnitude
+m=−2 `3` @ 0.5368; polymer all-7 `1` @ 0.7467; calc lookup steer `1` @ 0.8841,
+width 1.26) — bf16 determinism holds across a different A100 variant.
+
+Input suppressions across the strength ladder (ones-digit answer; baseline `5` @ 0.999):
+
+| Experiment | m=−1 (ablation; the old comparison) | m=−2 (paper prose −1×) | m=−3 (paper figure −2×) |
+|---|---|---|---|
+| suppress `_6` (paper: 98) | **`8`** @ 0.29 — the 9+9 story | `2` @ 0.99 | `2` @ 0.99 |
+| suppress `_9` (paper: 91) | `5` @ 0.52 | `3` @ 0.96 | junk (`,` 0.39, `""` 0.35) |
+| inhibit magnitude (paper: ones intact) | `5` @ 0.998, ones-path 85–116% — clean dissociation | `3` @ 0.54, sums 0–23% — broken | junk (flat, top `""` 0.08) |
+| … first-digit readout | `9` 0.99→0.40, mag features 54–66% | `1` @ 0.21, mag 0% | flat (`1` @ 0.09) |
+
+Reading: the paper's qualitative phenomenology lives at **ablation** strength on
+Qwen3-4B and progressively shatters at the paper's −1×/−2× — the same
+over-drive-at-paper-strength pattern as the multilingual grafts. This is now the
+stated verdict framing ("reproduced at reduced strength").
+
+Polymer + calc, the paper-faithful lookups-only runs (m=−3 = figure −2×):
+
+| Run | Output | Sum-feature readout |
+|---|---|---|
+| polymer ones moment, suppress the **3 active lookups only** | `5` @ 0.982 → **`1`** @ 0.77 (199⟦1⟧ — magnitude-consistent nearby year, cf. the paper's 997 @ 54.8%) | **all 4 active sum features → 0%** — the paper's number |
+| (parity: committed all-7 variant) | `1` @ 0.7467 ✓ | — |
+| calc ones prompt, suppress the 5 lookup-class features only | `1` @ 0.88, width 1.26 (the committed smear row) | **all 4 sum features → 0%** |
+
+Reading: Fig A5 panel 2's **weak-direct / strong-indirect** claim reproduces —
+suppressing only the lookup stage silences the sum stage completely and changes the
+answer; the sums add nothing beyond what the lookups already carry (0.771 vs 0.747).
+Polymer-suppression verdict upgraded from "analog" to **reproduced**; the smear-row
+"differs" gains a sharper statement (the flip to `1` happens with the sum stage fully
+silenced).
+
+### Queued for the next full A100-80GB execution
+
+1. Fold the recheck code into the notebook: cell-11 strength loop `(-1, -2, -3)`,
+   lookups-only polymer suppression with sum readout (keep the all-7 line as a
+   robustness variant), sum-readout on the cell-13 lookup steer.
+2. Re-select `input_mag` with a band criterion (drop `mixed`) and re-run the
+   magnitude dissociation at m=−2/−3.
+3. Hunt the paper's actual Add Function class: one-operand-condition stripe grids
+   read at the answer position (mid-layers, between inputs and lookups).
+4. Intermediate computation: re-hunt with *bottom*-logit / negative-output-weight
+   screening for computed-9-intermediate candidates.
+5. Multilingual: add Fig B5-style say-large-X readouts to the language-swap null
+   (does say-large-zh move at all under en→zh?).
+
+### State of the world (after the recheck session)
+
+- Branch `verify/paper-recheck`; markdown-only notebook edits, DEVLOG + digest
+  corrections, `notes/verification_recheck.md` added; ruff clean, tests pass.
+- This node (40GB) now holds the 4b model + fp32-cached transcoders (113 GB — the
+  auto-cache path does not take the bf16 `dtype` shortcut; re-cache with
+  `cache_transcoder(..., dtype=torch.bfloat16)` if disk matters). Recheck numbers:
+  `artifacts/paper_addition/4b/recheck_results.json` (node-local).

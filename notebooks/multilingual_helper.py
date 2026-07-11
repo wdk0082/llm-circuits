@@ -40,7 +40,10 @@ from llm_circuits.circuits.interventions import (
     sweep_patch_end_layer,
 )
 from llm_circuits.instrumentation.chat import prepare_messages
-from llm_circuits.transcoders.feature_labels import load_feature_labels
+from llm_circuits.transcoders.feature_labels import (
+    load_feature_examples,
+    load_feature_labels,
+)
 from llm_circuits.transcoders.registry import get_spec
 
 # ZH tick/legend labels (大/小/冷) need a CJK font; matplotlib >=3.6 falls back per glyph
@@ -212,8 +215,17 @@ def build_graph(
             by_layer[nd.layer].append(nd.feature_idx)
     labels: dict[tuple[int, int], dict] = {}
     for layer, idxs in by_layer.items():
-        for fidx, lab in load_feature_labels(repo_id, layer, idxs).items():
-            labels[(layer, fidx)] = lab.to_dict()
+        labs = load_feature_labels(repo_id, layer, idxs)
+        # Activation examples ship in the same label blobs; merging them here (the serve
+        # engine's convention) lets the explorer's detail panel show the quantile-grouped
+        # max-activating snippets instead of "no activation examples".
+        exs = load_feature_examples(repo_id, layer, idxs, n_per_quantile=5)
+        for fidx in idxs:
+            if fidx not in labs and fidx not in exs:
+                continue
+            d = labs[fidx].to_dict() if fidx in labs else {}
+            d["examples"] = exs.get(fidx, [])
+            labels[(layer, fidx)] = d
     for nd in pg.nodes:
         if nd.node_type == "feature":
             nd.label = labels.get((nd.layer, nd.feature_idx))

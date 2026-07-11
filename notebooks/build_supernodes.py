@@ -303,6 +303,31 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
         # (input-side = fires on "opposite"/"contraire"/反义; output-side = promotes them).
         cands = shared_concept("opposite", names, lambda _n: None, side="both")
         members, overflow = cap_members(cands)
+        note = (
+            "operation-swap source; steered -5x (m=-6) at each member's own node"
+            " position per recipient graph"
+        )
+        if (
+            not members
+            and tag == "raw "
+            and any(s["name"] == "antonym (multilingual)" for s in sns)
+        ):
+            chat_members = next(s for s in sns if s["name"] == "antonym (multilingual)")["members"]
+            note += (
+                " — EMPTY under raw-graph semantic selection (RECORDED FINDING: the small"
+                " pruned raw graphs keep almost no antonym-operation nodes; only"
+                " L7f79606 survives, in raw_fr). Members below are the CHAT-derived"
+                " antonym supernode as an off-graph fallback (same model features,"
+                " steered on the raw prompts at the operation-word positions) — approve"
+                " or reject at review."
+            )
+            for m in chat_members:
+                mm = json.loads(json.dumps(m))
+                mm["source"] = "chat-graph-fallback"
+                mm["review_note"] = (
+                    mm.get("review_note", "") + " not a raw-graph node (chat-derived fallback)"
+                ).strip()
+                members.append(mm)
         sns.append(
             supernode(
                 f"{tag}antonym (multilingual)",
@@ -312,8 +337,44 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 "member-positions",
                 members,
                 overflow,
-                note="operation-swap source; steered -5x (m=-6) at each member's own node"
-                " position per recipient graph",
+                note=note,
+            )
+        )
+        # paper-faithful donor: synonym OPERATION features — they fire ON the word
+        # "synonym"/"synonymous" (input-side peaks) at the operation-word token of the
+        # donor prompt; found only once the input side was searched (2026-07-11 review).
+        op_best: dict[tuple[int, int], dict] = {}
+        for n in feature_nodes(graphs[syn_graph]):
+            m = concept_match(n.get("label"), "synonym", "both")
+            if not m:
+                continue
+            key = (n["layer"], n["feature_idx"])
+            entry = member_entry(n, matched=m)
+            if key not in op_best or entry["act"] > op_best[key]["act"]:
+                op_best[key] = entry
+        members, overflow = cap_members(list(op_best.values()))
+        note = (
+            "operation-swap donor (paper-faithful): synonym-OPERATION features from the"
+            " EN synonym prompt, injected at +6x the stored act. They live at the"
+            " 'synonym' word token of the donor prompt; on the recipient, inject at the"
+            " operation-word position ('opposite'/'contraire'/反义词)."
+        )
+        if not members:
+            note += (
+                " EMPTY: the pruned raw synonym graph keeps no synonym-operation"
+                " features (raw-graph finding) — the say-answer supernode below is the"
+                " only raw donor available."
+            )
+        sns.append(
+            supernode(
+                f"{tag}synonym (operation)",
+                "synonym",
+                "donor",
+                syn_graph,
+                "member-positions",
+                members,
+                overflow,
+                note=note,
             )
         )
         syn_cands = [
@@ -330,16 +391,15 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             supernode(
                 f"{tag}synonym (say-answer)",
                 "synonym",
-                "donor",
+                "donor-alternative",
                 syn_graph,
                 "final",
                 members,
                 overflow,
-                note="operation-swap donor; injected value = +6x the stored act. MODEL"
-                " DIFFERENCE vs paper: Qwen3's synonym graph has no operation-labeled"
-                " features — these are the synonym-mode ANSWER features (say small/tiny),"
-                " selected by the synonym-answer lexicon; the paper's donor was an"
-                " operation supernode.",
+                note="ALTERNATIVE answer-side donor (the v1-style echo-synonym landing):"
+                " say small/tiny features at the final position. The paper-faithful donor"
+                " is the synonym (operation) supernode above; keep this one only if you"
+                " want the answer-side variant compared.",
             )
         )
 

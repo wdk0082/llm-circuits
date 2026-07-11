@@ -253,9 +253,281 @@
    "note": "operation-swap source; steered -5x (m=-6) at each member's own node position per recipient graph"
   },
   {
-   "name": "synonym (say-answer)",
+   "name": "synonym (operation)",
    "paper_name": "synonym",
    "role": "donor",
+   "graph": "synonym_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 15,
+     "feature": 110474,
+     "position": 5,
+     "act": 5.0938,
+     "influence": 0.000603,
+     "evidence": {
+      "matched": "peak_token:'synonyms' (input-side, 4/6 examples)",
+      "top_logits": [
+       "ovie",
+       "中学",
+       " Disposable",
+       " disposable",
+       "<?"
+      ],
+      "example": " your English paper.⏎Yes, instead of using common words, use the⟦ synonyms⟧ (which you hav",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 19,
+     "feature": 47233,
+     "position": 8,
+     "act": 4.9688,
+     "influence": 0.00107,
+     "evidence": {
+      "matched": "top_logits:'synonyms' (output-side)",
+      "top_logits": [
+       " synonyms",
+       " adjective",
+       " verb",
+       "词",
+       "词语"
+      ],
+      "example": "<|im_start|>user⏎tendent⟦ious⟧ was our Word of the Day on 10/09/",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 8,
+     "feature": 146027,
+     "position": 5,
+     "act": 4.6875,
+     "influence": 0.001723,
+     "evidence": {
+      "matched": "peak_token:'synonyms' (input-side, 3/6 examples)",
+      "top_logits": [
+       "atz",
+       " edge",
+       "一眼",
+       " CPL",
+       "突出问题"
+      ],
+      "example": " each of the amounts.⏎The widely used phrase exponent can be a synonym⟦ of⟧ electricity. T",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 9,
+     "feature": 142433,
+     "position": 5,
+     "act": 4.6562,
+     "influence": 0.001216,
+     "evidence": {
+      "matched": "peak_token:'synonyms' (input-side, 3/6 examples)",
+      "top_logits": [
+       "hum",
+       "配置",
+       "接触",
+       " FIG",
+       "规划设计"
+      ],
+      "example": "aria Pigmentosa is not the name you expected. Please check the⟦ synonyms⟧ listing to find ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 13,
+     "feature": 30550,
+     "position": 5,
+     "act": 4.5625,
+     "influence": 0.000687,
+     "evidence": {
+      "matched": "peak_token:'synonym' (input-side, 5/6 examples)",
+      "top_logits": [
+       "\"",
+       "iveness",
+       "一个个",
+       "ators",
+       " NodeType"
+      ],
+      "example": ", and can be applied to men or women. It can be a⟦ synonym⟧ for 'Old Guard leather', and m",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 7,
+     "feature": 12044,
+     "position": 9,
+     "act": 4.1562,
+     "influence": 0.000933,
+     "evidence": {
+      "matched": "top_logits:'synonymous' (output-side)",
+      "top_logits": [
+       "单词",
+       "二字",
+       " synonymous",
+       " phrase",
+       "这个词"
+      ],
+      "example": " author writes tulips; instead of walked, the author writes scampered⟦,⟧ or sauntered). St",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 11,
+     "feature": 123551,
+     "position": 5,
+     "act": 4.1562,
+     "influence": 0.00094,
+     "evidence": {
+      "matched": "peak_token:'synonyms' (input-side, 4/6 examples)",
+      "top_logits": [
+       " exp",
+       " vex",
+       "傍",
+       "oen",
+       "代"
+      ],
+      "example": " English language with definition and examples for ESL Learners.⏎The list of⟦ synonyms⟧ wi",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 7,
+     "feature": 61853,
+     "position": 5,
+     "act": 3.8906,
+     "influence": 0.001566,
+     "evidence": {
+      "matched": "peak_token:'synonymous' (input-side, 6/6 examples)",
+      "top_logits": [
+       " purs",
+       "essential",
+       "国内外",
+       "黑白",
+       " regelmäßig"
+      ],
+      "example": " a term used for any important military day, though now it has become⟦ synonymous⟧ with Ov",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 11,
+     "feature": 136368,
+     "position": 5,
+     "act": 3.8906,
+     "influence": 0.00056,
+     "evidence": {
+      "matched": "peak_token:'synonymous' (input-side, 4/6 examples)",
+      "top_logits": [
+       " efficacy",
+       " Shiite",
+       " flames",
+       "aru",
+       "ժ"
+      ],
+      "example": " the similar meanings of a particular word or its semantic relation. A Syn⟦onym⟧ is a word",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 10,
+     "feature": 29000,
+     "position": 5,
+     "act": 3.75,
+     "influence": 0.00071,
+     "evidence": {
+      "matched": "peak_token:'synonym' (input-side, 6/6 examples)",
+      "top_logits": [
+       ">Title",
+       "-complete",
+       " gig",
+       " foss",
+       "前"
+      ],
+      "example": " of the poem and the fifth line contains a word that is either a⟦ synonym⟧ for the topic o",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 16,
+     "feature": 35582,
+     "position": 8,
+     "act": 3.7188,
+     "influence": 0.000773,
+     "evidence": {
+      "matched": "top_logits:'synonymous' (output-side)",
+      "top_logits": [
+       "$con",
+       " synonymous",
+       " rootReducer",
+       "源头",
+       "备用"
+      ],
+      "example": ", though fawning is probably more common. The noun has given us⟦ a⟧ color adjective: the y",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 5,
+     "feature": 15858,
+     "position": 5,
+     "act": 3.1406,
+     "influence": 0.002844,
+     "evidence": {
+      "matched": "peak_token:'synonyms' (input-side, 6/6 examples)",
+      "top_logits": [
+       " htonl",
+       "-growing",
+       "鞠",
+       " speakers",
+       "这份"
+      ],
+      "example": " selected. Change⏎Spellweb is your one-stop resource for definitions,⟦ synonyms⟧ and corre",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 4,
+     "feature": 3375,
+     "position": 5,
+     "act": 2.4531,
+     "influence": 0.002614,
+     "evidence": {
+      "matched": "peak_token:'synonym' (input-side, 6/6 examples)",
+      "top_logits": [
+       "/IP",
+       "ilde",
+       "umas",
+       " Commissioners",
+       "NAS"
+      ],
+      "example": "Taxonomic Notes:||P. gruveli is considered a⟦ synonym⟧ of P. pectoralis, following Krefft ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "note": "operation-swap donor (paper-faithful): synonym-OPERATION features from the EN synonym prompt, injected at +6x the stored act. They live at the 'synonym' word token of the donor prompt; on the recipient, inject at the operation-word position ('opposite'/'contraire'/反义词)."
+  },
+  {
+   "name": "synonym (say-answer)",
+   "paper_name": "synonym",
+   "role": "donor-alternative",
    "graph": "synonym_en",
    "position": "final",
    "members": [
@@ -642,7 +914,7 @@
      "review": "proposed"
     }
    ],
-   "note": "operation-swap donor; injected value = +6x the stored act. MODEL DIFFERENCE vs paper: Qwen3's synonym graph has no operation-labeled features — these are the synonym-mode ANSWER features (say small/tiny), selected by the synonym-answer lexicon; the paper's donor was an operation supernode."
+   "note": "ALTERNATIVE answer-side donor (the v1-style echo-synonym landing): say small/tiny features at the final position. The paper-faithful donor is the synonym (operation) supernode above; keep this one only if you want the answer-side variant compared."
   },
   {
    "name": "raw antonym (multilingual)",
@@ -650,13 +922,239 @@
    "role": "source",
    "graph": "raw_antonym_en;raw_antonym_fr;raw_antonym_zh",
    "position": "member-positions",
+   "members": [
+    {
+     "layer": 22,
+     "feature": 78043,
+     "position": 28,
+     "act": 10.6875,
+     "influence": 0.002117,
+     "evidence": {
+      "matched": "top_logits:'相反' (output-side)",
+      "top_logits": [
+       " opposed",
+       "对立",
+       " oppos",
+       "Opp",
+       "相反"
+      ],
+      "example": " The fields (for black it is d8, and for white it⟦ is⟧ d1), on which queens are placed, be",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 10.6875,
+      "antonym_fr": 10.25,
+      "antonym_zh": 11.4375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    },
+    {
+     "layer": 8,
+     "feature": 663,
+     "position": 6,
+     "act": 9.5625,
+     "influence": 0.003074,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       " Advanced",
+       "看好",
+       "iments",
+       "coe",
+       "粉"
+      ],
+      "example": " with ball (thrower). The fourth player (defender) stands⟦ opposite⟧ thrower, between and ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.5625,
+      "antonym_fr": 6.9688,
+      "antonym_zh": 6.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    },
+    {
+     "layer": 7,
+     "feature": 79606,
+     "position": 6,
+     "act": 8.0625,
+     "influence": 0.005659,
+     "evidence": {
+      "matched": "top_logits:'反转' (output-side)",
+      "top_logits": [
+       "反转",
+       " bets",
+       "东路",
+       "tti",
+       "istar"
+      ],
+      "example": " اقدامات⏎Antonyms For Retrace Steps , Opposite⟦ to⟧ Retrace Steps⏎Retrace Steps Urdu Meani",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.0625,
+      "antonym_fr": 10.25,
+      "antonym_zh": 10.5
+     },
+     "positions": {
+      "antonym_en": 7,
+      "antonym_fr": 9,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    },
+    {
+     "layer": 13,
+     "feature": 136136,
+     "position": 6,
+     "act": 6.3438,
+     "influence": 0.000704,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       "issement",
+       "ARRIER",
+       "垫",
+       "dealloc",
+       "辙"
+      ],
+      "example": " water⏎term used to describe material through which water cannot move quickly;⟦ opposite⟧ ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.3438,
+      "antonym_zh": 6.4375
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    },
+    {
+     "layer": 11,
+     "feature": 22932,
+     "position": 6,
+     "act": 6.1562,
+     "influence": 0.000987,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 5/6 examples)",
+      "top_logits": [
+       " syncing",
+       "anske",
+       " Bosch",
+       "要紧",
+       "形状"
+      ],
+      "example": " still trying to find backers for the new enterprise.⏎v. having the⟦ opposite⟧ effect to t",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.1562,
+      "antonym_fr": 6.0,
+      "antonym_zh": 6.6875
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    },
+    {
+     "layer": 9,
+     "feature": 92049,
+     "position": 6,
+     "act": 5.2188,
+     "influence": 0.001094,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       "RefPtr",
+       "refer",
+       "后再",
+       "準",
+       "Fed"
+      ],
+      "example": " work: the McGill University Union, which stands on Sherbrooke Street⟦ opposite⟧ the McGil",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.2188,
+      "antonym_zh": 4.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ],
+     "source": "chat-graph-fallback",
+     "review_note": "not a raw-graph node (chat-derived fallback)"
+    }
+   ],
+   "note": "operation-swap source; steered -5x (m=-6) at each member's own node position per recipient graph — EMPTY under raw-graph semantic selection (RECORDED FINDING: the small pruned raw graphs keep almost no antonym-operation nodes; only L7f79606 survives, in raw_fr). Members below are the CHAT-derived antonym supernode as an off-graph fallback (same model features, steered on the raw prompts at the operation-word positions) — approve or reject at review."
+  },
+  {
+   "name": "raw synonym (operation)",
+   "paper_name": "synonym",
+   "role": "donor",
+   "graph": "raw_synonym_en",
+   "position": "member-positions",
    "members": [],
-   "note": "operation-swap source; steered -5x (m=-6) at each member's own node position per recipient graph"
+   "note": "operation-swap donor (paper-faithful): synonym-OPERATION features from the EN synonym prompt, injected at +6x the stored act. They live at the 'synonym' word token of the donor prompt; on the recipient, inject at the operation-word position ('opposite'/'contraire'/反义词). EMPTY: the pruned raw synonym graph keeps no synonym-operation features (raw-graph finding) — the say-answer supernode below is the only raw donor available."
   },
   {
    "name": "raw synonym (say-answer)",
    "paper_name": "synonym",
-   "role": "donor",
+   "role": "donor-alternative",
    "graph": "raw_synonym_en",
    "position": "final",
    "members": [
@@ -843,7 +1341,7 @@
      "review": "proposed"
     }
    ],
-   "note": "operation-swap donor; injected value = +6x the stored act. MODEL DIFFERENCE vs paper: Qwen3's synonym graph has no operation-labeled features — these are the synonym-mode ANSWER features (say small/tiny), selected by the synonym-answer lexicon; the paper's donor was an operation supernode."
+   "note": "ALTERNATIVE answer-side donor (the v1-style echo-synonym landing): say small/tiny features at the final position. The paper-faithful donor is the synonym (operation) supernode above; keep this one only if you want the answer-side variant compared."
   },
   {
    "name": "small (multilingual)",

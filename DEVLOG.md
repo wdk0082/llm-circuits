@@ -1,8 +1,29 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-10, after the THIRD A100 session, branch
-> `handoff/a100-80gb-queue`): **all five HANDOFF items are implemented, executed and
-> written up.** The strength ladder lives in `addition.ipynb` cell 11 (recheck numbers
+> **⏩ CURRENT STATE** (2026-07-11, after the FOURTH A100 session, branch
+> `fix/constrained-patching-pass`): **the pre-report scan queue is closed.** Every
+> ✅-marked scan fix was independently re-verified against the code, the tests, the CI
+> config and the committed notebook outputs (all hold), and the §3.1 decision is
+> executed: **constrained patching is now the headline protocol** for every
+> reproduction intervention — ℓ swept per the paper's recipe and stated next to every
+> result, propagate kept as the no-pinning robustness variant (plumbing `bc71f40`,
+> notebook code `cf9356b`, executed `5224c99`; 116 tests pass, zero cell errors, bf16
+> continuity exact on a fifth A100). What the protocol switch changed: the
+> magnitude/ones dissociation now holds at full paper strength for **both** supernodes
+> (the loose set's propagate breakage was the unpinned cascade of the flipped always-on
+> feature), the paper's **sum-side smear appears** (width 4.10 at ℓ=35), the polymer
+> lookups-only indirect effect strengthens (`1` @ 0.83, sums 0%), and the language-swap
+> null becomes **protocol-complete** (p_exp ≈ 0 at every ℓ × strength × direction ×
+> format). What turns out to be **propagate-specific**: the 9+9-flavored `8`
+> substitutions, the lookup swap's paper-margin landing (`8` @ 0.715 — constrained
+> finds NO landing layer, p(`8`) ≤ 0.087), and the operation/operand swap crossovers
+> (Qwen3's influence-top supernodes reach L27–35, leaving the paper's protocol
+> little-to-no recompute room). Remaining open scan items are library/serve/
+> housekeeping only (§3.2, §3.3, §5.x, §6). See "Fourth A100 session" below.
+>
+> Previous state (2026-07-10, after the THIRD A100 session, branch
+> `handoff/a100-80gb-queue`): all five HANDOFF items are implemented, executed and
+> written up. The strength ladder lives in `addition.ipynb` cell 11 (recheck numbers
 > confirmed in-pipeline); `input_mag` is the paper-shaped two-band supernode
 > (`band-a(~45)` + `band-b(~49)`) and the magnitude/ones dissociation **survives full
 > paper strength** with it — the earlier m=−2 breakdown was selection pollution, and
@@ -977,11 +998,14 @@ annotations (say-large-multilingual ≈100%, old say-large-X 18–39%, new say-l
   baseline-active members, `L31f21719` wobbles (15.3 → 20 / 9.5 / 12.8) and
   `L29f56902` falls 81% at 6× (4.7 → 0.9). (Tally corrected per `DEVLOG_EXTRA.md`
   §2.1 — originally miscounted as "10/12 at every strength".)
-- the say-big trio holds ≈100% at 1×/3× (`L30f27666` 28→27–29 throughout); at 6× two
-  of three degrade (29%/55%) — the familiar over-drive erosion;
-- the late **en**-say supernode only partially weakens (≈half its features drop to
-  ~50% at 6×, the rest hold 90–105%) — directionally the paper's "old say-large-X
-  suppressed" but far shallower;
+- the say-big trio's anchor `L30f27666` holds ≈100% at 1×/3× (28→27–29 throughout)
+  while the trio mean-of-ratios reads 90.4/84.7% (scan §2.4 wording tightened, fourth
+  session); at 6× two of three degrade (29%/55%; mean 60.2%) — the familiar over-drive
+  erosion;
+- the late **en**-say supernode only partially weakens at 6× — by thirds: 4/12 at
+  47–55%, 4/12 at 66–82%, 4/12 at 90–105% (mean 74.5%; scan §2.4 wording tightened,
+  fourth session) — directionally the paper's "old say-large-X suppressed" but far
+  shallower;
 - the output **consolidates on English**: `large` 0.79 → 0.86 → 0.94 (the committed
   sweep's strengthening, now with its internals visible — the drive suppresses
   competitors like `big` 0.20 → 0.05 rather than recruiting Chinese).
@@ -1138,3 +1162,124 @@ end-to-end afterwards, zero cell errors):
   standalone on this run's own selections — 3 active lookups suppressed at m=−3 →
   `5` @ 0.9824 → **`1` @ 0.7708** with **all 4 sum features at 0%** of baseline
   (recheck's Fig A5 panel 2 resolution intact).
+---
+
+## Fourth A100 session: scan-fix verification + the constrained-patching pass (2026-07-11)
+
+Environment: a fresh **A100-80GB node** (Lightning studio, no Slurm), branch
+`fix/constrained-patching-pass`. Bootstrap per the handoff recipe: `uv sync
+--all-groups`, minimal `.env`, both transcoder sets pre-cached bf16 (57 + 91 GB, hub
+copies deleted), both models pre-fetched; the ~45 GB feature-label cache re-downloaded
+lazily during the first graph build (slower on this node — the first `addition.ipynb`
+execution took ~50 min wall, most of it label downloads; `multilingual.ipynb` reused
+the cache).
+
+### Step 1 — every ✅-marked scan fix independently re-verified
+
+Each DEVLOG_EXTRA §0 row marked fixed was re-checked against the code, the tests, the
+CI config, and the committed notebook outputs (not the prose): §1.1 (digit collection
+stops at `=`; 3 regression tests; ladder numbers `8`@0.7111 / `8`@0.6784 / `2`@0.3472
+match cell 11's committed outputs digit-for-digit), §1.2 (0.5626 baseline quoted;
+steered 0.5405/0.5072/0.4275 match), §1.3 (all four sums do read 0% from m=−1 at the
+corrected position), §1.4 (51.6/63.5/57.8 + five ≥95.8% + the 176.3% row match),
+§2.1 (tally re-derived feature-by-feature from the committed readout printout: 9
+always-zero + 1 waker to 3.64 + L31f21719 wobbling + L29f56902 4.69→0.90 = −81%),
+§2.2 (disjoint `downstream_say_large` present; FR-only collapse 1.0% raw / 6.5% chat
+vs EN/ZH 69/84% raw match cell 22/8 outputs; the trio row correctly relabeled), §2.3
+(docstring + prose state the encoder-side blindness), §4.1 (`sys.exit(1)` on FAIL),
+§4.3 (12 helper tests in CI; lint/format cover `notebooks/` + `verification/`), and
+the 3.1 doc-half from `9d61004` (module header scoped, docstring default corrected).
+**All hold.** One wording reconciliation: the Summary's donor range "67–106%" is the
+chat∪raw union while this DEVLOG's "89–106%" is raw-only — both faithful to the
+outputs. Two §2.4-class prose-generosity items were tightened this session in the
+multilingual Summary/DEVLOG (trio "≈100% at 1–3×" → measured means 90/85%; en-say
+"≈half drop to ~50%" → thirds at 47–55 / 66–82 / 90–105, mean 74.5%).
+
+### Step 2 — the §3.1 decision executed: constrained patching is the headline protocol
+
+Plumbing (`bc71f40`, +6 tests → 116 pass): `patch_end_layer` passthrough on
+`steer_and_report` / `paper_swap` / `paper_swap_sweep` / `run_graft` and per-job in
+`run_swap_sweeps`; `choose_patch_end_layer` in both helpers implements the paper's
+recipe — sweep ℓ ∈ [l_max, n_layers−1] at the paper's endpoint strength and take the
+most effective end layer on the target-token metric (suppressions: most-suppressive
+logit via `best_end_layer`; injections/swaps: max target probability via the new
+`LayerSweepResult.most_promoting_end_layer`); readout rows at layers ≤ ℓ are pinned by
+the protocol and dropped (`n_pinned` in `supernode_readout_pct`, `pinned: True` in
+`steer_and_report`). Both notebooks run every scoped intervention in both modes
+(`cf9356b` code, executed end-to-end with zero cell errors); the chosen ℓ is stated
+next to every constrained result; Summaries present constrained as the headline and
+propagate as the no-pinning robustness variant.
+
+**Continuity (propagate mode, fourth A100 variant):** exact to the printed digit again
+— studied pair re-selects 46+49 (77.7%/46.0%); suppress-`_9` ladder 0.7111/0.6784/
+0.3472; smears 1.26/1.03 (`1`@0.8841 / `3`@0.9867); polymer all-7 `1`@0.7467 and
+lookups-only `1`@0.7708 with all 4 sums at 0% (that run is now an in-notebook cell,
+not a recheck-only standalone); lookup swap `8`@0.7148; multilingual crossovers
+0.625×/1.0×/0.875× operand, 3×/1×/2× chat-op, 3×/1×/1× raw-op (with the same p_exp peaks 0.221→…/0.730/0.911 raw), language nulls in both formats, the raw en→zh readout means 90.4/98.6/7.6 → 60.2/74.5/5.4, and the §H scale table (8b 0.132/0.098/0.082 > 4b 0.107/0.089/0.077, set sizes 935/1206); IoU/scale table unchanged.
+
+### Addition under constrained patching (chosen ℓ next to each)
+
+| Experiment | l_max | ℓ (sweep @ paper strength) | propagate (robustness) | constrained (headline) |
+|---|---|---|---|---|
+| suppress `_6` | 7 | 15 | `8`@0.285 / `2`@0.986 / `2`@0.990 | `3`@0.82 / `3`@0.88 / `3`@0.36 — crisp at paper strengths, never the 9+9 `8` |
+| suppress `_9` (position-fixed) | 6 | 9 | `8`@0.711 / `8`@0.678 / `2`@0.347 | `5` intact @0.97 at ablation; `2`@0.92 at −1×; `2`@0.65 at −2× |
+| inhibit magnitude (band pair) | 7 | 9 | ones 0.999 all m; first digit 0.5626→0.54/0.51/0.43 | ones 0.999 all m (readouts 96–102%); first digit →0.557/0.507/0.477, low-prec 80–106% |
+| inhibit magnitude (loose) | 7 | 11 | ones breaks at m=−2 (`3`@0.535) | **ones survives every strength** (0.999; readouts 82–115%); first digit →0.42/0.28/0.12, three most-affected low-prec 27–65% at −2× |
+| neg-steer lookup (m=−3) | 25 | 25 | flips `1`@0.8841, width 1.26 | flips `1`@0.956, width 1.09 |
+| neg-steer sum (m=−3) | 34 | 35 | flips `3`@0.9867, width 1.03 | **smears** — width 4.10 (`4`@0.39, `3`@0.24, `9`/`7`/`6` ≈8% each) |
+| polymer all-7 (m=−3) | 34 | 35 | `1`@0.7467 | `4`@0.45 (two-point sweep picks the pure-direct ℓ=35; readouts all pinned) |
+| polymer lookups-only (m=−3) | 25 | 25 | `1`@0.7708, sums 0% | `1`@0.8315, sums 0% — the Fig A5 panel-2 claim, protocol-exact |
+| lookup swap (9,9) donors | 25 | 29 (best of a full curve) | **`8`@0.7148 top-1** (paper's margin) | **no landing layer**: p(`8`) = .032/.043/.072/.064/.087/.068/.077/.057/.019/.013/.017 over ℓ=25..35; best gives `1`@0.39 with `8` third |
+
+Readings. (1) The **magnitude/ones dissociation gets stronger** under the paper's
+protocol: it now holds at full paper strength for *both* supernodes — the loose
+catch-all's propagate-mode breakage at m=−2 was the unpinned cascade of the
+sign-flipped always-on `L0f116505` through the recomputing early layers, which
+constrained patching cuts by construction. Pinning also lets the magnitude side
+degrade deeper (first digit to 0.12 at −2× with low-prec readouts 27–65%) without
+touching the ones path — closer to the paper's annotation pattern than either
+propagate run. (2) The **paper's sum-side smear appears under the paper's protocol**:
+at the swept ℓ=35 the negative sum steer spreads the ones digit over width 4.10 (the
+paper: "smears the result out to a wider band"), where propagate had shown a sharp
+re-sharpened flip; the lookup side keeps flipping under both protocols (the paper's
+smear-over-~5 for lookups still does not appear). (3) The **9+9 story and the
+swap's paper-margin landing are propagate-specific**: under constrained patching the
+input suppressions substitute different digits (`3`/`2`), and the (9,9) donor
+injection never drives `8` past 8.7% at any end layer — on Qwen3-4B the swap's causal
+route needs the within-range recompute that pinning freezes (Haiku's swap landed
+under its constrained protocol; ours needs propagation — a real model/protocol
+difference now measured rather than hidden).
+
+### Multilingual under constrained patching
+
+The three swap families under the paper's protocol (ℓ stated per language; the
+constrained strength sweeps and endpoint readouts live in the new `constr-*` cells):
+
+| Swap | l_max (selection) | ℓ chosen | propagate (robustness) | constrained (headline) |
+|---|---|---|---|---|
+| operation, chat + raw | **35** — the influence-top final-position supernodes reach the last layer | 35 (forced; single-point sweep) | crossovers 3/1/2× chat, 3/1/1× raw; echo-synonym top-1 in all three raw languages | pure direct effect, every %-readout pinned; the direct push alone still lands the synonym mode mid-sweep (raw ZH 小 @ 0.95 at 1×, raw FR `pet` @ 0.51 at 2.5×, raw EN `small` @ 0.997 at 6×; chat EN's designated `tiny` reaches 0.221 vs 0.007 propagate) before endpoint junk |
+| operand | 28/28/27 | 28/28/27 (= l_max, the sweep's best) | crossovers 0.625/1.0/0.875×; cold / f / 冷 top-1 | **no crossover in any language** (p_exp ≤ 0.032); at +1.5× EN echoes the injected `hot` @ 0.74 instead of computing its antonym, FR/ZH keep baseline answers; say-cold not recruited (0–45% of stored vs 65–148% propagate); say-big 16–66% |
+| language, chat + raw | 10–11 (early detection supernodes) | swept 12–25, choice vacuous | p_exp = 0 at every strength, both formats | **p_exp ≈ 0 at every (ℓ, strength)** — max 0.0004 over the full end-layer sweep in all six direction×format combinations; constrained Fig B5 readouts (raw en→zh, ℓ=12): say-large-zh ≤ 10.7% of stored at every strength, say-big/en-say 60–98% |
+
+Reading: constrained patching **interacts with the selection style**. The paper's
+hand-curated supernodes are early/mid concept groups, so its protocol left Haiku's
+swaps room to recompute; our supernodes are influence-tops that reach L27–35, so the
+same protocol pins most of the network — the operation swap degenerates to a
+(surprisingly effective) direct-logit push, the operand swap — the cleanest propagate
+reproduction — cannot complete the antonym recomputation inside the pinned range, and
+the language-swap null upgrades to protocol-complete: no end layer, strength,
+direction, or prompt format moves the output language via early detection features.
+The multilingual verdicts keep their propagate basis with the constrained picture
+stated alongside (Summary rows updated in place).
+
+### State of the world (after the fourth session)
+
+- Branch `fix/constrained-patching-pass`: `bc71f40` (plumbing + tests), `cf9356b`
+  (notebook code), `5224c99` (executed notebooks + Summary updates), plus this
+  DEVLOG + DEVLOG_EXTRA close-out commit. ruff clean, 116 tests pass, zero cell
+  errors. Wall times: addition ~34 min (~20 min of it the label re-download),
+  multilingual ~15.5 min (warm caches; the added ℓ-sweeps cost ~1–2 min each run).
+- DEVLOG_EXTRA §0 row 3.1 is closed; §3.2/§3.3/§5.x/§6 remain recorded-open
+  (library/serve/housekeeping, outside the reproductions).
+- Node state: bf16 transcoder caches (57 + 91 GB), ~45 GB feature labels, both models
+  under `.cache/`; artifacts regenerated under `artifacts/paper_{addition,multilingual}/`.

@@ -7,8 +7,9 @@ Outputs under ``artifacts/supernode_inputs/<size>/``:
   output: nodes with layer/position/feature_idx/activation/influence and labels
   incl. activation examples, edges, tokens, prompt). These dicts were previously
   in-memory only (the explorer HTML drops influence).
-  Multilingual: antonym_{en,fr,zh}, synonym_en, hot_en + raw_ variants (no raw hot —
-  the paper's donor prompts for the operand swap are English chat-adapted only).
+  Multilingual: antonym_{en,fr,zh}, synonym_en, hot_en + raw_ variants of ALL of them.
+  The raw forms are the paper's exact prompts (the paper never uses chat formatting);
+  the chat forms are the Qwen3-instruct adaptation the notebook uses as primary.
   Addition: ones/first (studied pair), donor99 (49+49 ones), polymer (bare prompt).
 * ``grids.npz`` — operand-grid evidence for EVERY feature node of the calc graphs
   (single readout pass per probe, cost ~10k forwards each, independent of feature
@@ -61,6 +62,13 @@ def main() -> None:
     ap.add_argument("--skip-multilingual", action="store_true")
     ap.add_argument("--skip-addition", action="store_true")
     ap.add_argument(
+        "--graphs",
+        nargs="*",
+        default=None,
+        help="build only these multilingual graph names (partial rebuild; the manifest"
+        " merges, other entries stay). Addition graphs are all-or-nothing.",
+    )
+    ap.add_argument(
         "--node-threshold",
         type=float,
         default=0.8,
@@ -104,7 +112,10 @@ def main() -> None:
         ml_prompts["synonym_en"] = (M.synonym_prompt("small", "en"), False)
         ml_prompts["raw_synonym_en"] = (M.raw_synonym_prompt("small", "en"), True)
         ml_prompts["hot_en"] = (M.antonym_prompt("hot", "en"), False)
+        ml_prompts["raw_hot_en"] = (M.raw_antonym_prompt("hot", "en"), True)
         for name, (prompt, raw) in ml_prompts.items():
+            if args.graphs and name not in args.graphs:
+                continue
             gd, ans_id, ids = M.build_graph(
                 model,
                 tc,
@@ -115,7 +126,9 @@ def main() -> None:
                 node_threshold=args.node_threshold,
             )
             dump_graph(out, name, gd)
-            operand = "hot" if name == "hot_en" else M.WORD["small"][name.split("_")[-1]]
+            operand = (
+                "hot" if name in ("hot_en", "raw_hot_en") else M.WORD["small"][name.split("_")[-1]]
+            )
             manifest["graphs"][name] = {
                 "prompt": prompt,
                 "raw": raw,

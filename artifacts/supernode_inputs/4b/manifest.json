@@ -1,6 +1,6 @@
 {
  "size": "4b",
- "git": "7b74310",
+ "git": "b4a700d",
  "graphs": {
   "antonym_en": {
    "prompt": "What is the opposite of \"small\"? Reply with only the word, nothing else.",
@@ -180,6 +180,16 @@
    "prompt": "K. Whang, etc. Polymer, 36, 837, 1",
    "raw": true,
    "ones_moment_prompt": "K. Whang, etc. Polymer, 36, 837, 199"
+  },
+  "raw_hot_en": {
+   "prompt": "The opposite of \"hot\" is \"",
+   "raw": true,
+   "node_threshold": 0.95,
+   "answer": "cold",
+   "answer_token_id": 87072,
+   "n_tokens": 9,
+   "final_position": 8,
+   "operand_position": 5
   }
  }
 }

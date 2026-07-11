@@ -419,33 +419,35 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             " at review",
         )
     )
-    hot_cands = [
-        member_entry(n, matched=concept_match(n.get("label"), "hot", "both"))
-        for n in feature_nodes(graphs["hot_en"], mg["hot_en"]["operand_position"])
-        if concept_match(n.get("label"), "hot", "both")
-    ]
-    members, overflow = cap_members(hot_cands)
+    hot_names = [g for g in ("hot_en", "raw_hot_en") if g in graphs]
+    cands = shared_concept(
+        "hot", hot_names, lambda n: mg[n]["operand_position"], min_graphs=1, side="both"
+    )
+    members, overflow = cap_members(cands)
     sns.append(
         supernode(
             "hot (multilingual)",
             "hot",
             "donor",
-            "hot_en",
+            ";".join(hot_names),
             "operand",
             members,
             overflow,
-            note="operand-swap donor; injected value = +1.5x the stored act",
+            note="operand-swap donor; injected value = +1.5x the stored act (per donor"
+            " graph — the raw page is the paper's exact prompt format)",
         )
     )
-    cold_cands = [
-        member_entry(n, matched=f"top_logits:{matches_concept(n.get('label'), 'cold')!r}")
-        for n in feature_nodes(graphs["hot_en"], final("hot_en"))
-        if matches_concept(n.get("label"), "cold")
-    ]
-    members, overflow = cap_members(cold_cands)
+    cands = shared_concept("cold", hot_names, final, min_graphs=1, side="output")
+    members, overflow = cap_members(cands)
     sns.append(
         supernode(
-            "say cold (multilingual)", "say cold", "readout", "hot_en", "final", members, overflow
+            "say cold (multilingual)",
+            "say cold",
+            "readout",
+            ";".join(hot_names),
+            "final",
+            members,
+            overflow,
         )
     )
 

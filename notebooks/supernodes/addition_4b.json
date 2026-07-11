@@ -1,7 +1,7 @@
 {
  "task": "addition",
  "size": "4b",
- "built_from": "/teamspace/studios/this_studio/llm-circuits/artifacts/supernode_inputs/4b@7b74310",
+ "built_from": "/teamspace/studios/this_studio/llm-circuits/artifacts/supernode_inputs/4b@b4a700d",
  "max_members": 6,
  "supernodes": [
   {

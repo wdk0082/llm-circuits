@@ -34,7 +34,11 @@ from matplotlib import font_manager as _fm
 from llm_circuits.circuits.attribution_graph import build_attribution_graph
 from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
 from llm_circuits.circuits.graph_pruning import graph_to_dict, prune_graph
-from llm_circuits.circuits.interventions import FeatureIntervention, run_feature_intervention
+from llm_circuits.circuits.interventions import (
+    FeatureIntervention,
+    run_feature_intervention,
+    sweep_patch_end_layer,
+)
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 from llm_circuits.transcoders.registry import get_spec
@@ -498,13 +502,24 @@ def position_supernode(
     return cands[:top_n], ids
 
 
-def run_graft(model, tc, recipient_ids, source_node, donor_node, position, *, scale: float = 1.0):
+def run_graft(
+    model,
+    tc,
+    recipient_ids,
+    source_node,
+    donor_node,
+    position,
+    *,
+    scale: float = 1.0,
+    patch_end_layer: int | None = None,
+):
     """Ablate ``source_node`` and inject ``donor_node`` (donor acts x ``scale``) at ``position``.
 
     ``*_node`` are ``[(layer, idx, act)]`` lists; ``position`` is an int or ``"final"``.  The
     paper drives interventions well above the donor's natural activation (~6x) so the injected
     concept dominates — ``scale`` exposes that knob.  Donor features that also appear in the
     source are dropped from the ablation set so the inject isn't cancelled.
+    ``patch_end_layer`` selects the paper's constrained patching (see :func:`paper_swap`).
     """
     pos = recipient_ids.shape[1] - 1 if position == "final" else position
     donor_keys = {(L, idx) for (L, idx, _) in donor_node}
@@ -516,7 +531,9 @@ def run_graft(model, tc, recipient_ids, source_node, donor_node, position, *, sc
     ivs += [
         FeatureIntervention(L, idx, position=pos, value=scale * act) for (L, idx, act) in donor_node
     ]
-    return run_feature_intervention(model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS)
+    return run_feature_intervention(
+        model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS, patch_end_layer=patch_end_layer
+    )
 
 
 def lang_specific_final_features(
@@ -565,7 +582,9 @@ def lang_specific_final_features(
     return out
 
 
-def supernode_readout_pct(res, node, position, *, ref: str = "baseline"):
+def supernode_readout_pct(
+    res, node, position, *, ref: str = "baseline", patch_end_layer: int | None = None
+):
     """Fig B3-B5-style supernode %-readout: **per-feature ratio first, then mean**.
 
     Each feature's ratio is ``steered_activation / reference * 100`` and the
@@ -591,17 +610,25 @@ def supernode_readout_pct(res, node, position, *, ref: str = "baseline"):
     (Fig B5's "new say-large-Y 76-105%" is a *downstream recruited* reading).
 
     Features whose reference is ~0 cannot form a ratio and are excluded (counted in
-    ``n_skipped``).  Requires the swap to have run with ``readout_layers`` covering
-    every layer in ``node``.  Returns ``{"mean_pct", "n_used", "n_skipped",
-    "per_feature"}`` (``mean_pct`` is ``None`` when no feature has a usable
-    reference).
+    ``n_skipped``).  Under **constrained patching** pass the run's ``patch_end_layer``:
+    features at layers ``<= ell`` are clamped by the protocol, so their readout is not a
+    network response — they are dropped from the mean and counted in ``n_pinned``
+    (DEVLOG_EXTRA §3.1 step 4; the paper's annotations are downstream nodes, above ``ell``).
+    Requires the swap to have run with ``readout_layers`` covering every layer in
+    ``node``.  Returns ``{"mean_pct", "n_used", "n_skipped", "n_pinned", "per_feature"}``
+    (``mean_pct`` is ``None`` when no feature has a usable reference).
     """
-    per: dict[str, float | None] = {}
+    per: dict[str, float | str | None] = {}
     ratios: list[float] = []
     skipped = 0
+    pinned = 0
     for entry in node:
         L, i = entry[0], entry[1]
         act = float(entry[2]) if len(entry) > 2 else 0.0
+        if patch_end_layer is not None and patch_end_layer >= L:
+            per[f"L{L}f{i}"] = "pinned"
+            pinned += 1
+            continue
         if L not in res.ablated_features:
             raise KeyError(
                 f"layer {L} missing from ablated_features — pass readout_layers "
@@ -621,7 +648,13 @@ def supernode_readout_pct(res, node, position, *, ref: str = "baseline"):
         per[f"L{L}f{i}"] = round(pct, 1)
         ratios.append(pct)
     mean_pct = round(sum(ratios) / len(ratios), 1) if ratios else None
-    return {"mean_pct": mean_pct, "n_used": len(ratios), "n_skipped": skipped, "per_feature": per}
+    return {
+        "mean_pct": mean_pct,
+        "n_used": len(ratios),
+        "n_skipped": skipped,
+        "n_pinned": pinned,
+        "per_feature": per,
+    }
 
 
 def top_token_probs(logit_row, tokenizer, k: int = 6):
@@ -679,29 +712,14 @@ PAPER_SWAP_STRENGTHS = {
 }
 
 
-def paper_swap(
-    model,
-    tc,
-    recipient_ids,
-    source_node,
-    donor_node,
-    position,
-    *,
-    source_mult: float,
-    donor_mult: float,
-    readout_layers: list[int] | None = None,
+def swap_interventions(
+    recipient_ids, source_node, donor_node, position, *, source_mult: float, donor_mult: float
 ):
-    """One paper-protocol swap: source at ``source_mult x clean``, donor at ``donor_mult x donor``.
-
-    ``source_node``/``donor_node`` are ``[(layer, idx, act)]`` lists (``act`` = clean/donor
-    activation); ``position`` is an int or ``"final"``.  Donor features also present in the
-    source are dropped from the suppression set so the inject isn't cancelled.
-
-    ``readout_layers`` is passed through to :func:`run_feature_intervention`, filling the
-    result's ``ablated_features`` with the perturbed activations at those layers — the
-    paper's Fig B3-B5 supernode "% of baseline" annotations (e.g. does say-large-zh move
-    under an en→zh language swap?).
-    """
+    """The paper-swap :class:`FeatureIntervention` list: source features steered to
+    ``source_mult x clean`` (``m = source_mult - 1``), donor features injected at the
+    absolute ``donor_mult x`` their donor-prompt activation.  Donor features also present
+    in the source are dropped from the suppression set so the inject isn't cancelled.
+    ``position`` is an int or ``"final"`` (resolved against ``recipient_ids``)."""
     pos = recipient_ids.shape[1] - 1 if position == "final" else position
     donor_keys = {(L, idx) for (L, idx, _) in donor_node}
     ivs = [
@@ -713,8 +731,86 @@ def paper_swap(
         FeatureIntervention(L, idx, position=pos, value=donor_mult * act)
         for (L, idx, act) in donor_node
     ]
+    return ivs
+
+
+def choose_patch_end_layer(
+    model,
+    tc,
+    recipient_ids,
+    source_node,
+    donor_node,
+    position,
+    token_id: int,
+    *,
+    kind: str,
+    mode: str = "promote",
+):
+    """The paper's intervention-layer recipe for a swap: sweep the constrained-patching
+    end layer ``ell`` over ``[l_max, n_layers-1]`` at the paper's endpoint strengths for
+    ``kind`` and pick the most effective one on the ``token_id`` metric —
+    ``mode="promote"`` (default) = largest expected-token probability,
+    ``mode="suppress"`` = largest logit suppression.
+
+    Returns ``(ell, sweep)``; ``sweep.end_layers[0]`` is ``l_max`` (the last steered
+    layer — when the supernodes reach the final layer the sweep has a single point and
+    constrained patching degenerates to the pure direct effect).
+    """
+    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
+    ivs = swap_interventions(
+        recipient_ids, source_node, donor_node, position, source_mult=src_max, donor_mult=don_max
+    )
+    sweep = sweep_patch_end_layer(model, tc, recipient_ids, ivs, token_id, n_bos_tokens=N_BOS)
+    ell = sweep.most_promoting_end_layer if mode == "promote" else sweep.best_end_layer
+    return ell, sweep
+
+
+def paper_swap(
+    model,
+    tc,
+    recipient_ids,
+    source_node,
+    donor_node,
+    position,
+    *,
+    source_mult: float,
+    donor_mult: float,
+    readout_layers: list[int] | None = None,
+    patch_end_layer: int | None = None,
+):
+    """One paper-protocol swap: source at ``source_mult x clean``, donor at ``donor_mult x donor``.
+
+    ``source_node``/``donor_node`` are ``[(layer, idx, act)]`` lists (``act`` = clean/donor
+    activation); ``position`` is an int or ``"final"``.  Donor features also present in the
+    source are dropped from the suppression set so the inject isn't cancelled.
+
+    ``readout_layers`` is passed through to :func:`run_feature_intervention`, filling the
+    result's ``ablated_features`` with the perturbed activations at those layers — the
+    paper's Fig B3-B5 supernode "% of baseline" annotations (e.g. does say-large-zh move
+    under an en→zh language swap?).
+
+    ``patch_end_layer`` selects the paper's **constrained patching** protocol (activations
+    up to layer ``ell`` clamped at their perturbed values, real model after ``ell``); ``None``
+    = fully-propagating clean-anchored deltas (the no-pinning robustness variant).  Under
+    constrained patching every feature at layer ``<= ell`` is pinned, so %-readouts are
+    meaningful only for nodes ABOVE ``ell``.
+    """
+    ivs = swap_interventions(
+        recipient_ids,
+        source_node,
+        donor_node,
+        position,
+        source_mult=source_mult,
+        donor_mult=donor_mult,
+    )
     return run_feature_intervention(
-        model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS, readout_layers=readout_layers
+        model,
+        tc,
+        recipient_ids,
+        ivs,
+        n_bos_tokens=N_BOS,
+        readout_layers=readout_layers,
+        patch_end_layer=patch_end_layer,
     )
 
 
@@ -731,6 +827,7 @@ def paper_swap_sweep(
     baseline_token: int,
     expected_token: int,
     n_steps: int = 13,
+    patch_end_layer: int | None = None,
 ):
     """Sweep the swap strength 0 -> donor_max (the paper's Fig B3/B4 line charts).
 
@@ -741,8 +838,12 @@ def paper_swap_sweep(
     every step and reports the **crossover** = smallest s where P(expected) > P(baseline)
     (paper: ~4x for the operation swap, consistent across languages).
 
+    ``patch_end_layer`` runs every step under the paper's constrained patching at that
+    fixed end layer ``ell`` (choose it with :func:`choose_patch_end_layer`); the ``s = 0``
+    baseline is the clean forward either way.
+
     Returns a dict with ``strengths``, ``p_baseline``, ``p_expected``, ``top_tokens`` (per
-    step), and ``crossover`` (None if never crossed).
+    step), ``crossover`` (None if never crossed), and ``patch_end_layer``.
     """
     src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
     strengths = [don_max * i / (n_steps - 1) for i in range(n_steps)]
@@ -761,6 +862,7 @@ def paper_swap_sweep(
                 position,
                 source_mult=1.0 + (src_max - 1.0) * (s / don_max),
                 donor_mult=s,
+                patch_end_layer=patch_end_layer,
             )
             row = res.ablated_logits[-1]
         probs = row.float().softmax(-1)
@@ -777,6 +879,7 @@ def paper_swap_sweep(
         "p_expected": p_exp,
         "top_tokens": tops,
         "crossover": crossover,
+        "patch_end_layer": patch_end_layer,
     }
 
 
@@ -806,15 +909,19 @@ def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=No
     return ax_row
 
 
-def run_swap_sweeps(model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13, out_png=None):
+def run_swap_sweeps(
+    model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13, out_png=None, title=None
+):
     """Run :func:`paper_swap_sweep` for every job and draw the Fig B3/B4/B5 panel row.
 
     ``jobs`` entries: ``{lang, label, recipient_ids, source, donor, position,
-    baseline_token, expected_token}`` (source/donor are ``[(layer, idx, act)]``).
-    Prints one line per job, saves the panel to ``out_png`` if given, and returns
-    ``{lang: sweep_result}``.  NOTE: track the *actual* top tokens (``top_tokens`` per
-    step), not just ``p_expected`` — e.g. the FR operand swap lands on lowercase
-    ``f``(roid) while the recorded expected token is capitalized ``F``.
+    baseline_token, expected_token}`` (source/donor are ``[(layer, idx, act)]``); an
+    optional ``patch_end_layer`` per job runs that language's sweep under constrained
+    patching at the given end layer.  Prints one line per job, saves the panel to
+    ``out_png`` if given, and returns ``{lang: sweep_result}``.  NOTE: track the *actual*
+    top tokens (``top_tokens`` per step), not just ``p_expected`` — e.g. the FR operand
+    swap lands on lowercase ``f``(roid) while the recorded expected token is capitalized
+    ``F``.
     """
     results: dict[str, dict] = {}
     token_strs: dict[str, tuple[str, str]] = {}
@@ -832,6 +939,7 @@ def run_swap_sweeps(model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13,
             baseline_token=job["baseline_token"],
             expected_token=job["expected_token"],
             n_steps=n_steps,
+            patch_end_layer=job.get("patch_end_layer"),
         )
         r["label"] = job["label"]
         results[lg] = r
@@ -843,7 +951,7 @@ def run_swap_sweeps(model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13,
             f"{kind} {job['label']}: crossover={r['crossover']} "
             f"p_exp(max)={max(r['p_expected']):.3f} final_tops={r['top_tokens'][-1][:2]}"
         )
-    plot_swap_sweeps(results, tokenizer, token_strs, title=f"{kind} (paper protocol)")
+    plot_swap_sweeps(results, tokenizer, token_strs, title=title or f"{kind} (paper protocol)")
     if out_png is not None:
         plt.savefig(out_png, dpi=130, bbox_inches="tight")
     return results

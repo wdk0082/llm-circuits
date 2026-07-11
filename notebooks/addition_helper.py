@@ -31,7 +31,11 @@ import torch
 from llm_circuits.circuits.attribution_graph import build_attribution_graph
 from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
 from llm_circuits.circuits.graph_pruning import graph_to_dict, prune_graph
-from llm_circuits.circuits.interventions import FeatureIntervention, run_feature_intervention
+from llm_circuits.circuits.interventions import (
+    FeatureIntervention,
+    run_feature_intervention,
+    sweep_patch_end_layer,
+)
 from llm_circuits.instrumentation.chat import prepare_messages
 from llm_circuits.transcoders.feature_labels import load_feature_labels
 from llm_circuits.transcoders.registry import get_spec
@@ -728,6 +732,29 @@ def feature_label(node) -> str:
 # ---------------------------------------------------------------------------
 
 
+def steer_interventions(feats, *, m: float, position: int | None = None):
+    """``[(layer, idx, act)]`` -> the :class:`FeatureIntervention` list steering each
+    feature by ``m`` at ``position`` (``None`` = every non-BOS position, per
+    ``FeatureIntervention`` semantics — how the magnitude supernodes are steered)."""
+    return [FeatureIntervention(L, i, position=position, m=m) for (L, i, _) in feats]
+
+
+def choose_patch_end_layer(
+    model, tc, input_ids, interventions, token_id: int, *, mode: str = "suppress"
+):
+    """The paper's intervention-layer recipe: sweep the constrained-patching end layer
+    ``ell`` over ``[l_max, n_layers-1]`` and pick the most effective one on the
+    ``token_id`` metric — ``mode="suppress"`` = largest logit suppression (input/feature
+    suppressions), ``mode="promote"`` = largest probability (donor injections / swaps).
+
+    Returns ``(ell, sweep)`` where ``sweep`` is the full
+    :class:`~llm_circuits.circuits.interventions.LayerSweepResult` curve.
+    """
+    sweep = sweep_patch_end_layer(model, tc, input_ids, interventions, token_id, n_bos_tokens=N_BOS)
+    ell = sweep.best_end_layer if mode == "suppress" else sweep.most_promoting_end_layer
+    return ell, sweep
+
+
 def steer_and_report(
     model,
     tc,
@@ -738,23 +765,37 @@ def steer_and_report(
     m: float,
     position: int | None = None,
     readout: list[tuple[int, int, int]] | None = None,
+    patch_end_layer: int | None = None,
 ):
-    """Steer ``feats`` (``[(layer, idx, act)]``) by ``m`` at ``position`` (None = the
-    feature nodes' own recorded positions are NOT known here — pass an explicit position).
+    """Steer ``feats`` (``[(layer, idx, act)]``) by ``m`` at ``position`` (``None`` =
+    every non-BOS position — how the magnitude supernodes are steered).
+
+    ``patch_end_layer`` selects the paper's **constrained patching** (activations up to
+    layer ``ell`` clamped at their perturbed values, real model after ``ell``); ``None`` =
+    fully-propagating clean-anchored deltas (the no-pinning robustness variant).
+    Readout entries at layers ``<= patch_end_layer`` are pinned by the protocol and
+    reported as ``pinned: True`` (their %-of-baseline is not meaningful).
 
     Returns dict with top tokens (baseline/steered), the 0-9 digit distribution + smear
     metrics for both, and each ``readout`` feature's activation as % of baseline
     (``readout`` entries are ``(layer, feature_idx, position)``).
     """
-    ivs = [FeatureIntervention(L, i, position=position, m=m) for (L, i, _) in feats]
+    ivs = steer_interventions(feats, m=m, position=position)
     readout_layers = sorted({L for (L, _, _) in readout or []})
     res = run_feature_intervention(
-        model, tc, input_ids, ivs, n_bos_tokens=N_BOS, readout_layers=readout_layers
+        model,
+        tc,
+        input_ids,
+        ivs,
+        n_bos_tokens=N_BOS,
+        readout_layers=readout_layers,
+        patch_end_layer=patch_end_layer,
     )
     row_b, row_s = res.baseline_logits[-1], res.ablated_logits[-1]
     report = {
         "m": m,
         "n_feats": len(feats),
+        "patch_end_layer": patch_end_layer,
         "baseline_top": top_tokens(row_b, tokenizer),
         "steered_top": top_tokens(row_s, tokenizer),
         "baseline_digits": digit_distribution(row_b, tokenizer),
@@ -771,11 +812,14 @@ def steer_and_report(
             after2 = after[0] if after.dim() == 3 else after
             b0 = float(base2[p, i])
             a0 = float(after2[p, i])
-            pct[f"L{L}f{i}@p{p}"] = {
+            entry = {
                 "baseline": b0,
                 "steered": a0,
                 "pct_of_baseline": (a0 / b0 * 100.0) if abs(b0) > 1e-6 else None,
             }
+            if patch_end_layer is not None and patch_end_layer >= L:
+                entry["pinned"] = True  # clamped by the protocol; % not meaningful
+            pct[f"L{L}f{i}@p{p}"] = entry
         report["readout_pct"] = pct
     return report
 

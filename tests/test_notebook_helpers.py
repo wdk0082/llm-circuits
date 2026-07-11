@@ -193,3 +193,126 @@ def test_readout_final_position_and_missing_layer():
     assert out["mean_pct"] == pytest.approx(50.0)
     with pytest.raises(KeyError):
         M.supernode_readout_pct(res, [(5, 0)], "final")
+
+
+# ---------------------------------------------------------------------------
+# Constrained-patching plumbing (DEVLOG_EXTRA §3.1)
+# ---------------------------------------------------------------------------
+
+
+def test_swap_interventions_dedup_convention_and_final_position():
+    rec = torch.zeros(1, 5, dtype=torch.long)
+    source = [(2, 10, 3.0), (4, 20, 1.0)]  # (4,20) also a donor -> dropped from suppression
+    donor = [(4, 20, 2.0), (6, 30, 5.0)]
+    ivs = M.swap_interventions(rec, source, donor, "final", source_mult=-5.0, donor_mult=6.0)
+    assert [(iv.layer, iv.feature_idx) for iv in ivs] == [(2, 10), (4, 20), (6, 30)]
+    assert all(iv.position == 4 for iv in ivs)  # "final" -> seq-1
+    assert ivs[0].m == pytest.approx(-6.0) and ivs[0].value is None  # M_paper=-5 -> m=-6
+    assert ivs[1].value == pytest.approx(12.0)  # donor 6x its 2.0 act, absolute
+    assert ivs[2].value == pytest.approx(30.0)
+
+
+def test_steer_interventions_m_and_position():
+    ivs = A.steer_interventions([(3, 7, 1.5), (5, 9, 0.2)], m=-2.0, position=None)
+    assert [(iv.layer, iv.feature_idx, iv.position, iv.m) for iv in ivs] == [
+        (3, 7, None, -2.0),
+        (5, 9, None, -2.0),
+    ]
+
+
+def test_layer_sweep_result_pick_properties():
+    from llm_circuits.circuits.interventions import LayerSweepResult
+
+    sweep = LayerSweepResult(
+        end_layers=[10, 11, 12, 13],
+        logits=[5.0, 2.0, 4.0, 2.0],  # min at ell=11 (first of the tie 11/13)
+        probs=[0.1, 0.3, 0.9, 0.9],  # max at ell=12 (first of the tie 12/13)
+        baseline_logit=6.0,
+        baseline_prob=0.5,
+        token_id=42,
+        position=-1,
+    )
+    assert sweep.best_end_layer == 11
+    assert sweep.most_promoting_end_layer == 12
+
+
+def test_readout_pinned_rows_dropped_under_constrained_patching():
+    res = _fake_result(layers=(0, 1))
+    fin = 3
+    res.baseline_features[0][fin, 1] = 10.0
+    res.ablated_features[0][fin, 1] = 5.0  # L0 <= ell -> pinned, excluded
+    res.baseline_features[1][fin, 2] = 4.0
+    res.ablated_features[1][fin, 2] = 8.0  # L1 > ell -> the only used row
+    out = M.supernode_readout_pct(res, [(0, 1), (1, 2)], fin, patch_end_layer=0)
+    assert out["mean_pct"] == pytest.approx(200.0)
+    assert out["n_used"] == 1 and out["n_pinned"] == 1
+    assert out["per_feature"]["L0f1"] == "pinned"
+    # pinned check runs before the layer-coverage check (no KeyError for pinned layers
+    # missing from readout_layers)
+    out2 = M.supernode_readout_pct(res, [(9, 0)], fin, patch_end_layer=9)
+    assert out2["mean_pct"] is None and out2["n_pinned"] == 1
+
+
+def test_steer_and_report_patch_end_layer_passthrough_and_pinned_readout(monkeypatch):
+    captured = {}
+
+    def fake_run(model, tc, input_ids, ivs, **kw):
+        captured["patch_end_layer"] = kw.get("patch_end_layer")
+        base = {L: torch.zeros(4, 8) for L in (2, 5)}
+        abl = {L: torch.zeros(4, 8) for L in (2, 5)}
+        base[2][3, 1] = 2.0
+        abl[2][3, 1] = 1.0
+        base[5][3, 1] = 2.0
+        abl[5][3, 1] = 1.0
+        logits = torch.zeros(4, 16)
+        return SimpleNamespace(
+            baseline_logits=logits,
+            ablated_logits=logits,
+            baseline_features=base,
+            ablated_features=abl,
+        )
+
+    class _CallableTokenizer(_FakeTokenizer):
+        def __call__(self, text, **_kw):  # digit_distribution: "3" -> id 3
+            return SimpleNamespace(input_ids=[self.toks.index(text)])
+
+    monkeypatch.setattr(A, "run_feature_intervention", fake_run)
+    tok = _CallableTokenizer([str(d) for d in range(10)] + [""] * 6)
+    rep = A.steer_and_report(
+        None,
+        None,
+        torch.zeros(1, 4, dtype=torch.long),
+        [(2, 1, 1.0)],
+        tok,
+        m=-1.0,
+        position=3,
+        readout=[(2, 1, 3), (5, 1, 3)],
+        patch_end_layer=3,
+    )
+    assert captured["patch_end_layer"] == 3
+    assert rep["patch_end_layer"] == 3
+    assert rep["readout_pct"]["L2f1@p3"].get("pinned") is True  # L2 <= ell=3
+    assert "pinned" not in rep["readout_pct"]["L5f1@p3"]  # L5 > ell
+
+
+def test_paper_swap_patch_end_layer_passthrough(monkeypatch):
+    captured = {}
+
+    def fake_run(model, tc, input_ids, ivs, **kw):
+        captured["patch_end_layer"] = kw.get("patch_end_layer")
+        captured["n_ivs"] = len(ivs)
+        return "result"
+
+    monkeypatch.setattr(M, "run_feature_intervention", fake_run)
+    out = M.paper_swap(
+        None,
+        None,
+        torch.zeros(1, 4, dtype=torch.long),
+        [(2, 10, 3.0)],
+        [(6, 30, 5.0)],
+        "final",
+        source_mult=-5.0,
+        donor_mult=6.0,
+        patch_end_layer=7,
+    )
+    assert out == "result" and captured["patch_end_layer"] == 7 and captured["n_ivs"] == 2

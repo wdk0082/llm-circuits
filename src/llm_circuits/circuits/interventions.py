@@ -595,6 +595,14 @@ class LayerSweepResult:
         i = min(range(len(self.logits)), key=lambda j: self.logits[j])
         return self.end_layers[i]
 
+    @property
+    def most_promoting_end_layer(self) -> int:
+        """The end layer with the largest target-token *probability* (for injection/swap
+        interventions, where "most effective" means the swapped-in answer promoted most).
+        Ties pick the smallest end layer (maximum downstream recompute)."""
+        i = max(range(len(self.probs)), key=lambda j: self.probs[j])
+        return self.end_layers[i]
+
 
 def sweep_patch_end_layer(
     model: nn.Module,

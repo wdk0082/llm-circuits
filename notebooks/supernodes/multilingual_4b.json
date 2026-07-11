@@ -1,0 +1,2783 @@
+{
+ "task": "multilingual",
+ "size": "4b",
+ "built_from": "/teamspace/studios/this_studio/llm-circuits/artifacts/supernode_inputs/4b@9151262",
+ "max_members": 6,
+ "supernodes": [
+  {
+   "name": "antonym (multilingual)",
+   "paper_name": "antonym",
+   "role": "source",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 22,
+     "feature": 78043,
+     "position": 28,
+     "act": 10.6875,
+     "influence": 0.002117,
+     "evidence": {
+      "matched": "top_logits:'相反'",
+      "top_logits": [
+       " opposed",
+       "对立",
+       " oppos",
+       "Opp",
+       "相反"
+      ],
+      "example": " The fields (for black it is d8, and for white it⟦ is⟧ d1), on which queens are placed, be",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 10.6875,
+      "antonym_fr": 10.25,
+      "antonym_zh": 11.4375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 7,
+     "feature": 79606,
+     "position": 6,
+     "act": 8.0625,
+     "influence": 0.005659,
+     "evidence": {
+      "matched": "top_logits:'反转'",
+      "top_logits": [
+       "反转",
+       " bets",
+       "东路",
+       "tti",
+       "istar"
+      ],
+      "example": " اقدامات⏎Antonyms For Retrace Steps , Opposite⟦ to⟧ Retrace Steps⏎Retrace Steps Urdu Meani",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.0625,
+      "antonym_fr": 10.25,
+      "antonym_zh": 10.5
+     },
+     "positions": {
+      "antonym_en": 7,
+      "antonym_fr": 9,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 13,
+     "feature": 159589,
+     "position": 6,
+     "act": 5.0938,
+     "influence": 0.000789,
+     "evidence": {
+      "matched": "top_logits:'opposite'",
+      "top_logits": [
+       " inversion",
+       " invert",
+       " opposite",
+       "invert",
+       " reversal"
+      ],
+      "example": " some mysterious reason, it weakens and does a complete 18⟦0⟧.⏎Now, a team from the Univer",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.0938,
+      "antonym_zh": 7.0312
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    }
+   ],
+   "note": "operation-swap source; steered -5x (m=-6) at each member's own node position per recipient graph"
+  },
+  {
+   "name": "synonym (say-answer)",
+   "paper_name": "synonym",
+   "role": "donor",
+   "graph": "synonym_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 30,
+     "feature": 82993,
+     "position": 27,
+     "act": 44.0,
+     "influence": 0.010342,
+     "evidence": {
+      "matched": "top_logits:'comparatively'",
+      "top_logits": [
+       " comparatively",
+       "小幅",
+       " relatively",
+       "较",
+       "較"
+      ],
+      "example": "exposed or appeared to be too dark if the sensor is exposed for⟦ too⟧ short. Getting the r",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 162657,
+     "position": 27,
+     "act": 36.75,
+     "influence": 0.024037,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       " мал",
+       "⼩",
+       " small",
+       "的小",
+       "小"
+      ],
+      "example": " Likewise once number get bigger/smaller beyond some point, any additional bigger⟦/sm⟧alle",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 28,
+     "feature": 76279,
+     "position": 27,
+     "act": 28.5,
+     "influence": 0.046413,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       "small",
+       "小型",
+       "小",
+       " tiny",
+       " small"
+      ],
+      "example": " pig breeds.⏎The smallest breed of domesticated pig in the world is⟦ the⟧ Kunekune. Howeve",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 105764,
+     "position": 27,
+     "act": 20.25,
+     "influence": 0.020665,
+     "evidence": {
+      "matched": "top_logits:'小型'",
+      "top_logits": [
+       "小型",
+       "small",
+       " smaller",
+       "小",
+       " small"
+      ],
+      "example": " introduced:⏎grande - big⏎mediano(a) - medium⏎⟦pe⟧queño(a) - small⏎blando(a) - soft⏎",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 33,
+     "feature": 157520,
+     "position": 27,
+     "act": 19.0,
+     "influence": 0.005788,
+     "evidence": {
+      "matched": "top_logits:'little'",
+      "top_logits": [
+       " peu",
+       " Little",
+       "Little",
+       "little",
+       " little"
+      ],
+      "example": ", and it is cilia. Yes, you read that right:⟦ those⟧ trillions of tiny hair-like extension",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 115822,
+     "position": 27,
+     "act": 16.375,
+     "influence": 0.003311,
+     "evidence": {
+      "matched": "top_logits:'微'",
+      "top_logits": [
+       "(me",
+       "→me",
+       " Me",
+       " me",
+       "微"
+      ],
+      "example": " domestic heating, transport and industry, the share of wind and solar is⟦ a⟧ minuscule 1.",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 31,
+     "feature": 117368,
+     "position": 27,
+     "act": 13.0,
+     "influence": 0.019317,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       "Small",
+       " Small",
+       "small",
+       "小",
+       " small"
+      ],
+      "example": "<|im_start|>user⏎For decades, electronic devices have been⟦ getting⟧ smaller, and smaller,",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 27,
+     "feature": 139629,
+     "position": 27,
+     "act": 12.0625,
+     "influence": 0.006068,
+     "evidence": {
+      "matched": "top_logits:'小儿'",
+      "top_logits": [
+       "芥",
+       "child",
+       " child",
+       "小儿",
+       "蚊"
+      ],
+      "example": " together, will collect signals from space.⏎The price tag is a relative⟦ p⟧ittance as scie",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 78512,
+     "position": 27,
+     "act": 10.375,
+     "influence": 0.009361,
+     "evidence": {
+      "matched": "top_logits:'microscopic'",
+      "top_logits": [
+       " mic",
+       " microscopic",
+       " nan",
+       "微",
+       " micro"
+      ],
+      "example": "-proton ratios. The desired nuclei, which exist for only fractions of⟦ a⟧ second, are prod",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 30,
+     "feature": 62557,
+     "position": 27,
+     "act": 10.25,
+     "influence": 0.00247,
+     "evidence": {
+      "matched": "top_logits:'little'",
+      "top_logits": [
+       "一点儿",
+       "一點",
+       "little",
+       "一点",
+       " little"
+      ],
+      "example": "⏎are close to the surface of the hard soil, as to intake⟦ what⟧⏎little water falls upon th",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 30,
+     "feature": 149790,
+     "position": 27,
+     "act": 8.25,
+     "influence": 0.007291,
+     "evidence": {
+      "matched": "top_logits:'很小'",
+      "top_logits": [
+       " simple",
+       "轻",
+       "很小",
+       " tiny",
+       " small"
+      ],
+      "example": " fixed, the design remains still. But scroll or physically move your screen⟦ ever⟧ so slig",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 35044,
+     "position": 27,
+     "act": 4.8438,
+     "influence": 0.008366,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       "small",
+       "的小",
+       "小",
+       " tiny",
+       " small"
+      ],
+      "example": ". If tiny red, yellow, green, brown, red, or⟦ black⟧ specs fall on your paper and begin to",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 27,
+     "feature": 83988,
+     "position": 27,
+     "act": 4.625,
+     "influence": 0.001737,
+     "evidence": {
+      "matched": "top_logits:'细微'",
+      "top_logits": [
+       "隐",
+       "细微",
+       " subtly",
+       " subt",
+       " subtle"
+      ],
+      "example": "osing Parkinsons at an early stage is very difficult since the physical symptoms⟦ are⟧ als",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 43405,
+     "position": 27,
+     "act": 4.375,
+     "influence": 0.000709,
+     "evidence": {
+      "matched": "top_logits:'smaller'",
+      "top_logits": [
+       " gim",
+       " smaller",
+       "请教",
+       " Seventh",
+       " lesser"
+      ],
+      "example": " meaningfully.⏎For agriculture, the most valuable global dataset for farmers large⟦ and⟧ s",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 18,
+     "feature": 74852,
+     "position": 27,
+     "act": 3.6875,
+     "influence": 0.001268,
+     "evidence": {
+      "matched": "top_logits:'microsystems'",
+      "top_logits": [
+       " Scenes",
+       "thur",
+       "quel",
+       "chemy",
+       " Microsystems"
+      ],
+      "example": " yoo-kee-aw] /ˈyu kiˌoʊ⟦;;⟧ Japanese ˈyu kiˌɔ/ (Show IPA), (K",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 22,
+     "feature": 56429,
+     "position": 27,
+     "act": 2.5625,
+     "influence": 0.00067,
+     "evidence": {
+      "matched": "top_logits:'小时内'",
+      "top_logits": [
+       "限期",
+       "小时内",
+       "urpose",
+       "OfWeek",
+       "cae"
+      ],
+      "example": "ifolia var. tennesseensis⏎USDA Symbol: E⟦CT⟧E3⏎One of the nations rarest wildflowers, it w",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 160637,
+     "position": 27,
+     "act": 2.4844,
+     "influence": 0.000958,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       " moderate",
+       " modest",
+       " small",
+       "较小",
+       " relatively"
+      ],
+      "example": " foot range), but the actual remains of the Pharaoh tell us he⟦ was⟧ about 5′ 10″. You’ll ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 28,
+     "feature": 92878,
+     "position": 27,
+     "act": 2.2344,
+     "influence": 0.003448,
+     "evidence": {
+      "matched": "top_logits:'tiny'",
+      "top_logits": [
+       " negligible",
+       "tiny",
+       " small",
+       "很小",
+       " tiny"
+      ],
+      "example": " language development is that in language horizontal transmission processes are known to p",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 30,
+     "feature": 149493,
+     "position": 27,
+     "act": 2.1875,
+     "influence": 0.001148,
+     "evidence": {
+      "matched": "top_logits:'tiny'",
+      "top_logits": [
+       " sweet",
+       " tiny",
+       " kidd",
+       "啦",
+       "小"
+      ],
+      "example": " steps you can take when it comes to prenatal care, to ensure your⟦ little⟧ one has the be",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "note": "operation-swap donor; injected value = +6x the stored act. MODEL DIFFERENCE vs paper: Qwen3's synonym graph has no operation-labeled features — these are the synonym-mode ANSWER features (say small/tiny), selected by the synonym-answer lexicon; the paper's donor was an operation supernode."
+  },
+  {
+   "name": "raw antonym (multilingual)",
+   "paper_name": "antonym",
+   "role": "source",
+   "graph": "raw_antonym_en;raw_antonym_fr;raw_antonym_zh",
+   "position": "member-positions",
+   "members": [],
+   "note": "operation-swap source; steered -5x (m=-6) at each member's own node position per recipient graph"
+  },
+  {
+   "name": "raw synonym (say-answer)",
+   "paper_name": "synonym",
+   "role": "donor",
+   "graph": "raw_synonym_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 30,
+     "feature": 82993,
+     "position": 8,
+     "act": 47.75,
+     "influence": 0.022252,
+     "evidence": {
+      "matched": "top_logits:'comparatively'",
+      "top_logits": [
+       " comparatively",
+       "小幅",
+       " relatively",
+       "较",
+       "較"
+      ],
+      "example": "exposed or appeared to be too dark if the sensor is exposed for⟦ too⟧ short. Getting the r",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 162657,
+     "position": 8,
+     "act": 42.25,
+     "influence": 0.029031,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       " мал",
+       "⼩",
+       " small",
+       "的小",
+       "小"
+      ],
+      "example": " Likewise once number get bigger/smaller beyond some point, any additional bigger⟦/sm⟧alle",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 28,
+     "feature": 76279,
+     "position": 8,
+     "act": 28.0,
+     "influence": 0.066328,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       "small",
+       "小型",
+       "小",
+       " tiny",
+       " small"
+      ],
+      "example": " pig breeds.⏎The smallest breed of domesticated pig in the world is⟦ the⟧ Kunekune. Howeve",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 115822,
+     "position": 8,
+     "act": 28.0,
+     "influence": 0.008618,
+     "evidence": {
+      "matched": "top_logits:'微'",
+      "top_logits": [
+       "(me",
+       "→me",
+       " Me",
+       " me",
+       "微"
+      ],
+      "example": " domestic heating, transport and industry, the share of wind and solar is⟦ a⟧ minuscule 1.",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 105764,
+     "position": 8,
+     "act": 21.25,
+     "influence": 0.024514,
+     "evidence": {
+      "matched": "top_logits:'小型'",
+      "top_logits": [
+       "小型",
+       "small",
+       " smaller",
+       "小",
+       " small"
+      ],
+      "example": " introduced:⏎grande - big⏎mediano(a) - medium⏎⟦pe⟧queño(a) - small⏎blando(a) - soft⏎",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 117368,
+     "position": 8,
+     "act": 13.625,
+     "influence": 0.022597,
+     "evidence": {
+      "matched": "top_logits:'small'",
+      "top_logits": [
+       "Small",
+       " Small",
+       "small",
+       "小",
+       " small"
+      ],
+      "example": "<|im_start|>user⏎For decades, electronic devices have been⟦ getting⟧ smaller, and smaller,",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 30,
+     "feature": 62557,
+     "position": 8,
+     "act": 13.25,
+     "influence": 0.005303,
+     "evidence": {
+      "matched": "top_logits:'little'",
+      "top_logits": [
+       "一点儿",
+       "一點",
+       "little",
+       "一点",
+       " little"
+      ],
+      "example": "⏎are close to the surface of the hard soil, as to intake⟦ what⟧⏎little water falls upon th",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 78512,
+     "position": 8,
+     "act": 10.1875,
+     "influence": 0.012239,
+     "evidence": {
+      "matched": "top_logits:'microscopic'",
+      "top_logits": [
+       " mic",
+       " microscopic",
+       " nan",
+       "微",
+       " micro"
+      ],
+      "example": "-proton ratios. The desired nuclei, which exist for only fractions of⟦ a⟧ second, are prod",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 33,
+     "feature": 157520,
+     "position": 8,
+     "act": 9.6875,
+     "influence": 0.004766,
+     "evidence": {
+      "matched": "top_logits:'little'",
+      "top_logits": [
+       " peu",
+       " Little",
+       "Little",
+       "little",
+       " little"
+      ],
+      "example": ", and it is cilia. Yes, you read that right:⟦ those⟧ trillions of tiny hair-like extension",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "note": "operation-swap donor; injected value = +6x the stored act. MODEL DIFFERENCE vs paper: Qwen3's synonym graph has no operation-labeled features — these are the synonym-mode ANSWER features (say small/tiny), selected by the synonym-answer lexicon; the paper's donor was an operation supernode."
+  },
+  {
+   "name": "small (multilingual)",
+   "paper_name": "small",
+   "role": "source",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "operand",
+   "members": [
+    {
+     "layer": 24,
+     "feature": 24991,
+     "position": 9,
+     "act": 15.375,
+     "influence": 0.016527,
+     "evidence": {
+      "matched": "top_logits:'/small'",
+      "top_logits": [
+       "-sized",
+       "/small",
+       "size",
+       "-size",
+       " size"
+      ],
+      "example": " outline how do you do your homework really fast⏎template for opinion essay⟦ small⟧ busine",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 15.375,
+      "antonym_zh": 10.1875
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 22,
+     "feature": 113890,
+     "position": 9,
+     "act": 9.6875,
+     "influence": 0.020359,
+     "evidence": {
+      "matched": "top_logits:'不小'",
+      "top_logits": [
+       " mistake",
+       " Sized",
+       "gest",
+       " intestine",
+       "不小"
+      ],
+      "example": " can put the characters literally.)⏎- a, abbr, b,⟦ big⟧, blockquote, br, caption, center, ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.6875,
+      "antonym_fr": 7.1875
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr"
+     ],
+     "review_note": "top logits look unrelated (mistake/Sized/gest/intestine) and the example is an HTML tag list — doubtful 'small' feature"
+    }
+   ],
+   "note": "operand-swap source; steered -0.5x (m=-1.5)"
+  },
+  {
+   "name": "hot",
+   "paper_name": "hot",
+   "role": "donor",
+   "graph": "hot_en",
+   "position": "operand",
+   "members": [
+    {
+     "layer": 24,
+     "feature": 127078,
+     "position": 9,
+     "act": 26.125,
+     "influence": 0.035246,
+     "evidence": {
+      "matched": "top_logits:'hot'",
+      "top_logits": [
+       "hot",
+       " hotter",
+       " hottest",
+       " hot",
+       "-hot"
+      ],
+      "example": " habits may be increased exposure to potentially harmful germs in the workplace.⏎⟦Hot⟧-des",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 24,
+     "feature": 8689,
+     "position": 9,
+     "act": 14.0625,
+     "influence": 0.012574,
+     "evidence": {
+      "matched": "top_logits:'-hot'",
+      "top_logits": [
+       "els",
+       "-hot",
+       "-solid",
+       " hottest",
+       "ness"
+      ],
+      "example": "<|im_start|>user⏎Why⟦ Hot⟧ Water?⏎Hot water packs a powerful energetic punch when released",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 24,
+     "feature": 29468,
+     "position": 9,
+     "act": 6.4062,
+     "influence": 0.006698,
+     "evidence": {
+      "matched": "top_logits:'hot'",
+      "top_logits": [
+       "hot",
+       " hotter",
+       " hot",
+       "spots",
+       "-hot"
+      ],
+      "example": " human hearing, but this particular eruption produced something audible.⏎Alicia⟦ Hot⟧ovec-",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 26,
+     "feature": 42599,
+     "position": 9,
+     "act": 6.1562,
+     "influence": 0.000849,
+     "evidence": {
+      "matched": "top_logits:'.hot'",
+      "top_logits": [
+       "ulous",
+       "盛",
+       "chair",
+       ".hot",
+       "钉"
+      ],
+      "example": " analog. And guess what when it comes to adding this technology to your⟦ hot⟧ ride, there'",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 25,
+     "feature": 109567,
+     "position": 9,
+     "act": 5.5312,
+     "influence": 0.000926,
+     "evidence": {
+      "matched": "top_logits:'hot'",
+      "top_logits": [
+       "拦",
+       "界的",
+       "powered",
+       "点燃",
+       "hot"
+      ],
+      "example": " are then ordered, based on overlaps in the gene Latest Prevention Wellness News⟦ Hot⟧ Day",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 7,
+     "feature": 109065,
+     "position": 9,
+     "act": 5.0938,
+     "influence": 0.011418,
+     "evidence": {
+      "matched": "top_logits:'heatmap'",
+      "top_logits": [
+       " heatmap",
+       "暑",
+       "热",
+       "降温",
+       " thermometer"
+      ],
+      "example": " similarly sized mammals that walk on all fours and that may tend to over⟦heat⟧ have not g",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 5,
+     "feature": 134029,
+     "position": 9,
+     "act": 4.7188,
+     "influence": 0.014146,
+     "evidence": {
+      "matched": "top_logits:'散热'",
+      "top_logits": [
+       "暖",
+       " thermal",
+       "暧",
+       "散热",
+       "热"
+      ],
+      "example": " purification and carbon sequestration are very important. The benefits of the⟦ warmth⟧ do",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 11,
+     "feature": 22499,
+     "position": 9,
+     "act": 3.0312,
+     "influence": 0.004664,
+     "evidence": {
+      "matched": "top_logits:'heat'",
+      "top_logits": [
+       "冬",
+       "保暖",
+       " heat",
+       "暖",
+       " temperatures"
+      ],
+      "example": " matter. The cloud of gas was cooled to within a few degrees of⟦ absolute⟧ zero using (fit",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 3,
+     "feature": 131394,
+     "position": 9,
+     "act": 2.8125,
+     "influence": 0.016228,
+     "evidence": {
+      "matched": "top_logits:'_hot'",
+      "top_logits": [
+       "沿着",
+       " kut",
+       "有用",
+       "围",
+       "_HOT"
+      ],
+      "example": ".org or see our contact page⏎Study Links California Hospitalizations to Hot⟦ter⟧ Weather⏎T",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 11,
+     "feature": 137485,
+     "position": 9,
+     "act": 2.75,
+     "influence": 0.001447,
+     "evidence": {
+      "matched": "top_logits:'加热'",
+      "top_logits": [
+       "noon",
+       "加热",
+       " heat",
+       "heat",
+       " hottest"
+      ],
+      "example": " shade and the windows cracked, the INSIDE temperature can rapidly reach dangerous⟦ levels",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "note": "operand-swap donor; injected value = +1.5x the stored act"
+  },
+  {
+   "name": "say cold",
+   "paper_name": "say cold",
+   "role": "readout",
+   "graph": "hot_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 32,
+     "feature": 9227,
+     "position": 28,
+     "act": 53.5,
+     "influence": 0.082738,
+     "evidence": {
+      "matched": "top_logits:'cooling'",
+      "top_logits": [
+       " cooling",
+       "cool",
+       "Cool",
+       "冷却",
+       " cool"
+      ],
+      "example": " high is 90 degrees Fahrenheit in July. Since land heats and⟦ co⟧ols much faster than wate",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 160128,
+     "position": 28,
+     "act": 34.0,
+     "influence": 0.054495,
+     "evidence": {
+      "matched": "top_logits:'冷'",
+      "top_logits": [
+       "warm",
+       "冷",
+       " hot",
+       " cold",
+       " warm"
+      ],
+      "example": " our hair and nails looking perfect at all times. Especially when the weather⟦ turns⟧ warm",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 32,
+     "feature": 93558,
+     "position": 28,
+     "act": 14.375,
+     "influence": 0.017992,
+     "evidence": {
+      "matched": "top_logits:'冷'",
+      "top_logits": [
+       "冷",
+       "cool",
+       "凉",
+       "冷却",
+       " cool"
+      ],
+      "example": " If the Earth emits more of this energy than it absorbs, the Earth⟦ co⟧ols. As it cools, t",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 102550,
+     "position": 28,
+     "act": 13.125,
+     "influence": 0.007494,
+     "evidence": {
+      "matched": "top_logits:'cold'",
+      "top_logits": [
+       "Cold",
+       "寒",
+       "cold",
+       "冷",
+       " cold"
+      ],
+      "example": " store the excessive heat when it is warm and let it out when it⟦ is⟧ cold. But, to do tha",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 27,
+     "feature": 73788,
+     "position": 28,
+     "act": 9.625,
+     "influence": 0.003378,
+     "evidence": {
+      "matched": "top_logits:'cold'",
+      "top_logits": [
+       " sweaty",
+       " cold",
+       "вед",
+       " chilly",
+       "ilia"
+      ],
+      "example": ":⏎- Pain when chewing⏎- Sensitivity of the teeth to hot⟦ or⟧ cold⏎- Bitter taste in the mo",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 53713,
+     "position": 28,
+     "act": 8.8125,
+     "influence": 0.008258,
+     "evidence": {
+      "matched": "top_logits:'冷'",
+      "top_logits": [
+       " soft",
+       " heavy",
+       "冷",
+       "粗",
+       " thick"
+      ],
+      "example": " Could Sink Ships⏎In the first century, Roman naturalist Pliny⟦ the⟧ Elder wrote a book ca",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "cold evidence weak (top: soft/heavy/冷/粗; example is about Pliny the Elder) — verify before keeping"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 27,
+     "feature": 137832,
+     "position": 28,
+     "act": 7.4688,
+     "influence": 0.013746,
+     "evidence": {
+      "matched": "top_logits:'寒冷'",
+      "top_logits": [
+       "寒冷",
+       " colder",
+       "冻",
+       " freezing",
+       " cold"
+      ],
+      "example": " get a nicotine fix. Inconveniences like shivering outside in⟦ the⟧ cold to enjoy a smoke ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 127625,
+     "position": 28,
+     "act": 5.8125,
+     "influence": 0.00655,
+     "evidence": {
+      "matched": "top_logits:'cold'",
+      "top_logits": [
+       " Cold",
+       "Cold",
+       "cold",
+       " cold",
+       "冷"
+      ],
+      "example": ", the first month of winter in Reykjavik, is a⟦ very⟧ cold month with highs of 1.3°C (34.",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 129939,
+     "position": 28,
+     "act": 5.0938,
+     "influence": 0.006855,
+     "evidence": {
+      "matched": "top_logits:'冷'",
+      "top_logits": [
+       " Warm",
+       "冷",
+       " cold",
+       " hot",
+       " warm"
+      ],
+      "example": " video “2009 Global Temperature Package: Year Tied as⟦ Second⟧ Hottest”. NASA/Goddard Mult",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "paper_name": "say large",
+   "role": "readout",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "final",
+   "members": [
+    {
+     "layer": 30,
+     "feature": 57180,
+     "position": 28,
+     "act": 23.0,
+     "influence": 0.019167,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       "small",
+       " low",
+       " large",
+       " short",
+       " small"
+      ],
+      "example": " Most of these pregnancies are unplanned and unintentional.⏎Getting pregnant at⟦ such⟧ a y",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 23.0,
+      "antonym_fr": 19.0,
+      "antonym_zh": 23.375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 11436,
+     "position": 28,
+     "act": 19.5,
+     "influence": 0.026072,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       " large",
+       " small",
+       " big",
+       "小",
+       "大"
+      ],
+      "example": " for growing herbs despite the fact that massive greenhouses could end up being⟦ as⟧ wide ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 19.5,
+      "antonym_fr": 26.75,
+      "antonym_zh": 17.75
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 30,
+     "feature": 27666,
+     "position": 28,
+     "act": 17.625,
+     "influence": 0.024252,
+     "evidence": {
+      "matched": "top_logits:'巨大的'",
+      "top_logits": [
+       "巨型",
+       "巨大的",
+       "巨大",
+       " giant",
+       "巨"
+      ],
+      "example": "olithic communities used stone. They made dolmens and megalithic⟦ (⟧large stone) monuments",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 17.625,
+      "antonym_fr": 34.75,
+      "antonym_zh": 20.0
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 126548,
+     "position": 28,
+     "act": 17.625,
+     "influence": 0.003521,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       " Very",
+       " Simple",
+       " Large",
+       " More",
+       " Strong"
+      ],
+      "example": "6th to May 12th under the theme “Small Bite⟦,⟧ g Threat”. The slogan “Fight the Bite, Dest",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 17.625,
+      "antonym_fr": 5.7188
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr"
+     ],
+     "review_note": "generic top logits (Very/Simple/Large/More) — check the activation examples before keeping"
+    },
+    {
+     "layer": 30,
+     "feature": 156227,
+     "position": 28,
+     "act": 14.125,
+     "influence": 0.021655,
+     "evidence": {
+      "matched": "top_logits:'largest'",
+      "top_logits": [
+       " largest",
+       "较大",
+       "更大的",
+       "较大的",
+       " larger"
+      ],
+      "example": " your brain to stay positive⏎1. Express gratitude.⏎Negative events lo⟦om⟧ large unless you",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 14.125,
+      "antonym_fr": 15.0,
+      "antonym_zh": 12.625
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 32,
+     "feature": 100307,
+     "position": 28,
+     "act": 8.0625,
+     "influence": 0.012135,
+     "evidence": {
+      "matched": "top_logits:'bigger'",
+      "top_logits": [
+       " bigger",
+       "太大",
+       "大",
+       " big",
+       "大的"
+      ],
+      "example": " x, g(x) = x - 2, and h(x⟦)⟧ = log₂x + x. The zeros are a, b,",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 8.0625,
+      "antonym_fr": 46.25,
+      "antonym_zh": 11.4375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 33,
+     "feature": 45899,
+     "position": 36,
+     "act": 7.6875,
+     "influence": 0.007607,
+     "evidence": {
+      "matched": "top_logits:'grand'",
+      "top_logits": [
+       "Grand",
+       " Grand",
+       "grand",
+       " grand",
+       " fat"
+      ],
+      "example": " To Manage Kids' Screen Time⏎Watching a lot of TV makes for⟦ f⟧atter kids, but media multi",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_fr": 7.6875,
+      "antonym_zh": 14.4375
+     },
+     "positions": {
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 56787,
+     "position": 28,
+     "act": 6.7188,
+     "influence": 0.00398,
+     "evidence": {
+      "matched": "top_logits:'更大'",
+      "top_logits": [
+       "更大",
+       " bigger",
+       " larger",
+       "大的",
+       "大于"
+      ],
+      "example": " - x ≥ 0. Solving that inequality: 1 -⟦ x⟧ ≥ 0 ⇒ -x ≥ -",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.7188,
+      "antonym_fr": 25.25,
+      "antonym_zh": 12.125
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 32,
+     "feature": 48600,
+     "position": 28,
+     "act": 6.3438,
+     "influence": 0.003981,
+     "evidence": {
+      "matched": "top_logits:'larger'",
+      "top_logits": [
+       " larger",
+       " huge",
+       " big",
+       "大",
+       " large"
+      ],
+      "example": " extinction rate⏎for small islands; E1 is the maximum extinction rate⟦ for⟧ large islands.",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.3438,
+      "antonym_zh": 2.6562
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 27,
+     "feature": 87470,
+     "position": 28,
+     "act": 4.7812,
+     "influence": 0.003057,
+     "evidence": {
+      "matched": "top_logits:'大的'",
+      "top_logits": [
+       "大的",
+       " strongly",
+       " high",
+       "强",
+       " strong"
+      ],
+      "example": " by the cooling rate. Extrusive rocks cooled quicly and therefore⟦ form⟧ a more homogenous",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 4.7812,
+      "antonym_fr": 6.8125,
+      "antonym_zh": 5.6562
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 27213,
+     "position": 28,
+     "act": 4.2188,
+     "influence": 0.00389,
+     "evidence": {
+      "matched": "top_logits:'big'",
+      "top_logits": [
+       " big",
+       " wide",
+       " thick",
+       " tall",
+       " strong"
+      ],
+      "example": " also the world’s largest invertebrate. Tentacles on a creature⟦ that⟧ size are estimated ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 4.2188,
+      "antonym_fr": 8.0,
+      "antonym_zh": 4.9688
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 23,
+     "feature": 125341,
+     "position": 28,
+     "act": 3.875,
+     "influence": 0.000999,
+     "evidence": {
+      "matched": "top_logits:'人大代表'",
+      "top_logits": [
+       " hunts",
+       "-Origin",
+       " fer",
+       "addin",
+       "人大代表"
+      ],
+      "example": " for most people, it’s better to not lose $20 than⟦ to⟧ find $20. What this means for reta",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 3.875,
+      "antonym_fr": 5.9375,
+      "antonym_zh": 5.375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 29,
+     "feature": 54298,
+     "position": 28,
+     "act": 3.0625,
+     "influence": 0.001547,
+     "evidence": {
+      "matched": "top_logits:'bigger'",
+      "top_logits": [
+       " bigger",
+       "大型",
+       " large",
+       " Larger",
+       " larger"
+      ],
+      "example": ". Having a source of alternative energy to power your devices, both small⟦ and⟧ medium, ca",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 3.0625,
+      "antonym_zh": 6.0
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_zh": 29
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "say large (en)",
+   "paper_name": "say large (en)",
+   "role": "readout",
+   "graph": "antonym_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 33,
+     "feature": 114919,
+     "position": 28,
+     "act": 9.25,
+     "influence": 0.001125,
+     "evidence": {
+      "matched": "top_logits:'big'",
+      "top_logits": [
+       " Big",
+       " True",
+       " Simple",
+       " Very",
+       " Easy"
+      ],
+      "example": "-64 by Professional Coin Grading Service.⏎What Makes This Penny⟦ so⟧ Special?⏎In the 1990s",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 23,
+     "feature": 7336,
+     "position": 28,
+     "act": 3.625,
+     "influence": 0.002093,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       "主演",
+       " large",
+       " millennium",
+       "OfYear",
+       "大型"
+      ],
+      "example": " of stars in a stellar region, to a galaxy, and finally to⟦ a⟧ cluster of galaxies.⏎The lo",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 134681,
+     "position": 28,
+     "act": 2.0312,
+     "influence": 0.001202,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       "全",
+       " full",
+       "large",
+       " big",
+       " large"
+      ],
+      "example": " tens of inputs and outputs, in a housing integral with the processor,⟦ to⟧ large rack-mou",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "say large (fr)",
+   "paper_name": "say large (fr)",
+   "role": "readout",
+   "graph": "antonym_fr",
+   "position": "final",
+   "members": [
+    {
+     "layer": 33,
+     "feature": 62570,
+     "position": 36,
+     "act": 24.625,
+     "influence": 0.001251,
+     "evidence": {
+      "matched": "top_logits:'过大'",
+      "top_logits": [
+       "idders",
+       "椅",
+       "ovolta",
+       "过",
+       "过大"
+      ],
+      "example": "-1715), the \"The Sun King\" (R⟦oi⟧ soleil), was the king of France from childhood to old ag",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '过大' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 30,
+     "feature": 76139,
+     "position": 36,
+     "act": 22.375,
+     "influence": 0.014477,
+     "evidence": {
+      "matched": "top_logits:'的一大'",
+      "top_logits": [
+       "拿出来",
+       "偏差",
+       "很明显",
+       "的一大",
+       "正品"
+      ],
+      "example": "os could arrive from the east with his war elephants and deliver the coup⟦ de⟧ grace. Beca",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '的一大' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 31,
+     "feature": 17182,
+     "position": 36,
+     "act": 22.0,
+     "influence": 0.00571,
+     "evidence": {
+      "matched": "top_logits:'长大了'",
+      "top_logits": [
+       " Reporter",
+       "长大了",
+       " pos",
+       " est",
+       "_guard"
+      ],
+      "example": " (aged between 9 and 16 months; Stagion⟦ato⟧ 16 mesi (over 16 months), and Ris",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '长大了' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 33,
+     "feature": 48380,
+     "position": 36,
+     "act": 21.375,
+     "influence": 0.000857,
+     "evidence": {
+      "matched": "top_logits:'大火'",
+      "top_logits": [
+       "orst",
+       "orque",
+       " rac",
+       "大火",
+       " Garc"
+      ],
+      "example": " âhesté tapande-ye gune-ye B⏎Fr⟦.:⟧ étoile B pulsante à longue période⏎A member of",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '大火' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 32,
+     "feature": 138876,
+     "position": 36,
+     "act": 20.375,
+     "influence": 0.014866,
+     "evidence": {
+      "matched": "top_logits:'huge'",
+      "top_logits": [
+       " huge",
+       "大的",
+       "大",
+       " big",
+       " large"
+      ],
+      "example": " displayed parity.⏎- MIN/MAX- The correct answer is the smallest⟦/l⟧argest of the four pos",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 45673,
+     "position": 36,
+     "act": 17.5,
+     "influence": 0.01198,
+     "evidence": {
+      "matched": "top_logits:'grand'",
+      "top_logits": [
+       "雄",
+       "辽",
+       " grand",
+       "宏",
+       " vast"
+      ],
+      "example": " earth OR Mother Land , Its said “ Let the Mother Earth be broad⟦ and⟧ stable upon which a",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 33,
+     "feature": 29273,
+     "position": 36,
+     "act": 17.5,
+     "influence": 0.001091,
+     "evidence": {
+      "matched": "top_logits:'扩大'",
+      "top_logits": [
+       "扩大",
+       ".Serializable",
+       "到账",
+       "永不",
+       "licit"
+      ],
+      "example": " friends go to the movies.)⏎Question: Est-ce que mes amis vont⟦ au⟧ cinéma? (Are my friend",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '扩大' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 28,
+     "feature": 10143,
+     "position": 36,
+     "act": 7.8125,
+     "influence": 0.003509,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       " largo",
+       "large",
+       "larg",
+       " larg",
+       " large"
+      ],
+      "example": " 3 to 6 months. It is primarily a disease of large⟦ or⟧ giant breeds of dogs, although the",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "say large (zh)",
+   "paper_name": "say large (zh)",
+   "role": "readout",
+   "graph": "antonym_zh",
+   "position": "final",
+   "members": [
+    {
+     "layer": 27,
+     "feature": 4226,
+     "position": 29,
+     "act": 5.2188,
+     "influence": 0.001592,
+     "evidence": {
+      "matched": "top_logits:'大规模'",
+      "top_logits": [
+       " tipped",
+       "urally",
+       "塘",
+       "istor",
+       "大规模"
+      ],
+      "example": " cholesterol levels. Of course they are still fats and so should not be⟦ consumed⟧ in exce",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 25,
+     "feature": 110060,
+     "position": 29,
+     "act": 2.6875,
+     "influence": 0.000684,
+     "evidence": {
+      "matched": "top_logits:'大大提高'",
+      "top_logits": [
+       "大大提高",
+       " HISTORY",
+       "Pk",
+       "此种",
+       " Coun"
+      ],
+      "example": " to be talking about something specific in order to be saying it's the⟦ same⟧",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "raw say large (multilingual)",
+   "paper_name": "say large",
+   "role": "readout",
+   "graph": "raw_antonym_en;raw_antonym_fr;raw_antonym_zh",
+   "position": "final",
+   "members": [
+    {
+     "layer": 32,
+     "feature": 100307,
+     "position": 10,
+     "act": 52.25,
+     "influence": 0.052599,
+     "evidence": {
+      "matched": "top_logits:'bigger'",
+      "top_logits": [
+       " bigger",
+       "太大",
+       "大",
+       " big",
+       "大的"
+      ],
+      "example": " x, g(x) = x - 2, and h(x⟦)⟧ = log₂x + x. The zeros are a, b,",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_fr": 52.25,
+      "raw_antonym_zh": 18.125
+     },
+     "positions": {
+      "raw_antonym_fr": 10,
+      "raw_antonym_zh": 9
+     },
+     "graphs": [
+      "raw_antonym_fr",
+      "raw_antonym_zh"
+     ]
+    },
+    {
+     "layer": 30,
+     "feature": 27666,
+     "position": 8,
+     "act": 28.0,
+     "influence": 0.056749,
+     "evidence": {
+      "matched": "top_logits:'巨大的'",
+      "top_logits": [
+       "巨型",
+       "巨大的",
+       "巨大",
+       " giant",
+       "巨"
+      ],
+      "example": "olithic communities used stone. They made dolmens and megalithic⟦ (⟧large stone) monuments",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 28.0,
+      "raw_antonym_fr": 38.25,
+      "raw_antonym_zh": 24.0
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10,
+      "raw_antonym_zh": 9
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr",
+      "raw_antonym_zh"
+     ]
+    },
+    {
+     "layer": 30,
+     "feature": 57180,
+     "position": 8,
+     "act": 21.0,
+     "influence": 0.023928,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       "small",
+       " low",
+       " large",
+       " short",
+       " small"
+      ],
+      "example": " Most of these pregnancies are unplanned and unintentional.⏎Getting pregnant at⟦ such⟧ a y",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 21.0,
+      "raw_antonym_fr": 20.875,
+      "raw_antonym_zh": 15.5
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10,
+      "raw_antonym_zh": 9
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr",
+      "raw_antonym_zh"
+     ]
+    },
+    {
+     "layer": 30,
+     "feature": 156227,
+     "position": 8,
+     "act": 16.375,
+     "influence": 0.031685,
+     "evidence": {
+      "matched": "top_logits:'largest'",
+      "top_logits": [
+       " largest",
+       "较大",
+       "更大的",
+       "较大的",
+       " larger"
+      ],
+      "example": " your brain to stay positive⏎1. Express gratitude.⏎Negative events lo⟦om⟧ large unless you",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 16.375,
+      "raw_antonym_fr": 16.625
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 11436,
+     "position": 8,
+     "act": 14.25,
+     "influence": 0.02683,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       " large",
+       " small",
+       " big",
+       "小",
+       "大"
+      ],
+      "example": " for growing herbs despite the fact that massive greenhouses could end up being⟦ as⟧ wide ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 14.25,
+      "raw_antonym_fr": 24.5,
+      "raw_antonym_zh": 16.625
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10,
+      "raw_antonym_zh": 9
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr",
+      "raw_antonym_zh"
+     ]
+    },
+    {
+     "layer": 31,
+     "feature": 45673,
+     "position": 8,
+     "act": 13.9375,
+     "influence": 0.006088,
+     "evidence": {
+      "matched": "top_logits:'grand'",
+      "top_logits": [
+       "雄",
+       "辽",
+       " grand",
+       "宏",
+       " vast"
+      ],
+      "example": " earth OR Mother Land , Its said “ Let the Mother Earth be broad⟦ and⟧ stable upon which a",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 13.9375,
+      "raw_antonym_fr": 25.5
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr"
+     ]
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 31,
+     "feature": 56787,
+     "position": 8,
+     "act": 13.125,
+     "influence": 0.011211,
+     "evidence": {
+      "matched": "top_logits:'更大'",
+      "top_logits": [
+       "更大",
+       " bigger",
+       " larger",
+       "大的",
+       "大于"
+      ],
+      "example": " - x ≥ 0. Solving that inequality: 1 -⟦ x⟧ ≥ 0 ⇒ -x ≥ -",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "raw_antonym_en": 13.125,
+      "raw_antonym_fr": 27.875,
+      "raw_antonym_zh": 13.125
+     },
+     "positions": {
+      "raw_antonym_en": 8,
+      "raw_antonym_fr": 10,
+      "raw_antonym_zh": 9
+     },
+     "graphs": [
+      "raw_antonym_en",
+      "raw_antonym_fr",
+      "raw_antonym_zh"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "raw say large (en)",
+   "paper_name": "say large (en)",
+   "role": "readout",
+   "graph": "raw_antonym_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 32,
+     "feature": 48600,
+     "position": 8,
+     "act": 11.4375,
+     "influence": 0.009952,
+     "evidence": {
+      "matched": "top_logits:'larger'",
+      "top_logits": [
+       " larger",
+       " huge",
+       " big",
+       "大",
+       " large"
+      ],
+      "example": " extinction rate⏎for small islands; E1 is the maximum extinction rate⟦ for⟧ large islands.",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "raw say large (fr)",
+   "paper_name": "say large (fr)",
+   "role": "readout",
+   "graph": "raw_antonym_fr",
+   "position": "final",
+   "members": [
+    {
+     "layer": 30,
+     "feature": 76139,
+     "position": 10,
+     "act": 25.125,
+     "influence": 0.017447,
+     "evidence": {
+      "matched": "top_logits:'的一大'",
+      "top_logits": [
+       "拿出来",
+       "偏差",
+       "很明显",
+       "的一大",
+       "正品"
+      ],
+      "example": "os could arrive from the east with his war elephants and deliver the coup⟦ de⟧ grace. Beca",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '的一大' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 31,
+     "feature": 17182,
+     "position": 10,
+     "act": 18.5,
+     "influence": 0.004656,
+     "evidence": {
+      "matched": "top_logits:'长大了'",
+      "top_logits": [
+       " Reporter",
+       "长大了",
+       " pos",
+       " est",
+       "_guard"
+      ],
+      "example": " (aged between 9 and 16 months; Stagion⟦ato⟧ 16 mesi (over 16 months), and Ris",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "matched token '长大了' is zh-script on the fr-specific supernode — likely junk/mixed feature, verify the example"
+    },
+    {
+     "layer": 32,
+     "feature": 138876,
+     "position": 10,
+     "act": 18.5,
+     "influence": 0.013403,
+     "evidence": {
+      "matched": "top_logits:'huge'",
+      "top_logits": [
+       " huge",
+       "大的",
+       "大",
+       " big",
+       " large"
+      ],
+      "example": " displayed parity.⏎- MIN/MAX- The correct answer is the smallest⟦/l⟧argest of the four pos",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 31,
+     "feature": 27213,
+     "position": 10,
+     "act": 10.125,
+     "influence": 0.004271,
+     "evidence": {
+      "matched": "top_logits:'big'",
+      "top_logits": [
+       " big",
+       " wide",
+       " thick",
+       " tall",
+       " strong"
+      ],
+      "example": " also the world’s largest invertebrate. Tentacles on a creature⟦ that⟧ size are estimated ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 33,
+     "feature": 45899,
+     "position": 10,
+     "act": 10.125,
+     "influence": 0.009727,
+     "evidence": {
+      "matched": "top_logits:'grand'",
+      "top_logits": [
+       "Grand",
+       " Grand",
+       "grand",
+       " grand",
+       " fat"
+      ],
+      "example": " To Manage Kids' Screen Time⏎Watching a lot of TV makes for⟦ f⟧atter kids, but media multi",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 28,
+     "feature": 10143,
+     "position": 10,
+     "act": 9.875,
+     "influence": 0.00612,
+     "evidence": {
+      "matched": "top_logits:'large'",
+      "top_logits": [
+       " largo",
+       "large",
+       "larg",
+       " larg",
+       " large"
+      ],
+      "example": " 3 to 6 months. It is primarily a disease of large⟦ or⟧ giant breeds of dogs, although the",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ]
+  },
+  {
+   "name": "raw say large (zh)",
+   "paper_name": "say large (zh)",
+   "role": "readout",
+   "graph": "raw_antonym_zh",
+   "position": "final",
+   "members": []
+  },
+  {
+   "name": "detect (en)",
+   "paper_name": "open-quote-in-en",
+   "role": "source+donor",
+   "graph": "raw_antonym_en",
+   "position": "final",
+   "members": [
+    {
+     "layer": 8,
+     "feature": 65213,
+     "position": "final",
+     "act": 3.5938,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "ní",
+       "可靠",
+       " esc",
+       "nze",
+       "agne"
+      ],
+      "example": " since they sound more direct in writing. The major difference is that attrib⟦utive⟧ adjec",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 8,
+     "feature": 22468,
+     "position": "final",
+     "act": 2.5781,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "etc",
+       "sure",
+       "琯",
+       "bler",
+       "ibili"
+      ],
+      "example": ". A noun or pronoun can be used between \"grunt\" and⟦ \"⟧out.\" Luckily, the patient managed ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 10,
+     "feature": 40520,
+     "position": "final",
+     "act": 2.4219,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "esModule",
+       "inue",
+       "shaw",
+       "跳跃",
+       "gor"
+      ],
+      "example": "<|im_start|>user⏎COMPASSION⟦:⟧ Considerate and respectful of self, others, and the world a",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 9,
+     "feature": 9110,
+     "position": "final",
+     "act": 2.25,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "очек",
+       "ownik",
+       " suffix",
+       "moire",
+       " bordel"
+      ],
+      "example": " unrecorded Old English word or else from Old Norse gapa \"⟦to⟧ open the mouth, gape,\" comm",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 9,
+     "feature": 74263,
+     "position": "final",
+     "act": 2.0781,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "udas",
+       " Clyde",
+       "窄",
+       "线上",
+       " informative"
+      ],
+      "example": " landholding, holding; countryside, Verb: land, 3rd⟦ person⟧ present; lands, past tense: l",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 9,
+     "feature": 145870,
+     "position": "final",
+     "act": 1.9844,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "季",
+       " Arabic",
+       "称",
+       " translates",
+       "通"
+      ],
+      "example": " many different ancient traditions. The word Enneagram comes from the Greek⟦ for⟧ “nine”—e",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    }
+   ],
+   "note": "language-swap source/donor (graph-first, raw open-quote graphs) — EMPTY under graph-first selection (RECORDED FINDING: the pruned raw graphs contain NO early-layer nodes at the quote position at all, so the paper's detector supernodes cannot be graph nodes here). Members below are the OFF-GRAPH fallback: the v1 activation scan (early_language_detection_supernode on the raw prompts, committed in raw_language_detection_supernodes.json), marked source=off-graph — approve or reject at review."
+  },
+  {
+   "name": "detect (fr)",
+   "paper_name": "open-quote-in-fr",
+   "role": "source+donor",
+   "graph": "raw_antonym_fr",
+   "position": "final",
+   "members": [
+    {
+     "layer": 9,
+     "feature": 81034,
+     "position": "final",
+     "act": 4.625,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       " accord",
+       "bots",
+       " nad",
+       "oplan",
+       " Orr"
+      ],
+      "example": "<|im_start|>user⏎Ian Carr-Harris on Simple⟦ Present⟧ Future Anterior⏎Ten Sentences on Susa",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 10,
+     "feature": 24646,
+     "position": "final",
+     "act": 3.3438,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "엄",
+       " noun",
+       " verbs",
+       " verb",
+       "里"
+      ],
+      "example": ". The general rule is to make sure the verbs are conjugated in⟦ the⟧ same manner.⏎WRONG: H",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 6,
+     "feature": 51710,
+     "position": "final",
+     "act": 3.25,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "anship",
+       "{\"",
+       " Bel",
+       "为之",
+       "边"
+      ],
+      "example": " least. When we think we produce emotions or feelings. Thought precede⟦ feeling⟧ and actio",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 11,
+     "feature": 160610,
+     "position": "final",
+     "act": 3.0781,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "涂",
+       " thin",
+       "hai",
+       "封",
+       " em"
+      ],
+      "example": "undred-thousand-year history as true watershed moments. The first was agriculture⟦,⟧ devel",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 8,
+     "feature": 34489,
+     "position": "final",
+     "act": 2.7344,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       " inversion",
+       "描",
+       "aea",
+       " adultes",
+       "新闻网"
+      ],
+      "example": " Problem Generator, that turns the “computational knowledge engine” on its⟦ head⟧.⏎\"The Pr",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 6,
+     "feature": 19056,
+     "position": "final",
+     "act": 2.5781,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "点多",
+       " Partition",
+       "alls",
+       "ably",
+       " partition"
+      ],
+      "example": ": \"What is a Christian?\" They responded by defining a Christian as⟦ one⟧ who believes in t",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    }
+   ],
+   "note": "language-swap source/donor (graph-first, raw open-quote graphs) — EMPTY under graph-first selection (RECORDED FINDING: the pruned raw graphs contain NO early-layer nodes at the quote position at all, so the paper's detector supernodes cannot be graph nodes here). Members below are the OFF-GRAPH fallback: the v1 activation scan (early_language_detection_supernode on the raw prompts, committed in raw_language_detection_supernodes.json), marked source=off-graph — approve or reject at review."
+  },
+  {
+   "name": "detect (zh)",
+   "paper_name": "open-quote-in-zh",
+   "role": "source+donor",
+   "graph": "raw_antonym_zh",
+   "position": "final",
+   "members": [
+    {
+     "layer": 6,
+     "feature": 118093,
+     "position": "final",
+     "act": 4.625,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "苣",
+       "忧",
+       " brig",
+       "mes",
+       " comp"
+      ],
+      "example": " to the Acne website, look for facial cleansing products that include words⟦ like⟧ \"gentle",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 7,
+     "feature": 92802,
+     "position": "final",
+     "act": 2.7969,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       " fant",
+       "igi",
+       "ENA",
+       " Asi",
+       "atas"
+      ],
+      "example": "\" is also offensive. Although it means the same thing as the phrase⟦ \"⟧private person\", ju",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 4,
+     "feature": 39543,
+     "position": "final",
+     "act": 2.4531,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "$$$",
+       "脯",
+       ">(()",
+       "blockquote",
+       "][-"
+      ],
+      "example": " beginning of her chapter titled \"Looking to the future.\" She writes:⟦ \"⟧I have argued tha",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 7,
+     "feature": 18105,
+     "position": "final",
+     "act": 2.3125,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "在其",
+       " AUTHOR",
+       " Bild",
+       " PROCUREMENT",
+       "่น"
+      ],
+      "example": " Gerais region, has leaded to the removal of trees along the⟦ Sao⟧ Francisco River. This h",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 8,
+     "feature": 129231,
+     "position": "final",
+     "act": 2.2969,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "一根",
+       "し�",
+       "Cut",
+       " whip",
+       "CF"
+      ],
+      "example": " Stone Age.⏎The word \"Amethyst\" comes from the Greek word⟦ \"⟧amethustos\" which means “not ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    },
+    {
+     "layer": 8,
+     "feature": 32537,
+     "position": "final",
+     "act": 2.2344,
+     "influence": null,
+     "source": "off-graph-fallback",
+     "evidence": {
+      "matched": "v1 activation scan (early, language-unique); example langs ['en', 'en', 'en', 'en', 'en', 'en']",
+      "top_logits": [
+       "农药",
+       "fol",
+       " beyond",
+       "反之",
+       "alf"
+      ],
+      "example": " bring up a new window with an automated collection of images related to the⟦ term⟧: Purti",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "review_note": "not a pruned-graph node; off-graph activation pick"
+    }
+   ],
+   "note": "language-swap source/donor (graph-first, raw open-quote graphs) — EMPTY under graph-first selection (RECORDED FINDING: the pruned raw graphs contain NO early-layer nodes at the quote position at all, so the paper's detector supernodes cannot be graph nodes here). Members below are the OFF-GRAPH fallback: the v1 activation scan (early_language_detection_supernode on the raw prompts, committed in raw_language_detection_supernodes.json), marked source=off-graph — approve or reject at review."
+  }
+ ],
+ "approved": false
+}

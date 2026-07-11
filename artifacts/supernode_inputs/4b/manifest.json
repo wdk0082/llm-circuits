@@ -1,0 +1,176 @@
+{
+ "size": "4b",
+ "git": "9151262",
+ "graphs": {
+  "antonym_en": {
+   "prompt": "What is the opposite of \"small\"? Reply with only the word, nothing else.",
+   "raw": false,
+   "answer": "large",
+   "answer_token_id": 16767,
+   "n_tokens": 29,
+   "final_position": 28,
+   "operand_position": 9
+  },
+  "raw_antonym_en": {
+   "prompt": "The opposite of \"small\" is \"",
+   "raw": true,
+   "answer": "large",
+   "answer_token_id": 16767,
+   "n_tokens": 9,
+   "final_position": 8,
+   "operand_position": 5
+  },
+  "antonym_fr": {
+   "prompt": "Quel est le contraire de \"petit\" ? Réponds avec un seul mot, rien d'autre.",
+   "raw": false,
+   "answer": "Grand",
+   "answer_token_id": 40151,
+   "n_tokens": 37,
+   "final_position": 36,
+   "operand_position": 12
+  },
+  "raw_antonym_fr": {
+   "prompt": "Le contraire de \"petit\" est \"",
+   "raw": true,
+   "answer": "grand",
+   "answer_token_id": 52666,
+   "n_tokens": 11,
+   "final_position": 10,
+   "operand_position": 7
+  },
+  "antonym_zh": {
+   "prompt": "\"小\"的反义词是什么？只回答一个词，不要其他内容。",
+   "raw": false,
+   "answer": "大",
+   "answer_token_id": 26288,
+   "n_tokens": 30,
+   "final_position": 29,
+   "operand_position": 4
+  },
+  "raw_antonym_zh": {
+   "prompt": "\"小\"的反义词是\"",
+   "raw": true,
+   "answer": "大",
+   "answer_token_id": 26288,
+   "n_tokens": 10,
+   "final_position": 9,
+   "operand_position": 2
+  },
+  "synonym_en": {
+   "prompt": "Give one synonym of \"small\". Reply with only the word, nothing else.",
+   "raw": false,
+   "answer": "tiny",
+   "answer_token_id": 46116,
+   "n_tokens": 28,
+   "final_position": 27,
+   "operand_position": 8
+  },
+  "raw_synonym_en": {
+   "prompt": "A synonym of \"small\" is \"",
+   "raw": true,
+   "answer": "tiny",
+   "answer_token_id": 46116,
+   "n_tokens": 9,
+   "final_position": 8,
+   "operand_position": 5
+  },
+  "hot_en": {
+   "prompt": "What is the opposite of \"hot\"? Reply with only the word, nothing else.",
+   "raw": false,
+   "answer": "cold",
+   "answer_token_id": 87072,
+   "n_tokens": 29,
+   "final_position": 28,
+   "operand_position": 9
+  },
+  "ones": {
+   "prompt": "calc: 46+49=",
+   "pair": [
+    46,
+    49
+   ],
+   "target": "ones",
+   "answer": "5",
+   "answer_token_id": 20,
+   "n_tokens": 11,
+   "final_position": 10,
+   "digit_positions": {
+    "a_digits": [
+     4,
+     5
+    ],
+    "b_digits": [
+     7,
+     8
+    ],
+    "eq": [
+     9
+    ],
+    "plus": [
+     6
+    ]
+   }
+  },
+  "first": {
+   "prompt": "calc: 46+49=",
+   "pair": [
+    46,
+    49
+   ],
+   "target": "first",
+   "answer": "9",
+   "answer_token_id": 24,
+   "n_tokens": 10,
+   "final_position": 9,
+   "digit_positions": {
+    "a_digits": [
+     4,
+     5
+    ],
+    "b_digits": [
+     7,
+     8
+    ],
+    "eq": [
+     9
+    ],
+    "plus": [
+     6
+    ]
+   }
+  },
+  "donor99": {
+   "prompt": "calc: 49+49=",
+   "pair": [
+    49,
+    49
+   ],
+   "target": "ones",
+   "answer": "8",
+   "answer_token_id": 23,
+   "n_tokens": 11,
+   "final_position": 10,
+   "digit_positions": {
+    "a_digits": [
+     4,
+     5
+    ],
+    "b_digits": [
+     7,
+     8
+    ],
+    "eq": [
+     9
+    ],
+    "plus": [
+     6
+    ]
+   }
+  },
+  "polymer": {
+   "prompt": "K. Whang, etc. Polymer, 36, 837, 1",
+   "raw": true,
+   "ones_moment_prompt": "K. Whang, etc. Polymer, 36, 837, 199"
+  }
+ }
+}

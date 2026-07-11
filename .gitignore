@@ -208,7 +208,17 @@ __marimo__/
 
 # Project-specific
 outputs/
-artifacts/
+# Artifacts: commit the small numbers layer (result JSONs, figures, npy — what the
+# Summaries/DEVLOG cite; ~20 MB), keep the heavy regenerables out (explorer/review
+# HTMLs 28-33 MB each, supernode-input graph dumps 13-54 MB each, grids.npz) — those
+# are deterministic re-derivations (bf16-stable across nodes) via
+# notebooks/build_supernode_inputs.py at the manifest's git sha.
+artifacts/**
+!artifacts/**/
+!artifacts/**/*.json
+!artifacts/**/*.png
+!artifacts/**/*.npy
+artifacts/supernode_inputs/**/graph_*.json
 .cache/
 *.code-workspace
 .vscode/

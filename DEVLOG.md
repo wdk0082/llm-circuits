@@ -1405,3 +1405,25 @@ files under `notebooks/supernodes/` before editing.
 - Branch `repro/constrained-supernodes`, pushed. 121 tests green (loader suite added),
   ruff clean, both --check validators OK. addition_4b.json approved; multilingual
   parked unapproved. Node caches warm (weights + labels + supernode inputs).
+
+### Same-day addendum — kind coverage, evidence figure, notebook cleanup
+
+User review vs the paper's own graph inventory drove three upgrades. (1) Two node
+KINDS existed on Qwen3 but had no classifier class: `exact-cross(V)` (row+column union
+at one value — the paper's `36`/`59` inputs; 3+6 members found, and several former
+input-lattice members correctly migrated there) and `region(~a,~b)` (2-D localized
+blobs — the wide/narrow magnitude-lookup class; 6 members on the first-digit circuit,
+1–2 visually clean + several diffuse washes worth a review pass). (2) The add-function
+negative became a LIVE scan result: an `add function (hunt)` supernode with a
+pair-consistent rule — the unconstrained scan's 13 hits were off-pair junk textures,
+the pair-consistent 2 are junk-labeled mod10-b(r9) shapes (flagged) — effectively
+negative, now reviewable in the file and visible in the evidence figure.
+(3) Readability: the seven v1 influence-pool panels and their taxonomy builder are
+retired (markdown 20.7k → ~11k chars; runtime ~13 → ~8 min; stale artifacts git-rm'd:
+7 panel PNGs, taxonomy.json, propagate-era interventions.json); the new
+`grids_supernodes.png` shows every reviewed member's operand grid, one supernode per
+row — the membership evidence in one figure. Delegated review decisions moved INTO the
+selector (`REJECTED_MEMBERS`/`APPROVED_TASKS`, re-applied on every emit) so re-runs
+reproduce reviewed state. Re-executed clean (~8 min): suppress-6 [ℓ=16] `3`@0.929 at
+−1×, suppress-9 [ℓ=9] `2`@0.963, magnitude/smears/polymer unchanged, swap still lands
+nowhere (p(`8`) ≤ 0.067) — the purified sets sharpened, none of the verdicts moved.

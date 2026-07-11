@@ -1014,7 +1014,7 @@ def validate(doc: dict, *, require_approved: bool) -> list[str]:
     return errs
 
 
-def emit_review_htmls(root: Path, graphs: dict, docs: list[dict]) -> None:
+def emit_review_htmls(root: Path, manifest: dict, graphs: dict, docs: list[dict]) -> None:
     per_graph: dict[str, list[dict]] = defaultdict(list)
     for doc in docs:
         for sn in doc["supernodes"]:
@@ -1035,12 +1035,17 @@ def emit_review_htmls(root: Path, graphs: dict, docs: list[dict]) -> None:
                     }
                 )
     for gname, gspecs in per_graph.items():
-        out_html = root / f"review_{gname}.html"
+        # Filename convention: review_chat_* / review_raw_* for the multilingual pairs
+        # (the manifest's "raw" flag exists only for those); addition stays review_*.
+        # The DUMP name (= export "example" label) is unprefixed either way.
+        raw_flag = manifest["graphs"].get(gname, {}).get("raw")
+        stem = f"chat_{gname}" if raw_flag is False else gname
+        out_html = root / f"review_{stem}.html"
         render_graph_explorer_html(
             graphs[gname],
             out_html,
             labels=[gname],  # exports carry this as "example" -> unambiguous mapping
-            title=f"review {gname}",
+            title=f"review {stem}",
             groups=gspecs,
         )
         print(f"  {out_html.name}: {len(gspecs)} seeded supernodes")
@@ -1264,7 +1269,7 @@ def main() -> None:
         flag = "" if sn["members"] else "   <-- empty seed"
         print(f"   {sn['name']:34s} {len(sn['members'])} seeded{flag}")
 
-    emit_review_htmls(root, graphs, docs)
+    emit_review_htmls(root, manifest, graphs, docs)
     print(
         "\nNEXT (multilingual): adjust groups in the review_*.html pages, Export"
         "\ngroups per page, then: build_supernodes.py --from-exports <files...>"

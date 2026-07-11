@@ -73,10 +73,11 @@ def main() -> None:
         type=float,
         default=0.8,
         help="graph pruning node threshold for the dumps (recorded per graph in the"
-        " manifest). The multilingual review pages use 0.95: the paper's supernode"
-        " membership is activity-based (20/27 active vs 10/27 in its pruned graphs),"
-        " and the explorer-export workflow can only pick GRAPH nodes, so selection"
-        " needs the larger graph; notebooks re-prune in-memory where they need 0.8.",
+        " manifest). Plan: CHAT multilingual graphs at 0.8 (circuit-tracer default),"
+        " RAW graphs at 0.95 — the raw graphs starve at 0.8 (no quote-position nodes"
+        " for the detectors) and the explorer-export workflow can only pick GRAPH"
+        " nodes; the paper's own membership is activity-based (20/27 active vs 10/27"
+        " in its pruned graphs). Rebuild one side via --graphs.",
     )
     args = ap.parse_args()
     size = args.size

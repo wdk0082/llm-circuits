@@ -595,10 +595,17 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
       core), while an exact-value cross (a=46 OR b=46, both arms equally bright) stays
       wide in both and is correctly excluded — the paper's magnitude intervention
       targets the ``~30``/``~59`` bands, not the exact-value features.
-    * ``label`` — derived family: ``lookup(a%10=M,b%10=N)`` (jointly residue-selective
-      points — the paper's lookup-table signature) / ``mod10-sum(rN)`` / ``band-a(~M)`` /
-      ``band-b(~M)`` (one-operand magnitude bands) / ``mod10-a(rN)`` / ``mod10-b(rN)`` /
-      ``magnitude-diag`` / ``sparse`` (fires in <1% of cells) / ``mixed`` / ``inactive``.
+    * ``label`` — derived family: ``exact-cross(V)`` (fires when EITHER operand equals
+      V — the paper's exact-value input features, ``36``/``59``) / ``region(~M,~N)``
+      (a 2-D localized non-repeating blob — the paper's wide/narrow MAGNITUDE-LOOKUP
+      class, ``~36+~60``) / ``lookup(a%10=M,b%10=N)`` (jointly residue-selective
+      REPEATING points — the paper's modular lookup-table signature) /
+      ``mod10-sum(rN)`` / ``band-a(~M)`` / ``band-b(~M)`` (one-operand magnitude
+      bands) / ``mod10-a(rN)`` / ``mod10-b(rN)`` / ``magnitude-diag`` / ``sparse``
+      (fires in <1% of cells) / ``mixed`` / ``inactive``. Cross and region are checked
+      BEFORE lookup: a tight value-specific blob concentrates both residues and would
+      otherwise hair-trigger the modular test, but true lattices repeat (large core
+      std) and fall through, keeping the two signatures disjoint.
       Bands are checked BEFORE the single-operand mod-10 stripes: a near-value band
       concentrates on ~5 residues and can hair-trigger the stripe test (measured:
       b_conc 1.52 on a razor b≈49 band), while a true periodic stripe can never have a
@@ -654,7 +661,34 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
         b_mean=b_mean,
         frac_on=frac_on,
     )
-    if frac_on <= 0.01:
+    cross_v = None
+    if on.sum() >= 50:
+        best_cov = 0.0
+        n_on = float(on.sum())
+        for v in range(min(len(a_vals), len(b_vals))):
+            row, col = on[A == v], on[B == v]
+            cov = float(on[(A == v) | (B == v)].sum()) / n_on
+            if (
+                cov > best_cov
+                and cov >= 0.85
+                and row.sum() / n_on >= 0.2
+                and col.sum() / n_on >= 0.2
+            ):
+                best_cov, cross_v = cov, v
+    rep["cross_v"] = cross_v
+
+    if cross_v is not None:
+        # Both arms of a row+column union at one VALUE: the paper's exact-value input
+        # features ("36"/"59") — the feature fires whenever either operand IS v.
+        # Checked before sparse/lookup: a coherent cross is structure, however small.
+        rep["label"] = f"exact-cross({cross_v})"
+    elif a_std < 8 and b_std < 8 and on.sum() >= 20:
+        # Bright core localized in BOTH operands without modular repetition: the
+        # paper's wide/narrow MAGNITUDE-LOOKUP class ("~36 + ~60"). The paper's
+        # "narrow" variant is a small blob, so this outranks the sparse floor
+        # (>= 20 cells guards against single-cell noise).
+        rep["label"] = f"region(~{round(a_mean)},~{round(b_mean)})"
+    elif frac_on <= 0.01:
         rep["label"] = "sparse"
     elif a_conc > 1.5 and b_conc > 1.5:
         # Jointly selective for BOTH operands' residues -> a repeating grid of points:

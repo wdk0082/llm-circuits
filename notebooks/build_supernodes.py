@@ -808,6 +808,55 @@ def build_addition(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
         )
     )
 
+    # exact-value inputs (the paper's `36`/`59` nodes): cross class at digit positions
+    for name, paper, val in (
+        ("input 46 (exact)", "36-analogue", 46),
+        ("input 49 (exact)", "59-analogue", 49),
+    ):
+        cands = input_class(
+            dp["a_digits"] + dp["b_digits"],
+            lambda r, v=val: lab(r) == f"exact-cross({v})",
+            None,
+        )
+        members, overflow = cap_members(cands)
+        sns.append(
+            supernode(
+                name,
+                paper,
+                "annotation",
+                "ones",
+                None,
+                members,
+                overflow,
+                note="exact-value input class (fires whenever either operand IS the"
+                " value); descriptive — no experiment steers it",
+            )
+        )
+
+    # magnitude-lookup regions (the paper's wide/narrow `~36+~60` class): the
+    # first-digit circuit's local blobs feeding the low-precision sum
+    region_cands = classed(
+        "first",
+        fin_first,
+        "last",
+        lambda r: lab(r).startswith("region("),
+        lambda r: f"grid:{lab(r)}",
+    )
+    members, overflow = cap_members(region_cands)
+    sns.append(
+        supernode(
+            "magnitude lookup (~46+~49)",
+            "~36+~60",
+            "annotation",
+            "first",
+            "final",
+            members,
+            overflow,
+            note="2-D localized non-repeating blobs — the paper's wide/narrow"
+            " magnitude-lookup class; descriptive — no experiment steers it",
+        )
+    )
+
     # polymer reuse: lookup members active at the polymer ones moment
     pol = json.loads((root / "polymer_ones_acts.json").read_text())
     active = {(int(L), int(i)): float(a) for L, i, a in pol["active_final"]}
@@ -861,6 +910,45 @@ MANUAL_FLAGS = {
     ("say large (multilingual)", 31, 126548): "generic top logits (Very/Simple/Large/More) "
     "— check the activation examples before keeping",
 }
+
+
+# Delegated review record (2026-07-11; the user waived the manual gate for the
+# grid-principled addition selection). Re-applied on every emit so selector re-runs
+# reproduce the reviewed state instead of clobbering it. Multilingual stays unapproved.
+REJECTED_MEMBERS = {
+    ("addition", "lookup (6,9-class)", 33, 109892): (
+        "on-pair activation 20% of grid max fails the >=30% receptive-field sanity;"
+        " replaced by the top act-ranked overflow qualifier"
+    ),
+}
+APPROVED_TASKS = {
+    "addition": "grid-principled selection reviewed by delegation (user waived the"
+    " manual gate); rejections in REJECTED_MEMBERS; all other members approved",
+}
+
+
+def apply_review_decisions(task: str, doc: dict) -> None:
+    for sn in doc["supernodes"]:
+        kept, rejected = [], []
+        for m in sn["members"]:
+            reason = REJECTED_MEMBERS.get((task, sn["name"], m["layer"], m["feature"]))
+            if reason:
+                m["review"] = "rejected"
+                m["review_note"] = (m.get("review_note", "") + " REVIEW: " + reason).strip()
+                rejected.append(m)
+            else:
+                kept.append(m)
+        if rejected:
+            promoted = sn.get("overflow", [])[: len(rejected)]
+            sn["overflow"] = rejected + sn.get("overflow", [])[len(rejected) :]
+            kept += promoted
+        sn["members"] = kept
+        if task in APPROVED_TASKS:
+            for m in sn["members"]:
+                m["review"] = "approved"
+    if task in APPROVED_TASKS:
+        doc["approved"] = True
+        doc["review_log"] = f"2026-07-11: {APPROVED_TASKS[task]}"
 
 
 def apply_manual_flags(doc: dict) -> None:
@@ -955,6 +1043,7 @@ def main() -> None:
     for task, builder in (("multilingual", build_multilingual), ("addition", build_addition)):
         doc = builder(args.size, root, manifest, graphs)
         apply_manual_flags(doc)
+        apply_review_decisions(task, doc)
         errs = validate(doc, require_approved=False)
         if errs:
             raise SystemExit(f"{task}: validation failed:\n  " + "\n  ".join(errs))

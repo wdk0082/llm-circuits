@@ -384,3 +384,19 @@ def test_load_supernodes_refuses_unapproved_rejected_and_overlap(tmp_path):
     p.write_text(json.dumps(doc))
     with pytest.raises(ValueError, match="in both"):
         A.load_supernodes(p)
+
+
+def test_exact_cross_and_region_classes(grid_axes):
+    a, b, av, bv = grid_axes
+    # exact-value cross: fires when EITHER operand is 46 (paper's "36"/"59" inputs)
+    g = ((a == 46) | (b == 46)).astype(float)
+    assert str(A.periodicity_report(g, av, bv)["label"]) == "exact-cross(46)"
+    # 2-D localized blob without repetition: the wide magnitude-lookup class
+    g2 = np.exp(-((a - 46.0) ** 2) / (2 * 4**2) - ((b - 49.0) ** 2) / (2 * 4**2))
+    lab = str(A.periodicity_report(g2, av, bv)["label"])
+    assert lab.startswith("region(~46"), lab
+    # true modular lattices must NOT be stolen by the new classes (2-wide points so
+    # the synthetic clears the 1% sparse floor, like real smeared lattices do)
+    g3 = (((a % 10) == 6) & (((b % 10) == 9) | ((b % 10) == 8))).astype(float)
+    lab3 = str(A.periodicity_report(g3, av, bv)["label"])
+    assert lab3.startswith("lookup(a%10=6"), lab3

@@ -968,6 +968,92 @@ APPROVED_TASKS = {
 }
 
 
+def merge_manual_overrides(task: str, size: str, doc: dict, graphs: dict) -> None:
+    """Merge hand-picked selections from ``supernodes/<task>_<size>.manual.json``.
+
+    The auto-selector OVERWRITES its output file on every run, so manual review edits
+    must live here to survive re-emits. Schema (all sections optional)::
+
+        {"add_supernodes": [{"name", "paper_name", "role", "graph", "position",
+                             "members": [{"layer", "feature", "act"?, "note"?}]}],
+         "add_members":    {"<supernode name>": [{"layer", "feature", "act"?, "note"?}]},
+         "remove_members": {"<supernode name>": [[layer, feature], ...]}}
+
+    Added members are marked ``source: "manual"``; when the (layer, feature) is a node
+    of the supernode's graph its evidence (label/example/act/influence) is auto-filled
+    from the graph dump so the file stays self-reviewable.
+    """
+    path = SUPERNODE_DIR / f"{task}_{size}.manual.json"
+    if not path.exists():
+        return
+    manual = json.loads(path.read_text())
+    by_name = {sn["name"]: sn for sn in doc["supernodes"]}
+
+    def build_member(spec, graph_field, position):
+        L, f = int(spec["layer"]), int(spec["feature"])
+        for gname in str(graph_field).split(";"):
+            for n in feature_nodes(graphs.get(gname, {"nodes": []})):
+                if n["layer"] == L and n["feature_idx"] == f:
+                    m = member_entry(n, matched="manual selection")
+                    break
+            else:
+                continue
+            break
+        else:
+            m = {
+                "layer": L,
+                "feature": f,
+                "position": position,
+                "act": float(spec.get("act", 0.0)),
+                "influence": None,
+                "evidence": {
+                    "matched": "manual selection (not a dump node)",
+                    "top_logits": [],
+                    "example": "",
+                    "grid_class": None,
+                },
+                "review": "proposed",
+            }
+        m["source"] = "manual"
+        if spec.get("act") is not None:
+            m["act"] = float(spec["act"])
+        if spec.get("note"):
+            m["review_note"] = spec["note"]
+        m["review"] = "approved"  # a manual pick IS the review
+        return m
+
+    for sn_spec in manual.get("add_supernodes", []):
+        members = [
+            build_member(s, sn_spec["graph"], sn_spec.get("position")) for s in sn_spec["members"]
+        ]
+        doc["supernodes"].append(
+            supernode(
+                sn_spec["name"],
+                sn_spec.get("paper_name", sn_spec["name"]),
+                sn_spec.get("role", "manual"),
+                sn_spec["graph"],
+                sn_spec.get("position"),
+                members,
+                [],
+                note=sn_spec.get("note", "manually selected at review"),
+            )
+        )
+        by_name[sn_spec["name"]] = doc["supernodes"][-1]
+    for name, specs in manual.get("add_members", {}).items():
+        sn = by_name[name]
+        sn["members"] += [build_member(s, sn["graph"], sn["position"]) for s in specs]
+    for name, keys in manual.get("remove_members", {}).items():
+        sn = by_name[name]
+        drop = {tuple(k) for k in keys}
+        removed = [m for m in sn["members"] if (m["layer"], m["feature"]) in drop]
+        sn["members"] = [m for m in sn["members"] if (m["layer"], m["feature"]) not in drop]
+        for m in removed:
+            m["review"] = "rejected"
+            m["review_note"] = (m.get("review_note", "") + " removed at manual review").strip()
+        sn["overflow"] = removed + sn.get("overflow", [])
+    doc["manual_overrides"] = str(path.name)
+
+
 def apply_review_decisions(task: str, doc: dict) -> None:
     for sn in doc["supernodes"]:
         kept, rejected = [], []
@@ -1083,6 +1169,7 @@ def main() -> None:
     docs = []
     for task, builder in (("multilingual", build_multilingual), ("addition", build_addition)):
         doc = builder(args.size, root, manifest, graphs)
+        merge_manual_overrides(task, args.size, doc, graphs)
         apply_manual_flags(doc)
         apply_review_decisions(task, doc)
         errs = validate(doc, require_approved=False)

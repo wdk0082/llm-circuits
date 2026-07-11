@@ -1427,3 +1427,57 @@ selector (`REJECTED_MEMBERS`/`APPROVED_TASKS`, re-applied on every emit) so re-r
 reproduce reviewed state. Re-executed clean (~8 min): suppress-6 [ℓ=16] `3`@0.929 at
 −1×, suppress-9 [ℓ=9] `2`@0.963, magnitude/smears/polymer unchanged, swap still lands
 nowhere (p(`8`) ≤ 0.067) — the purified sets sharpened, none of the verdicts moved.
+
+## Sixth session (2026-07-11, same day): multilingual selection is EXPORT-DRIVEN and reviewed
+
+The user set the selection principle: review pages in the explorer UI are the ONLY
+supernode-selection channel for multilingual — seeds proposed by the semantic scan,
+the human adjusts groups on the pages, "Export groups" JSONs are ingested verbatim
+(`build_supernodes.py --from-exports`) into the authoritative file. Manual-override
+channels, off-graph fallbacks, and the scan-written multilingual file were removed.
+
+### What shipped
+
+- **Paper-vocabulary supernodes** (user decision: fully faithful; admit absences):
+  lang-specific `opposite (lg)` / `quote (lg)` / `say large (lg)`; multilingual
+  `antonym / synonym / small / hot / say large / say small / say cold (multilingual)`.
+  The group NAME is the merge key across pages: identically-named groups union into
+  one supernode (chat + raw prompts alike) with per-graph acts/positions per member —
+  interventions steer the whole union. `large/cold (multilingual)`, `say hot`: no
+  defensible members found → admitted absent (ROLE_BY_NAME entries exist if later found).
+- **Dumps by design**: chat graphs at 0.8 (circuit-tracer default; 461–746 feature
+  nodes), raw graphs at 0.95 (at 0.8 they starve — zero quote-position nodes for the
+  detectors). `raw_hot_en` added: the paper's EXACT donor prompt (all paper prompts
+  are raw completions; chat forms are our Qwen3-instruct adaptation — an earlier
+  docstring claimed the opposite rationale and is fixed). Pages named
+  `review_chat_*` / `review_raw_*`; 10 multilingual + 3 addition.
+- **Review completed (2026-07-11)**: the user reviewed all 10 pages and accepted the
+  seeds as-is; exports were materialized verbatim from the approved pages' embedded
+  groups and ingested → `notebooks/supernodes/multilingual_4b.json` (16 supernodes,
+  approved: true, selection: explorer-export; source exports committed under
+  `notebooks/supernodes/exports/`).
+- **Strict disjointness** (global by (layer, feature), the paper's semantics) caught
+  three real seed overlaps; deterministic resolutions now in the seed rules:
+  quote beats opposite (the paper's quote-features "track language via other words");
+  say-large multilingual/lang-specific exclusion spans chat+raw scans; op-word
+  features firing for ≥2 languages are language-ambiguous and seed neither. Per-PAGE
+  groups stay ≤6; the reviewed cross-page union may exceed (recorded `max_members`;
+  antonym 7, synonym 8 — paper: 6/6).
+- **Fixed en route**: seeded groups with a `member-positions` marker were silently
+  dropped by the page renderer — the antonym + synonym groups (operation swap's
+  source and donor!) were missing from every page before this session's re-emit.
+
+### NEXT (phase B, next session)
+
+1. Rewire `multilingual.ipynb` constrained-only from the loaded file: jobs built from
+   roles (antonym −5×/m=−6 + synonym value=+6× donor at the recipient's operation-word
+   token; small −0.5×/m=−1.5 + hot value=+1.5×; quote swaps −5×/+6×), per-experiment
+   `sweep_patch_end_layer`, %-readouts from say-* supernodes at layers > ℓ.
+2. Addition-style prose cleanup + re-execution (~15 min GPU), stale propagate-era
+   multilingual artifacts git-rm'd, Summary rewritten as v2 verdicts, DEVLOG.
+3. Later: revisit addition supernodes via the same export workflow (user intent).
+
+Resume commands: `python3 -m http.server 8000 --bind 0.0.0.0 --directory artifacts`
+(review pages); heavy dumps live on the studio disk and regenerate deterministically
+via `notebooks/build_supernode_inputs.py` at the manifest's recorded sha/thresholds
+(~35 min GPU) if ever lost.

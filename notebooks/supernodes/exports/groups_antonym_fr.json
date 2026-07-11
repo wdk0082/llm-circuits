@@ -1,0 +1,198 @@
+{
+  "example": "antonym_fr",
+  "groups": [
+    {
+      "name": "antonym (multilingual)",
+      "nodes": [
+        {
+          "label": "L7 f79606 (反转)",
+          "layer": 7,
+          "position": 8,
+          "feature_idx": 79606
+        },
+        {
+          "label": "L7 f79606 (反转)",
+          "layer": 7,
+          "position": 9,
+          "feature_idx": 79606
+        },
+        {
+          "label": "L8 f663 ( Advanced)",
+          "layer": 8,
+          "position": 8,
+          "feature_idx": 663
+        },
+        {
+          "label": "L8 f663 ( Advanced)",
+          "layer": 8,
+          "position": 10,
+          "feature_idx": 663
+        },
+        {
+          "label": "L8 f663 ( Advanced)",
+          "layer": 8,
+          "position": 14,
+          "feature_idx": 663
+        },
+        {
+          "label": "L11 f22932 ( syncing)",
+          "layer": 11,
+          "position": 8,
+          "feature_idx": 22932
+        },
+        {
+          "label": "L22 f78043 ( opposed)",
+          "layer": 22,
+          "position": 36,
+          "feature_idx": 78043
+        }
+      ]
+    },
+    {
+      "name": "small (multilingual)",
+      "nodes": [
+        {
+          "label": "L27 f29715 (ish)",
+          "layer": 27,
+          "position": 12,
+          "feature_idx": 29715
+        },
+        {
+          "label": "L28 f36616 ( doses)",
+          "layer": 28,
+          "position": 12,
+          "feature_idx": 36616
+        }
+      ]
+    },
+    {
+      "name": "say large (multilingual)",
+      "nodes": [
+        {
+          "label": "L30 f27666 (巨型)",
+          "layer": 30,
+          "position": 36,
+          "feature_idx": 27666
+        },
+        {
+          "label": "L30 f57180 (small)",
+          "layer": 30,
+          "position": 36,
+          "feature_idx": 57180
+        },
+        {
+          "label": "L30 f156227 ( largest)",
+          "layer": 30,
+          "position": 36,
+          "feature_idx": 156227
+        },
+        {
+          "label": "L31 f11436 ( large)",
+          "layer": 31,
+          "position": 36,
+          "feature_idx": 11436
+        },
+        {
+          "label": "L31 f126548 ( Very)",
+          "layer": 31,
+          "position": 36,
+          "feature_idx": 126548
+        },
+        {
+          "label": "L32 f100307 ( bigger)",
+          "layer": 32,
+          "position": 36,
+          "feature_idx": 100307
+        }
+      ]
+    },
+    {
+      "name": "say large (fr)",
+      "nodes": [
+        {
+          "label": "L30 f76139 (拿出来)",
+          "layer": 30,
+          "position": 36,
+          "feature_idx": 76139
+        },
+        {
+          "label": "L31 f17182 ( Reporter)",
+          "layer": 31,
+          "position": 36,
+          "feature_idx": 17182
+        },
+        {
+          "label": "L32 f138876 ( huge)",
+          "layer": 32,
+          "position": 36,
+          "feature_idx": 138876
+        },
+        {
+          "label": "L33 f29273 (扩大)",
+          "layer": 33,
+          "position": 36,
+          "feature_idx": 29273
+        },
+        {
+          "label": "L33 f48380 (orst)",
+          "layer": 33,
+          "position": 36,
+          "feature_idx": 48380
+        },
+        {
+          "label": "L33 f62570 (idders)",
+          "layer": 33,
+          "position": 36,
+          "feature_idx": 62570
+        }
+      ]
+    },
+    {
+      "name": "opposite (fr)",
+      "nodes": [
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 4,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 5,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 6,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 8,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 12,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L23 f64429 (湘西)",
+          "layer": 23,
+          "position": 15,
+          "feature_idx": 64429
+        },
+        {
+          "label": "L31 f46944 ( responsable)",
+          "layer": 31,
+          "position": 36,
+          "feature_idx": 46944
+        }
+      ]
+    }
+  ]
+}

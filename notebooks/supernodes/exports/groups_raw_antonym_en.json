@@ -1,0 +1,180 @@
+{
+  "example": "raw_antonym_en",
+  "groups": [
+    {
+      "name": "antonym (multilingual)",
+      "nodes": [
+        {
+          "label": "L34 f67478 ( :⏎⏎⏎⏎)",
+          "layer": 34,
+          "position": 1,
+          "feature_idx": 67478
+        }
+      ]
+    },
+    {
+      "name": "small (multilingual)",
+      "nodes": [
+        {
+          "label": "L27 f29715 (ish)",
+          "layer": 27,
+          "position": 5,
+          "feature_idx": 29715
+        },
+        {
+          "label": "L28 f36616 ( doses)",
+          "layer": 28,
+          "position": 5,
+          "feature_idx": 36616
+        },
+        {
+          "label": "L29 f76918 (amount)",
+          "layer": 29,
+          "position": 5,
+          "feature_idx": 76918
+        },
+        {
+          "label": "L29 f97946 (etch)",
+          "layer": 29,
+          "position": 5,
+          "feature_idx": 97946
+        },
+        {
+          "label": "L30 f86044 (scale)",
+          "layer": 30,
+          "position": 5,
+          "feature_idx": 86044
+        },
+        {
+          "label": "L32 f50377 (-radius)",
+          "layer": 32,
+          "position": 5,
+          "feature_idx": 50377
+        }
+      ]
+    },
+    {
+      "name": "say large (multilingual)",
+      "nodes": [
+        {
+          "label": "L30 f27666 (巨型)",
+          "layer": 30,
+          "position": 8,
+          "feature_idx": 27666
+        },
+        {
+          "label": "L30 f57180 (small)",
+          "layer": 30,
+          "position": 8,
+          "feature_idx": 57180
+        },
+        {
+          "label": "L30 f156227 ( largest)",
+          "layer": 30,
+          "position": 8,
+          "feature_idx": 156227
+        },
+        {
+          "label": "L31 f11436 ( large)",
+          "layer": 31,
+          "position": 8,
+          "feature_idx": 11436
+        },
+        {
+          "label": "L31 f45673 (雄)",
+          "layer": 31,
+          "position": 8,
+          "feature_idx": 45673
+        }
+      ]
+    },
+    {
+      "name": "quote (en)",
+      "nodes": [
+        {
+          "label": "L23 f43918 (()\")",
+          "layer": 23,
+          "position": 8,
+          "feature_idx": 43918
+        },
+        {
+          "label": "L27 f65964 ( max)",
+          "layer": 27,
+          "position": 8,
+          "feature_idx": 65964
+        },
+        {
+          "label": "L27 f100360 (好吃)",
+          "layer": 27,
+          "position": 8,
+          "feature_idx": 100360
+        },
+        {
+          "label": "L28 f39571 (?”)",
+          "layer": 28,
+          "position": 8,
+          "feature_idx": 39571
+        },
+        {
+          "label": "L29 f81877 (良好)",
+          "layer": 29,
+          "position": 8,
+          "feature_idx": 81877
+        },
+        {
+          "label": "L29 f147934 (C)",
+          "layer": 29,
+          "position": 8,
+          "feature_idx": 147934
+        }
+      ]
+    },
+    {
+      "name": "opposite (en)",
+      "nodes": [
+        {
+          "label": "L23 f61192 ((Op)",
+          "layer": 23,
+          "position": 2,
+          "feature_idx": 61192
+        },
+        {
+          "label": "L23 f61192 ((Op)",
+          "layer": 23,
+          "position": 3,
+          "feature_idx": 61192
+        },
+        {
+          "label": "L24 f14944 (arrass)",
+          "layer": 24,
+          "position": 2,
+          "feature_idx": 14944
+        },
+        {
+          "label": "L26 f19191 (tober)",
+          "layer": 26,
+          "position": 2,
+          "feature_idx": 19191
+        },
+        {
+          "label": "L26 f158667 (序)",
+          "layer": 26,
+          "position": 2,
+          "feature_idx": 158667
+        },
+        {
+          "label": "L27 f158728 (gü)",
+          "layer": 27,
+          "position": 2,
+          "feature_idx": 158728
+        },
+        {
+          "label": "L28 f79063 (ogy)",
+          "layer": 28,
+          "position": 2,
+          "feature_idx": 79063
+        }
+      ]
+    }
+  ]
+}

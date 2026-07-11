@@ -1,0 +1,69 @@
+{
+  "example": "raw_synonym_en",
+  "groups": [
+    {
+      "name": "synonym (multilingual)",
+      "nodes": [
+        {
+          "label": "L19 f47233 ( synonyms)",
+          "layer": 19,
+          "position": 4,
+          "feature_idx": 47233
+        },
+        {
+          "label": "L24 f94161 (经开)",
+          "layer": 24,
+          "position": 2,
+          "feature_idx": 94161
+        },
+        {
+          "label": "L34 f47115 (,number)",
+          "layer": 34,
+          "position": 1,
+          "feature_idx": 47115
+        }
+      ]
+    },
+    {
+      "name": "say small (multilingual)",
+      "nodes": [
+        {
+          "label": "L28 f76279 (small)",
+          "layer": 28,
+          "position": 8,
+          "feature_idx": 76279
+        },
+        {
+          "label": "L30 f82993 ( comparatively)",
+          "layer": 30,
+          "position": 8,
+          "feature_idx": 82993
+        },
+        {
+          "label": "L31 f117368 (Small)",
+          "layer": 31,
+          "position": 8,
+          "feature_idx": 117368
+        },
+        {
+          "label": "L32 f105764 (小型)",
+          "layer": 32,
+          "position": 8,
+          "feature_idx": 105764
+        },
+        {
+          "label": "L32 f115822 ((me)",
+          "layer": 32,
+          "position": 8,
+          "feature_idx": 115822
+        },
+        {
+          "label": "L32 f162657 ( мал)",
+          "layer": 32,
+          "position": 8,
+          "feature_idx": 162657
+        }
+      ]
+    }
+  ]
+}

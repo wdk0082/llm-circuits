@@ -452,9 +452,23 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
     )
 
     # --- say large: multilingual (>=2 graphs) vs language-specific (exactly 1) --------
+    sl_iters = []
     for names in (ant_names, raw_ant_names):
         shared = shared_concept("large", names, final, min_graphs=2)
-        members, overflow = cap_members(shared)
+        sl_iters.append((names, *cap_members(shared)))
+    # Exclusions span BOTH scans (chat + raw): a feature that is multilingual on one
+    # side and single-graph on the other must not land in two supernodes. Likewise a
+    # feature qualifying for two languages is language-AMBIGUOUS and seeds neither.
+    shared_keys = {(m["layer"], m["feature"]) for _, mem, ovf in sl_iters for m in mem + ovf}
+    lang_of: dict[tuple[int, int], set[str]] = defaultdict(set)
+    for names, _, _ in sl_iters:
+        for lg in LANGS:
+            gname = names[LANGS.index(lg)]
+            for n in feature_nodes(graphs[gname], final(gname)):
+                key = (n["layer"], n["feature_idx"])
+                if matches_concept(n.get("label"), "large") and key not in shared_keys:
+                    lang_of[key].add(lg)
+    for names, members, overflow in sl_iters:
         sns.append(
             supernode(
                 "say large (multilingual)",
@@ -466,13 +480,13 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 overflow,
             )
         )
-        shared_keys = {(m["layer"], m["feature"]) for m in members + overflow}
         for lg in LANGS:
             name = names[LANGS.index(lg)]
             only = []
             for n in feature_nodes(graphs[name], final(name)):
+                key = (n["layer"], n["feature_idx"])
                 m = matches_concept(n.get("label"), "large")
-                if not m or (n["layer"], n["feature_idx"]) in shared_keys:
+                if not m or key in shared_keys or lang_of[key] != {lg}:
                     continue
                 entry = member_entry(n, matched=f"top_logits:{m!r}")
                 # script sanity: a {lang}-specific say-large whose only match is a
@@ -526,9 +540,11 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
     for lg in LANGS:
         for m in detect_cands[lg]:
             counts[(m["layer"], m["feature"])] += 1
+    quote_keys: set[tuple[int, int]] = set()
     for lg in LANGS:
         uniq = [m for m in detect_cands[lg] if counts[(m["layer"], m["feature"])] == 1]
         members, overflow = cap_members(uniq, key=lambda m: (-m["layer"], m["act"]))
+        quote_keys |= {(m["layer"], m["feature"]) for m in members + overflow}
         sns.append(
             supernode(
                 f"quote ({lg})",
@@ -548,18 +564,27 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
     # --- opposite (lang-specific): the operation WORD's own features (paper Fig B1:
     # 'opposite (lang-specific)' feeds 'antonym (multilingual)') --------------------
     op_word = {"en": "opposite", "fr": "contraire", "zh": "反义词"}
+    op_cands: dict[str, dict[tuple[int, int], dict]] = {}
     for lg in LANGS:
         best: dict[tuple[int, int], dict] = {}
         for name in (f"antonym_{lg}", f"raw_antonym_{lg}"):
             positions = op_word_positions(graphs[name], op_word[lg])
             for n in feature_nodes(graphs[name]):
                 key = (n["layer"], n["feature_idx"])
-                if n["position"] not in positions or key in ant_keys:
+                # ant_keys/quote_keys: supernodes are disjoint feature sets — features
+                # already claimed by antonym (multilingual) or quote (lg) stay there
+                # (the paper's quote-features track language via other words too).
+                if n["position"] not in positions or key in ant_keys or key in quote_keys:
                     continue
                 e = member_entry(n, matched=f"at operation-word token {op_word[lg]!r}")
                 if key not in best or e["act"] > best[key]["act"]:
                     best[key] = e
-        members, overflow = cap_members(list(best.values()))
+        op_cands[lg] = best
+    for lg in LANGS:
+        # language-unique only: a feature on the operation word of >=2 languages is not
+        # lang-specific (and not auto-promoted to antonym either — admit ambiguity)
+        uniq = [e for key, e in op_cands[lg].items() if sum(key in op_cands[o] for o in LANGS) == 1]
+        members, overflow = cap_members(uniq)
         sns.append(
             supernode(
                 f"opposite ({lg})",
@@ -1192,6 +1217,9 @@ def ingest_exports(size, files, root, manifest, graphs) -> None:
         "built_from": f"{root}@{manifest.get('git', '?')}",
         "selection": "explorer-export",
         "source_files": [str(Path(f).name) for f in files],
+        # per-PAGE groups are capped at MAX_MEMBERS by the seeds; the reviewed union
+        # across chat+raw pages may exceed it — the human selection is authoritative
+        "max_members": max((len(s["members"]) for s in supernodes), default=MAX_MEMBERS),
         "supernodes": supernodes,
         "approved": True,
         "review_log": "selected and reviewed by hand in the explorer (Export groups);"

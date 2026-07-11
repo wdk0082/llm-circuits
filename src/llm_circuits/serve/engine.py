@@ -231,17 +231,28 @@ class RealEngine(BaseEngine):
             self._load_lock.release()
 
     def _tokenize(self, text: str, use_chat: bool):
+        import torch
+
         if use_chat:
             from llm_circuits.instrumentation.chat import prepare_messages
 
-            messages, _, tkw = prepare_messages(text, "qwen3", enable_thinking=False)
+            messages, n_bos, tkw = prepare_messages(text, "qwen3", enable_thinking=False)
             ids = self.tokenizer.apply_chat_template(
                 messages, return_tensors="pt", add_generation_prompt=True, **tkw
             )
-            n_bos = 1
         else:
-            ids = self.tokenizer(text, return_tensors="pt").input_ids
-            n_bos = 0
+            # Raw completion: prepend one special token as the attention sink and count
+            # it as BOS — the notebooks' tokenize_raw discipline (transcoders cannot
+            # reconstruct position 0; without the sink the position-0 error node is
+            # silently inflated). Was n_bos=0 with no prepend (DEVLOG_EXTRA §5, fixed).
+            ids = self.tokenizer(text, add_special_tokens=False, return_tensors="pt").input_ids
+            special = (
+                self.tokenizer.bos_token_id
+                or self.tokenizer.pad_token_id
+                or self.tokenizer.eos_token_id
+            )
+            ids = torch.cat([torch.tensor([[special]], dtype=ids.dtype), ids], dim=1)
+            n_bos = 1
         return ids.to(self.model.device), n_bos
 
     def build(self, req) -> dict:

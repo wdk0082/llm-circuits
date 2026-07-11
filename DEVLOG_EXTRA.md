@@ -44,7 +44,7 @@ doc/edge-case/hygiene.
 | 4.1 | MED | `verify_intervention.py` | Prints PASS/FAIL but **always exits 0** (contrast `verify_attribution_graph.py`, which exits 1) — cannot gate a regression. | ✅ **fixed** (`9d61004`): exits 1 on FAIL |
 | 4.2 | MED | verification scope | "Numerically equivalent to circuit-tracer" is established for one config (0.6b / fp32 / CPU / one prompt / default all-mode / one constrained m=−2 steer). Steering parity covers neither `value=` donor injections nor propagate mode (which, per 3.1, is where the semantics diverge). | ◻️ acknowledged — cite-with-scope guidance stands; no new cross-verification run. Note (fourth session): the notebooks' headline results now run under **constrained patching — the mode the cross-verification does cover**; propagate results are the explicitly-labeled robustness variant |
 | 4.3 | MED | tests/CI | The newest verdict-carrying code is untested and outside CI: band-criterion classifier (basis of the magnitude-verdict upgrade; its offline validation is not committed), `direct_token_weights`, `supernode_readout_pct`; `notebooks/` + `verification/` are not in CI's lint/test paths. | ✅ **closed** (`aa7db37`+`9d61004`): 12 helper tests (1.1 regression, band synthetics, readout math, direct-weight vs reference); CI lints `notebooks/` + `verification/` |
-| 5.1–5.5 | MED | periphery | `ActivationRecorder.attach` leaks hooks on a bad name mid-list; `compare_models` docstring invites a crashing 1-D input (and silently drops batch>1); feature-label reader's gzip `find()` can misfire on ~1/65k blobs and then crash uncaught; serve steer/reprune not serialized against build/load; serve raw mode uses `n_bos=0` with no sink token (violates the repo's own discipline; notebooks unaffected). | ⬜ open (recorded; periphery, not report-blocking) |
+| 5.1–5.5 | MED | periphery | `ActivationRecorder.attach` leaks hooks on a bad name mid-list; `compare_models` docstring invites a crashing 1-D input (and silently drops batch>1); feature-label reader's gzip `find()` can misfire on ~1/65k blobs and then crash uncaught; serve steer/reprune not serialized against build/load; serve raw mode uses `n_bos=0` with no sink token (violates the repo's own discipline; notebooks unaffected). | ⬜ open (recorded; periphery, not report-blocking) — except the serve raw-mode sink, **fixed 2026-07-11**: `_tokenize` now prepends the sink token with `n_bos=1` (notebooks' `tokenize_raw` discipline) and the chat branch takes `prepare_messages`' BOS count; 2 unit tests |
 
 Everything else checked out — see the "verified clean" notes per section; §7 lists what
 the report can and cannot safely cite.
@@ -404,7 +404,8 @@ tests pass.
   sink token and `n_bos=0`**, violating the repo's own attention-sink discipline
   (`replacement_model.py:11-14`; the notebooks' raw path prepends and uses
   `n_bos_tokens=1`) — inflated position-0 error node in the UI's raw mode, silently.
-  Notebooks unaffected.
+  Notebooks unaffected. **Fixed (2026-07-11):** `_tokenize` mirrors `tokenize_raw`
+  (sink prepend + `n_bos=1`; chat branch uses `prepare_messages`' count) with 2 tests.
 - **LOW** serve chat branch hardcodes `n_bos=1` instead of using `prepare_messages`'
   returned count; loader `device=None` docstring wrong (resolves via circuit-tracer's
   default, not settings — diverges on MPS); `load_transcoder`'s auto-cache path

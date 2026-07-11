@@ -110,3 +110,51 @@ def test_sweep_returns_curve(client):
     body = r.json()
     assert len(body["end_layers"]) == len(body["delta_logits"]) == len(body["probs"])
     assert body["best_end_layer"] in body["end_layers"]
+
+
+def test_real_engine_tokenize_raw_prepends_sink_and_counts_bos():
+    # RealEngine._tokenize raw mode must follow the notebooks' tokenize_raw discipline:
+    # one special token prepended as the attention sink, n_bos=1 (DEVLOG_EXTRA §5 fix).
+    from types import SimpleNamespace
+
+    import torch
+
+    from llm_circuits.serve.engine import RealEngine
+
+    class _StubTok:
+        bos_token_id = None
+        pad_token_id = None
+        eos_token_id = 7
+
+        def __call__(self, text, add_special_tokens=True, return_tensors=None):
+            assert add_special_tokens is False
+            return SimpleNamespace(input_ids=torch.tensor([[11, 12, 13]]))
+
+    eng = RealEngine.__new__(RealEngine)
+    eng.tokenizer = _StubTok()
+    eng.model = SimpleNamespace(device="cpu")
+    ids, n_bos = eng._tokenize("calc: 1+2=", use_chat=False)
+    assert ids.tolist() == [[7, 11, 12, 13]]  # eos prepended as the sink
+    assert n_bos == 1
+
+
+def test_real_engine_tokenize_chat_uses_prepare_messages_bos_count():
+    from types import SimpleNamespace
+
+    import torch
+
+    from llm_circuits.serve.engine import RealEngine
+
+    class _StubTok:
+        def apply_chat_template(
+            self, messages, return_tensors=None, add_generation_prompt=True, **kw
+        ):
+            assert messages[-1]["role"] == "user"
+            return torch.tensor([[1, 2, 3]])
+
+    eng = RealEngine.__new__(RealEngine)
+    eng.tokenizer = _StubTok()
+    eng.model = SimpleNamespace(device="cpu")
+    ids, n_bos = eng._tokenize("hi", use_chat=True)
+    assert ids.tolist() == [[1, 2, 3]]
+    assert n_bos == 1  # prepare_messages("qwen3") reports one BOS-like token

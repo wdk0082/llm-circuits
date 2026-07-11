@@ -102,11 +102,54 @@ def top_logit_strings(label: dict | None) -> list[str]:
 
 
 def matches_concept(label: dict | None, concept: str) -> str | None:
-    """Return the matching top-logit string, or None."""
+    """OUTPUT-side match: the concept appears in the feature's top logits (what the
+    feature PROMOTES). Returns the matching top-logit string, or None."""
     for tok in top_logit_strings(label):
         for kw in CONCEPTS[concept]:
             if kw.lower() in tok:
                 return tok
+    return None
+
+
+def peak_token_match(label: dict | None, concept: str, n: int = 6) -> tuple[int, int, str | None]:
+    """INPUT-side match: does the PEAK-ACTIVATION token of the max-activating examples
+    contain a concept word (i.e. the feature fires ON the concept)? Scans up to ``n``
+    examples across quantile groups; returns (hits, scanned, first matching token)."""
+    hits, total, first = 0, 0, None
+    for q in (label or {}).get("examples") or []:
+        for item in q.get("items", []):
+            toks = item.get("tokens", [])
+            acts = [float(x) for x in item.get("acts", [])]
+            if not toks or not acts:
+                continue
+            k = max(range(len(acts)), key=acts.__getitem__)
+            tok = str(toks[k]).strip().lower()
+            total += 1
+            if any(kw.lower() in tok for kw in CONCEPTS[concept]):
+                hits += 1
+                first = first or tok
+            if total >= n:
+                break
+        if total >= n:
+            break
+    return hits, total, first
+
+
+def concept_match(label: dict | None, concept: str, side: str = "both") -> str | None:
+    """Match a concept on the requested side(s); returns a provenance string or None.
+
+    ``side``: "output" (top logits — say-features), "input" (example peak tokens —
+    features that fire ON the concept word, the paper's input supernodes), or "both".
+    Input-side requires a majority of scanned examples (>=2 hits) to peak on the concept.
+    """
+    if side in ("output", "both"):
+        tok = matches_concept(label, concept)
+        if tok:
+            return f"top_logits:{tok!r} (output-side)"
+    if side in ("input", "both"):
+        hits, total, tok = peak_token_match(label, concept)
+        if total and hits >= max(2, total // 2):
+            return f"peak_token:{tok!r} (input-side, {hits}/{total} examples)"
     return None
 
 
@@ -219,8 +262,8 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
     def final(name):
         return mg[name]["final_position"]
 
-    def shared_concept(concept, names, position_of, min_graphs=2):
-        """(L,f) matching `concept` in >= min_graphs of `names`.
+    def shared_concept(concept, names, position_of, min_graphs=2, side="both"):
+        """(L,f) matching `concept` (on ``side``) in >= min_graphs of `names`.
 
         ``position_of(name)`` scopes the scan (None = every position — the paper's
         supernodes are node SETS wherever they live). Per-graph activations and node
@@ -231,14 +274,14 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
         seen_in: dict[tuple[int, int], list[str]] = defaultdict(list)
         for name in names:
             for n in feature_nodes(graphs[name], position_of(name)):
-                m = matches_concept(n.get("label"), concept)
+                m = concept_match(n.get("label"), concept, side)
                 if not m:
                     continue
                 key = (n["layer"], n["feature_idx"])
                 if name not in seen_in[key]:
                     seen_in[key].append(name)
                 if key not in hits:
-                    hits[key] = member_entry(n, matched=f"top_logits:{m!r}")
+                    hits[key] = member_entry(n, matched=m)
                     hits[key]["acts"] = {}
                     hits[key]["positions"] = {}
                 prev = hits[key]["acts"].get(name, float("-inf"))
@@ -256,8 +299,9 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
         ("raw ", raw_ant_names, "raw_synonym_en"),
     ):
         # the antonym-operation supernode lives mid-graph (paper Fig B1: opposite+small
-        # -> antonym), not only on the final token: scan every position.
-        cands = shared_concept("opposite", names, lambda _n: None)
+        # -> antonym), not only on the final token: scan every position, BOTH sides
+        # (input-side = fires on "opposite"/"contraire"/反义; output-side = promotes them).
+        cands = shared_concept("opposite", names, lambda _n: None, side="both")
         members, overflow = cap_members(cands)
         sns.append(
             supernode(
@@ -300,7 +344,7 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
         )
 
     # --- operand swap: small (multilingual) source + hot donor + say-cold readout -----
-    cands = shared_concept("small", ant_names, lambda n: mg[n]["operand_position"])
+    cands = shared_concept("small", ant_names, lambda n: mg[n]["operand_position"], side="both")
     members, overflow = cap_members(cands)
     sns.append(
         supernode(
@@ -311,13 +355,16 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             "operand",
             members,
             overflow,
-            note="operand-swap source; steered -0.5x (m=-1.5)",
+            note="operand-swap source; steered -0.5x (m=-1.5). Input-side matches (peak"
+            " example token = small/petit/...) are the paper's operand-feature analogue;"
+            " output-side matches at the operand token are say-small-ish — extra scrutiny"
+            " at review",
         )
     )
     hot_cands = [
-        member_entry(n, matched=f"top_logits:{matches_concept(n.get('label'), 'hot')!r}")
+        member_entry(n, matched=concept_match(n.get("label"), "hot", "both"))
         for n in feature_nodes(graphs["hot_en"], mg["hot_en"]["operand_position"])
-        if matches_concept(n.get("label"), "hot")
+        if concept_match(n.get("label"), "hot", "both")
     ]
     members, overflow = cap_members(hot_cands)
     sns.append(

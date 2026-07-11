@@ -18,7 +18,7 @@
      "act": 10.6875,
      "influence": 0.002117,
      "evidence": {
-      "matched": "top_logits:'相反'",
+      "matched": "top_logits:'相反' (output-side)",
       "top_logits": [
        " opposed",
        "对立",
@@ -47,13 +47,48 @@
      ]
     },
     {
+     "layer": 8,
+     "feature": 663,
+     "position": 6,
+     "act": 9.5625,
+     "influence": 0.003074,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       " Advanced",
+       "看好",
+       "iments",
+       "coe",
+       "粉"
+      ],
+      "example": " with ball (thrower). The fourth player (defender) stands⟦ opposite⟧ thrower, between and ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.5625,
+      "antonym_fr": 6.9688,
+      "antonym_zh": 6.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
      "layer": 7,
      "feature": 79606,
      "position": 6,
      "act": 8.0625,
      "influence": 0.005659,
      "evidence": {
-      "matched": "top_logits:'反转'",
+      "matched": "top_logits:'反转' (output-side)",
       "top_logits": [
        "反转",
        " bets",
@@ -83,12 +118,113 @@
     },
     {
      "layer": 13,
+     "feature": 136136,
+     "position": 6,
+     "act": 6.3438,
+     "influence": 0.000704,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       "issement",
+       "ARRIER",
+       "垫",
+       "dealloc",
+       "辙"
+      ],
+      "example": " water⏎term used to describe material through which water cannot move quickly;⟦ opposite⟧ ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.3438,
+      "antonym_zh": 6.4375
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 11,
+     "feature": 22932,
+     "position": 6,
+     "act": 6.1562,
+     "influence": 0.000987,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 5/6 examples)",
+      "top_logits": [
+       " syncing",
+       "anske",
+       " Bosch",
+       "要紧",
+       "形状"
+      ],
+      "example": " still trying to find backers for the new enterprise.⏎v. having the⟦ opposite⟧ effect to t",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.1562,
+      "antonym_fr": 6.0,
+      "antonym_zh": 6.6875
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 9,
+     "feature": 92049,
+     "position": 6,
+     "act": 5.2188,
+     "influence": 0.001094,
+     "evidence": {
+      "matched": "peak_token:'opposite' (input-side, 6/6 examples)",
+      "top_logits": [
+       "RefPtr",
+       "refer",
+       "后再",
+       "準",
+       "Fed"
+      ],
+      "example": " work: the McGill University Union, which stands on Sherbrooke Street⟦ opposite⟧ the McGil",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.2188,
+      "antonym_zh": 4.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 13,
      "feature": 159589,
      "position": 6,
      "act": 5.0938,
      "influence": 0.000789,
      "evidence": {
-      "matched": "top_logits:'opposite'",
+      "matched": "top_logits:'opposite' (output-side)",
       "top_logits": [
        " inversion",
        " invert",
@@ -717,13 +853,83 @@
    "position": "operand",
    "members": [
     {
+     "layer": 28,
+     "feature": 36616,
+     "position": 9,
+     "act": 26.0,
+     "influence": 0.013544,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       " doses",
+       "-sized",
+       "-bodied",
+       " intestine",
+       "-scale"
+      ],
+      "example": " State University, Stillwater, Oklahoma 74078⏎⟦Small⟧mouth bass (Micropterus dolomieui) we",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 26.0,
+      "antonym_fr": 15.0,
+      "antonym_zh": 17.125
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 27,
+     "feature": 29715,
+     "position": 9,
+     "act": 23.0,
+     "influence": 0.014771,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ish",
+       "=size",
+       "est",
+       "-scale",
+       " enough"
+      ],
+      "example": " outline how do you do your homework really fast⏎template for opinion essay⟦ small⟧ busine",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 23.0,
+      "antonym_fr": 10.8125,
+      "antonym_zh": 12.25
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
      "layer": 24,
      "feature": 24991,
      "position": 9,
      "act": 15.375,
      "influence": 0.016527,
      "evidence": {
-      "matched": "top_logits:'/small'",
+      "matched": "top_logits:'/small' (output-side)",
       "top_logits": [
        "-sized",
        "/small",
@@ -749,13 +955,213 @@
      ]
     },
     {
+     "layer": 26,
+     "feature": 30805,
+     "position": 9,
+     "act": 14.4375,
+     "influence": 0.00373,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "culus",
+       " locally",
+       "起来",
+       "abb",
+       " ultr"
+      ],
+      "example": " you about the AMKD disease burden and management strategies: the need for⟦ small⟧ molecul",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 14.4375,
+      "antonym_fr": 9.8125
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr"
+     ]
+    },
+    {
+     "layer": 26,
+     "feature": 163015,
+     "position": 9,
+     "act": 11.75,
+     "influence": 0.002209,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "场面",
+       "ools",
+       "oky",
+       "nio",
+       "事务"
+      ],
+      "example": " part of the birth of America as a nation.⏎Madison was a⟦ small⟧ man in stature, but a gia",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 11.75,
+      "antonym_fr": 10.0,
+      "antonym_zh": 8.9375
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 25,
+     "feature": 42786,
+     "position": 9,
+     "act": 11.125,
+     "influence": 0.006243,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "uity",
+       " increments",
+       "istic",
+       "-town",
+       "-scale"
+      ],
+      "example": " your vet will have an excellent understanding of your pet’s medical history.⏎⟦Small⟧ plac",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 11.125,
+      "antonym_zh": 7.1562
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 26,
+     "feature": 58650,
+     "position": 9,
+     "act": 10.3125,
+     "influence": 0.002537,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "兒",
+       " tweaks",
+       "bins",
+       " increments",
+       " gains"
+      ],
+      "example": " pilot who hopped the pond to pursue his acting dream. In between⟦ small⟧ roles alongside ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 10.3125,
+      "antonym_fr": 10.5,
+      "antonym_zh": 22.875
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_fr",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 28,
+     "feature": 97177,
+     "position": 9,
+     "act": 10.3125,
+     "influence": 0.001143,
+     "evidence": {
+      "matched": "peak_token:'little' (input-side, 5/6 examples)",
+      "top_logits": [
+       "孩子",
+       "boy",
+       "imate",
+       "_endian",
+       "孩子的"
+      ],
+      "example": "<|im_start|>user⏎The⟦ little⟧ brown bat is one of the most common species of bats in North",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 10.3125,
+      "antonym_zh": 21.0
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 23,
+     "feature": 99795,
+     "position": 9,
+     "act": 9.9375,
+     "influence": 0.008838,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ishes",
+       " amount",
+       "ening",
+       "-scale",
+       "ish"
+      ],
+      "example": " ...⏎And Angola says a recent outbreak of Marburg virus is over.⏎⟦Small⟧ genetic differenc",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 9.9375,
+      "antonym_zh": 7.75
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
      "layer": 22,
      "feature": 113890,
      "position": 9,
      "act": 9.6875,
      "influence": 0.020359,
      "evidence": {
-      "matched": "top_logits:'不小'",
+      "matched": "top_logits:'不小' (output-side)",
       "top_logits": [
        " mistake",
        " Sized",
@@ -778,11 +1184,202 @@
      "graphs": [
       "antonym_en",
       "antonym_fr"
-     ],
-     "review_note": "top logits look unrelated (mistake/Sized/gest/intestine) and the example is an HTML tag list — doubtful 'small' feature"
+     ]
+    },
+    {
+     "layer": 22,
+     "feature": 42644,
+     "position": 9,
+     "act": 6.0,
+     "influence": 0.008491,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ings",
+       " enough",
+       " intestine",
+       "ness",
+       "疵"
+      ],
+      "example": " Queensland Government⏎© Queensland Government⏎Native to sub-Saharan Africa, the⟦ small⟧ h",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 6.0,
+      "antonym_zh": 4.75
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 0,
+     "feature": 133356,
+     "position": 9,
+     "act": 5.9688,
+     "influence": 0.039863,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "wares",
+       " sized",
+       " intestine",
+       "ness",
+       "atur"
+      ],
+      "example": "<|im_start|>user⏎The⟦ small⟧ moving spots which are sometimes seen in the focus area of vi",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.9688,
+      "antonym_zh": 4.25
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 22,
+     "feature": 38866,
+     "position": 9,
+     "act": 5.625,
+     "influence": 0.007125,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ingly",
+       "踊",
+       "omite",
+       " enough",
+       "izing"
+      ],
+      "example": "Traditions Garden Lecture Series.”⏎Suitable for backyards as well as⟦ small⟧ scale farms, ",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.625,
+      "antonym_zh": 4.2188
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 21,
+     "feature": 120516,
+     "position": 9,
+     "act": 5.4688,
+     "influence": 0.00635,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "至上",
+       " bur",
+       " conduct",
+       "eren",
+       " enough"
+      ],
+      "example": " language learners, to help you on your quest…⏎1. Set yourself⟦ small⟧ goals. Learning Eng",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 5.4688,
+      "antonym_zh": 4.125
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 19,
+     "feature": 77492,
+     "position": 9,
+     "act": 4.1562,
+     "influence": 0.007837,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       " taskId",
+       "stadt",
+       "und",
+       "-hearted",
+       "serrat"
+      ],
+      "example": " table above shows some characteristics of the antenna. It is based upon a⟦ small⟧ 5 degre",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 4.1562,
+      "antonym_zh": 3.4844
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
+    },
+    {
+     "layer": 24,
+     "feature": 153400,
+     "position": 9,
+     "act": 2.375,
+     "influence": 0.001182,
+     "evidence": {
+      "matched": "peak_token:'small' (input-side, 6/6 examples)",
+      "top_logits": [
+       "actly",
+       " wonders",
+       "illes",
+       "ened",
+       "ville"
+      ],
+      "example": " Health Organization (WHO). As D.A. Henderson, Director of the⟦ Small⟧pox Eradication Prog",
+      "grid_class": null
+     },
+     "review": "proposed",
+     "acts": {
+      "antonym_en": 2.375,
+      "antonym_zh": 5.0938
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     },
+     "graphs": [
+      "antonym_en",
+      "antonym_zh"
+     ]
     }
    ],
-   "note": "operand-swap source; steered -0.5x (m=-1.5)"
+   "note": "operand-swap source; steered -0.5x (m=-1.5). Input-side matches (peak example token = small/petit/...) are the paper's operand-feature analogue; output-side matches at the operand token are say-small-ish — extra scrutiny at review"
   },
   {
    "name": "hot",
@@ -792,13 +1389,53 @@
    "position": "operand",
    "members": [
     {
+     "layer": 27,
+     "feature": 143324,
+     "position": 9,
+     "act": 38.25,
+     "influence": 0.013776,
+     "evidence": {
+      "matched": "peak_token:'warm' (input-side, 5/6 examples)",
+      "top_logits": [
+       " unm",
+       "UNT",
+       "blood",
+       "杉",
+       "-blood"
+      ],
+      "example": " in the county include Gay, Lone Oak, Luthersville,⟦ Warm⟧ Springs, and Woodbury.⏎Accordin",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 29,
+     "feature": 42050,
+     "position": 9,
+     "act": 29.375,
+     "influence": 0.000761,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "лив",
+       " weather",
+       "天",
+       "-caption",
+       "nest"
+      ],
+      "example": "<|im_start|>user⏎The Peabody Printing Museum is a collection of⟦ hot⟧ type equipment datin",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 24,
      "feature": 127078,
      "position": 9,
      "act": 26.125,
      "influence": 0.035246,
      "evidence": {
-      "matched": "top_logits:'hot'",
+      "matched": "top_logits:'hot' (output-side)",
       "top_logits": [
        "hot",
        " hotter",
@@ -812,13 +1449,135 @@
      "review": "proposed"
     },
     {
+     "layer": 28,
+     "feature": 51031,
+     "position": 9,
+     "act": 24.875,
+     "influence": 0.002628,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " stead",
+       "indsight",
+       " //{",
+       "忠",
+       "蚂蚁"
+      ],
+      "example": "<|im_start|>user⏎Why⟦ Hot⟧ Water?⏎Hot water packs a powerful energetic punch when released",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 26,
+     "feature": 119024,
+     "position": 9,
+     "act": 20.875,
+     "influence": 0.008269,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "Ū",
+       "imoto",
+       " Hav",
+       "tings",
+       "ting"
+      ],
+      "example": " milk and soft cheese products or raw vegetables. Poultry, meats like⟦ hot⟧ dogs and lunch",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 27,
+     "feature": 58824,
+     "position": 9,
+     "act": 20.0,
+     "influence": 0.004947,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "flo",
+       "-down",
+       "尚",
+       "いや",
+       " ahead"
+      ],
+      "example": " developments in the use of light for information transfer in next-generation computers.⏎⟦",
+      "grid_class": null
+     },
+     "review": "proposed"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 28,
+     "feature": 32630,
+     "position": 9,
+     "act": 18.875,
+     "influence": 0.00552,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "tractive",
+       "orna",
+       "balls",
+       "rium",
+       "iful"
+      ],
+      "example": " project is exposed to the atmosphere. The performance of atmospherically exposed⟦ hot⟧-di",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 25,
+     "feature": 110576,
+     "position": 9,
+     "act": 16.375,
+     "influence": 0.002129,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "-area",
+       " bodily",
+       "itar",
+       "ness",
+       "emean"
+      ],
+      "example": " these 21 Subtle Signs You've Already Had Coronavirus.⏎\"⟦Hot⟧\" Blood Rush⏎Most of us exper",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 28,
+     "feature": 133749,
+     "position": 9,
+     "act": 15.875,
+     "influence": 0.001476,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "يز",
+       "片子",
+       "pmat",
+       "蓬",
+       " pon"
+      ],
+      "example": " up, costume, props and colour within the frame. Edgar Wright’s⟦ Hot⟧ Fuzz (2007) includes",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 24,
      "feature": 8689,
      "position": 9,
      "act": 14.0625,
      "influence": 0.012574,
      "evidence": {
-      "matched": "top_logits:'-hot'",
+      "matched": "top_logits:'-hot' (output-side)",
       "top_logits": [
        "els",
        "-hot",
@@ -832,13 +1591,113 @@
      "review": "proposed"
     },
     {
+     "layer": 27,
+     "feature": 80170,
+     "position": 9,
+     "act": 11.0625,
+     "influence": 0.003253,
+     "evidence": {
+      "matched": "peak_token:'warm' (input-side, 6/6 examples)",
+      "top_logits": [
+       "身",
+       "elling",
+       "ィ",
+       "izontal",
+       "-blood"
+      ],
+      "example": "ability, mantas have few natural predators. Orcas and large,⟦ warm⟧-water sharks such as t",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 23,
+     "feature": 152985,
+     "position": 9,
+     "act": 10.375,
+     "influence": 0.010281,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ness",
+       "lier",
+       "一点",
+       "ening",
+       " enough"
+      ],
+      "example": " Josh Chetwynd, author of the book, \"How the⟦ Hot⟧ Dog Found Its Bun,\" there are two main ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 8,
+     "feature": 66332,
+     "position": 9,
+     "act": 9.1875,
+     "influence": 0.012979,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "这里是",
+       "enaire",
+       "抖",
+       " ReSharper",
+       "ucked"
+      ],
+      "example": "The circuit of Figure 1 provides power-up sequencing for a variety of⟦ hot⟧-swap applicati",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 22,
+     "feature": 85454,
+     "position": 9,
+     "act": 9.0,
+     "influence": 0.014153,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ness",
+       "spell",
+       "ırl",
+       "-handed",
+       "ting"
+      ],
+      "example": " floating by in the sky overhead. But did you know that the modern⟦ hot⟧ air balloon syste",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 26,
+     "feature": 114823,
+     "position": 9,
+     "act": 7.5312,
+     "influence": 0.00103,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "/fast",
+       "lig",
+       " republic",
+       "ted",
+       " Republic"
+      ],
+      "example": " examples.⏎April 21, 1987 · \"⟦Hot⟧. Temperature got up to 30°C (86°F)",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 24,
      "feature": 29468,
      "position": 9,
      "act": 6.4062,
      "influence": 0.006698,
      "evidence": {
-      "matched": "top_logits:'hot'",
+      "matched": "top_logits:'hot' (output-side)",
       "top_logits": [
        "hot",
        " hotter",
@@ -858,7 +1717,7 @@
      "act": 6.1562,
      "influence": 0.000849,
      "evidence": {
-      "matched": "top_logits:'.hot'",
+      "matched": "top_logits:'.hot' (output-side)",
       "top_logits": [
        "ulous",
        "盛",
@@ -872,13 +1731,33 @@
      "review": "proposed"
     },
     {
+     "layer": 21,
+     "feature": 35829,
+     "position": 9,
+     "act": 5.8125,
+     "influence": 0.00863,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       ".escape",
+       "�",
+       "sters",
+       "劫",
+       "bin"
+      ],
+      "example": " The Yamuna River starts out clear as rainwater from a lake and⟦ hot⟧ spring at the foot o",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 25,
      "feature": 109567,
      "position": 9,
      "act": 5.5312,
      "influence": 0.000926,
      "evidence": {
-      "matched": "top_logits:'hot'",
+      "matched": "top_logits:'hot' (output-side)",
       "top_logits": [
        "拦",
        "界的",
@@ -893,12 +1772,72 @@
     },
     {
      "layer": 7,
+     "feature": 70527,
+     "position": 9,
+     "act": 5.5,
+     "influence": 0.004046,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ogie",
+       ">*</",
+       "surf",
+       "和支持",
+       "穴"
+      ],
+      "example": " there is a loss of vaginal elasticity and a drop in lubrication.⏎⟦Hot⟧ flashes are more c",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 25,
+     "feature": 147177,
+     "position": 9,
+     "act": 5.4688,
+     "influence": 0.000794,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "撥",
+       "分配",
+       "enal",
+       "orny",
+       "odia"
+      ],
+      "example": ", including soups, sauces, chilis, stews,⟦ hot⟧ dogs, gravies, seasoned snack foods, dips ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 9,
+     "feature": 116780,
+     "position": 9,
+     "act": 5.4375,
+     "influence": 0.004783,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 5/6 examples)",
+      "top_logits": [
+       "loys",
+       "Die",
+       "ícia",
+       "树",
+       "oyer"
+      ],
+      "example": " Provide text alternatives for disabled users. Use client-side MAP and text for⟦ hot⟧spots",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 7,
      "feature": 109065,
      "position": 9,
      "act": 5.0938,
      "influence": 0.011418,
      "evidence": {
-      "matched": "top_logits:'heatmap'",
+      "matched": "top_logits:'heatmap' (output-side)",
       "top_logits": [
        " heatmap",
        "暑",
@@ -910,9 +1849,27 @@
       "grid_class": null
      },
      "review": "proposed"
-    }
-   ],
-   "overflow": [
+    },
+    {
+     "layer": 10,
+     "feature": 39906,
+     "position": 9,
+     "act": 4.9375,
+     "influence": 0.00207,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " HOL",
+       "开",
+       " selectors",
+       " imprint",
+       "问他"
+      ],
+      "example": " tissue will collect fat, making it hard to ever get burned up.⟦ Hot⟧, used muscle will se",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
     {
      "layer": 5,
      "feature": 134029,
@@ -920,7 +1877,7 @@
      "act": 4.7188,
      "influence": 0.014146,
      "evidence": {
-      "matched": "top_logits:'散热'",
+      "matched": "top_logits:'散热' (output-side)",
       "top_logits": [
        "暖",
        " thermal",
@@ -934,13 +1891,293 @@
      "review": "proposed"
     },
     {
+     "layer": 9,
+     "feature": 130526,
+     "position": 9,
+     "act": 4.625,
+     "influence": 0.001634,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ijke",
+       "illard",
+       "gradable",
+       "feeds",
+       "rijk"
+      ],
+      "example": "), but none of them had made an attempt to get there in a⟦ hot⟧ air balloon. Salomon Augus",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 11,
+     "feature": 162128,
+     "position": 9,
+     "act": 4.4062,
+     "influence": 0.002872,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 5/6 examples)",
+      "top_logits": [
+       " volum",
+       "iminal",
+       "意大",
+       "而非",
+       "ள"
+      ],
+      "example": " analog. And guess what when it comes to adding this technology to your⟦ hot⟧ ride, there'",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 19,
+     "feature": 38230,
+     "position": 9,
+     "act": 4.0625,
+     "influence": 0.006658,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " streak",
+       "HEST",
+       "INESS",
+       " enough",
+       "략"
+      ],
+      "example": " large one.⏎Rober decided to scale the system up and turned his⟦ hot⟧ tub into a fluidized",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 12,
+     "feature": 103249,
+     "position": 9,
+     "act": 3.8594,
+     "influence": 0.002386,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "ycz",
+       "质量管理",
+       "工程质量",
+       "cret",
+       "BuilderFactory"
+      ],
+      "example": " will happen. Try salt, sugar, vinegar, baking soda, and⟦ hot⟧ water.⏎2. Learn about Therm",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 20,
+     "feature": 20026,
+     "position": 9,
+     "act": 3.7344,
+     "influence": 0.002462,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "nings",
+       "NING",
+       "cepts",
+       "ushman",
+       "ABCDEFGHI"
+      ],
+      "example": " frequently asked questions about cell-phone risks.)⏎The risks of microwave radiation are⟦",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 8,
+     "feature": 6962,
+     "position": 9,
+     "act": 3.5625,
+     "influence": 0.001784,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "/workspace",
+       "隔着",
+       "赚",
+       "年之久",
+       "aison"
+      ],
+      "example": ", too.⏎Food can be preserved in glass mason jars using either⟦ hot⟧ water bath or pressure",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 10,
+     "feature": 104758,
+     "position": 9,
+     "act": 3.5,
+     "influence": 0.002821,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 4/6 examples)",
+      "top_logits": [
+       "synthesize",
+       "孩",
+       " resil",
+       "的心",
+       "钤"
+      ],
+      "example": " Provide text alternatives for disabled users. Use client-side MAP and text for⟦ hot⟧spots",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 14,
+     "feature": 22000,
+     "position": 9,
+     "act": 3.3906,
+     "influence": 0.001445,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "bins",
+       "楼主",
+       "翼",
+       "egg",
+       " ulus"
+      ],
+      "example": " been described as “boring,” “burning,” “like a⟦ hot⟧ poker in the eye” and as “suicide he",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 6,
+     "feature": 134168,
+     "position": 9,
+     "act": 3.2656,
+     "influence": 0.003742,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "subst",
+       " tér",
+       "レー",
+       "-headed",
+       "度过"
+      ],
+      "example": " occurs when the body cannot get rid of excess heat in response to a⟦ hot⟧ environment. Wh",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 4,
+     "feature": 32249,
+     "position": 9,
+     "act": 3.2344,
+     "influence": 0.008071,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " m",
+       "defs",
+       " Eh",
+       "准入",
+       "再现"
+      ],
+      "example": "<|im_start|>user⏎⟦Hot⟧spots > Hamakua > Museum >⏎Around the turn-of-the-century",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 13,
+     "feature": 35909,
+     "position": 9,
+     "act": 3.1875,
+     "influence": 0.001038,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 5/6 examples)",
+      "top_logits": [
+       "iveau",
+       " suggest",
+       "roph",
+       " lạnh",
+       "氪"
+      ],
+      "example": " or a curtained window. Keep your Petra far away from cold or⟦ hot⟧ drafts, as they do not",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 6,
+     "feature": 123377,
+     "position": 9,
+     "act": 3.0781,
+     "influence": 0.002231,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 5/6 examples)",
+      "top_logits": [
+       "uku",
+       "cant",
+       "culo",
+       " Rh",
+       "icense"
+      ],
+      "example": ". That’s not a bad thing in an age when literacy is a⟦ hot⟧ topic in education circles.⏎Ev",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 3,
+     "feature": 75392,
+     "position": 9,
+     "act": 3.0625,
+     "influence": 0.015788,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "沿着",
+       " aunt",
+       " Erdogan",
+       "вит",
+       "itore"
+      ],
+      "example": " only cause significant deforestation in one of the world’s reaming biodiversity⟦ hot⟧spot",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 9,
+     "feature": 73181,
+     "position": 9,
+     "act": 3.0625,
+     "influence": 0.001321,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "战机",
+       "ffffff",
+       "样子",
+       "*(-",
+       "zsche"
+      ],
+      "example": " you need to build a model airplane. Help your little ones with the⟦ hot⟧ gluing and then ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 11,
      "feature": 22499,
      "position": 9,
      "act": 3.0312,
      "influence": 0.004664,
      "evidence": {
-      "matched": "top_logits:'heat'",
+      "matched": "top_logits:'heat' (output-side)",
       "top_logits": [
        "冬",
        "保暖",
@@ -954,13 +2191,53 @@
      "review": "proposed"
     },
     {
+     "layer": 18,
+     "feature": 104649,
+     "position": 9,
+     "act": 3.0,
+     "influence": 0.00246,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " subject",
+       " app",
+       "然是",
+       "ting",
+       "ness"
+      ],
+      "example": " horizontal instead of the usual cylinder. To fuel the rotary dryer, a⟦ hot⟧ air furnace i",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 5,
+     "feature": 18203,
+     "position": 9,
+     "act": 2.9844,
+     "influence": 0.003051,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " Dead",
+       "剥离",
+       "adera",
+       "illa",
+       "illas"
+      ],
+      "example": " what is lcm, show how to find the least common multiple and show⟦ hot⟧ to",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 3,
      "feature": 131394,
      "position": 9,
      "act": 2.8125,
      "influence": 0.016228,
      "evidence": {
-      "matched": "top_logits:'_hot'",
+      "matched": "top_logits:'_hot' (output-side)",
       "top_logits": [
        "沿着",
        " kut",
@@ -974,13 +2251,33 @@
      "review": "proposed"
     },
     {
+     "layer": 15,
+     "feature": 106771,
+     "position": 9,
+     "act": 2.7969,
+     "influence": 0.000882,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "为啥",
+       ".getOwnProperty",
+       "่าย",
+       "为何",
+       " divers"
+      ],
+      "example": " of 90 degrees C or higher. Due to the availability of⟦ hot⟧ water and hygienic nature of ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
      "layer": 11,
      "feature": 137485,
      "position": 9,
      "act": 2.75,
      "influence": 0.001447,
      "evidence": {
-      "matched": "top_logits:'加热'",
+      "matched": "top_logits:'加热' (output-side)",
       "top_logits": [
        "noon",
        "加热",
@@ -989,6 +2286,246 @@
        " hottest"
       ],
       "example": " shade and the windows cracked, the INSIDE temperature can rapidly reach dangerous⟦ levels",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 6,
+     "feature": 54126,
+     "position": 9,
+     "act": 2.5938,
+     "influence": 0.002149,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " *__",
+       " пут",
+       "setType",
+       "结构性",
+       "uxe"
+      ],
+      "example": " central region of the galaxy, as well as diffuse X-ray emission from⟦ hot⟧ gas.⏎On the ri",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 8,
+     "feature": 2335,
+     "position": 9,
+     "act": 2.5,
+     "influence": 0.00179,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " join",
+       "拼",
+       "样",
+       "aries",
+       "精英"
+      ],
+      "example": ". Pylori, unhealthy snacking, excessive exposure to sunlight,⟦ hot⟧ bath and stress.⏎Somet",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 13,
+     "feature": 111140,
+     "position": 9,
+     "act": 2.4688,
+     "influence": 0.00097,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "福彩",
+       " injecting",
+       " compart",
+       "quez",
+       " regul"
+      ],
+      "example": " I have come across numerous vendors specialising in surprisingly specific merchandise, in",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 11,
+     "feature": 51170,
+     "position": 9,
+     "act": 2.3906,
+     "influence": 0.00114,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " Mom",
+       "seys",
+       "hung",
+       "itches",
+       "ạc"
+      ],
+      "example": " and cool electronic devices through conduction. These platforms are alternatively known a",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 24,
+     "feature": 97034,
+     "position": 9,
+     "act": 2.3281,
+     "influence": 0.001008,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "耐",
+       "千",
+       "kin",
+       "絲",
+       "丝"
+      ],
+      "example": " in ZIP, RPM, RAR, DMG⏎Download servers:⟦ Hot⟧file, Dropbox, Librevault, BitShare, Google ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 6,
+     "feature": 120016,
+     "position": 9,
+     "act": 2.1875,
+     "influence": 0.002333,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "研",
+       "ouser",
+       " TITLE",
+       " Filed",
+       "如下"
+      ],
+      "example": ". Since then, the city has added 50 more buildings and⟦ hot⟧spots. Today, they’re working ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 5,
+     "feature": 51825,
+     "position": 9,
+     "act": 2.1562,
+     "influence": 0.002667,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "币",
+       " tan",
+       " endian",
+       "发达",
+       "与否"
+      ],
+      "example": " right climate is essential to grow premium wine grapes. Ideally it will be⟦ hot⟧ during t",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 10,
+     "feature": 88022,
+     "position": 9,
+     "act": 2.1406,
+     "influence": 0.001062,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "皂",
+       "座",
+       "uos",
+       "醛",
+       "就想"
+      ],
+      "example": "⏎*Podcast-a radio show that you can find online⏎*⟦Hot⟧ mic-microphone that is on, but the ",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 9,
+     "feature": 120460,
+     "position": 9,
+     "act": 2.125,
+     "influence": 0.000859,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " Tone",
+       "_dummy",
+       "跺",
+       "浮",
+       " Decoration"
+      ],
+      "example": "ated and this could even lead to death, particularly in hot environments.⏎⟦Hot⟧ and Cold T",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 5,
+     "feature": 116391,
+     "position": 9,
+     "act": 2.0938,
+     "influence": 0.002321,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       " j",
+       "oley",
+       ">null",
+       "o",
+       " nothing"
+      ],
+      "example": ".⏎During the colonial era, Oyster Bay had a reputation as a⟦ hot⟧bed of smuggling and it w",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 9,
+     "feature": 116536,
+     "position": 9,
+     "act": 2.0469,
+     "influence": 0.001391,
+     "evidence": {
+      "matched": "peak_token:'hot' (input-side, 6/6 examples)",
+      "top_logits": [
+       "笏",
+       " tun",
+       "elp",
+       "lat",
+       " gerçek"
+      ],
+      "example": " remotely.⏎A simple example of cloud computing is Yahoo email, Gmail,⟦ Hot⟧mail or Carboni",
+      "grid_class": null
+     },
+     "review": "proposed"
+    },
+    {
+     "layer": 10,
+     "feature": 162564,
+     "position": 9,
+     "act": 1.9766,
+     "influence": 0.000739,
+     "evidence": {
+      "matched": "peak_token:'heat' (input-side, 3/6 examples)",
+      "top_logits": [
+       "中国大陆",
+       " landscape",
+       "'acc",
+       "imedia",
+       "偏离"
+      ],
+      "example": " likely training year round and do not have the ability to escape the summer⟦ heat⟧, we al",
       "grid_class": null
      },
      "review": "proposed"
@@ -1202,7 +2739,7 @@
      "act": 23.0,
      "influence": 0.019167,
      "evidence": {
-      "matched": "top_logits:'large'",
+      "matched": "top_logits:'large' (output-side)",
       "top_logits": [
        "small",
        " low",
@@ -1237,7 +2774,7 @@
      "act": 19.5,
      "influence": 0.026072,
      "evidence": {
-      "matched": "top_logits:'large'",
+      "matched": "top_logits:'large' (output-side)",
       "top_logits": [
        " large",
        " small",
@@ -1272,7 +2809,7 @@
      "act": 17.625,
      "influence": 0.024252,
      "evidence": {
-      "matched": "top_logits:'巨大的'",
+      "matched": "top_logits:'巨大的' (output-side)",
       "top_logits": [
        "巨型",
        "巨大的",
@@ -1307,7 +2844,7 @@
      "act": 17.625,
      "influence": 0.003521,
      "evidence": {
-      "matched": "top_logits:'large'",
+      "matched": "top_logits:'large' (output-side)",
       "top_logits": [
        " Very",
        " Simple",
@@ -1340,7 +2877,7 @@
      "act": 14.125,
      "influence": 0.021655,
      "evidence": {
-      "matched": "top_logits:'largest'",
+      "matched": "top_logits:'largest' (output-side)",
       "top_logits": [
        " largest",
        "较大",
@@ -1375,7 +2912,7 @@
      "act": 8.0625,
      "influence": 0.012135,
      "evidence": {
-      "matched": "top_logits:'bigger'",
+      "matched": "top_logits:'bigger' (output-side)",
       "top_logits": [
        " bigger",
        "太大",
@@ -1412,7 +2949,7 @@
      "act": 7.6875,
      "influence": 0.007607,
      "evidence": {
-      "matched": "top_logits:'grand'",
+      "matched": "top_logits:'grand' (output-side)",
       "top_logits": [
        "Grand",
        " Grand",
@@ -1444,7 +2981,7 @@
      "act": 6.7188,
      "influence": 0.00398,
      "evidence": {
-      "matched": "top_logits:'更大'",
+      "matched": "top_logits:'更大' (output-side)",
       "top_logits": [
        "更大",
        " bigger",
@@ -1479,7 +3016,7 @@
      "act": 6.3438,
      "influence": 0.003981,
      "evidence": {
-      "matched": "top_logits:'larger'",
+      "matched": "top_logits:'larger' (output-side)",
       "top_logits": [
        " larger",
        " huge",
@@ -1511,7 +3048,7 @@
      "act": 4.7812,
      "influence": 0.003057,
      "evidence": {
-      "matched": "top_logits:'大的'",
+      "matched": "top_logits:'大的' (output-side)",
       "top_logits": [
        "大的",
        " strongly",
@@ -1546,7 +3083,7 @@
      "act": 4.2188,
      "influence": 0.00389,
      "evidence": {
-      "matched": "top_logits:'big'",
+      "matched": "top_logits:'big' (output-side)",
       "top_logits": [
        " big",
        " wide",
@@ -1581,7 +3118,7 @@
      "act": 3.875,
      "influence": 0.000999,
      "evidence": {
-      "matched": "top_logits:'人大代表'",
+      "matched": "top_logits:'人大代表' (output-side)",
       "top_logits": [
        " hunts",
        "-Origin",
@@ -1616,7 +3153,7 @@
      "act": 3.0625,
      "influence": 0.001547,
      "evidence": {
-      "matched": "top_logits:'bigger'",
+      "matched": "top_logits:'bigger' (output-side)",
       "top_logits": [
        " bigger",
        "大型",
@@ -1951,7 +3488,7 @@
      "act": 52.25,
      "influence": 0.052599,
      "evidence": {
-      "matched": "top_logits:'bigger'",
+      "matched": "top_logits:'bigger' (output-side)",
       "top_logits": [
        " bigger",
        "太大",
@@ -1983,7 +3520,7 @@
      "act": 28.0,
      "influence": 0.056749,
      "evidence": {
-      "matched": "top_logits:'巨大的'",
+      "matched": "top_logits:'巨大的' (output-side)",
       "top_logits": [
        "巨型",
        "巨大的",
@@ -2018,7 +3555,7 @@
      "act": 21.0,
      "influence": 0.023928,
      "evidence": {
-      "matched": "top_logits:'large'",
+      "matched": "top_logits:'large' (output-side)",
       "top_logits": [
        "small",
        " low",
@@ -2053,7 +3590,7 @@
      "act": 16.375,
      "influence": 0.031685,
      "evidence": {
-      "matched": "top_logits:'largest'",
+      "matched": "top_logits:'largest' (output-side)",
       "top_logits": [
        " largest",
        "较大",
@@ -2085,7 +3622,7 @@
      "act": 14.25,
      "influence": 0.02683,
      "evidence": {
-      "matched": "top_logits:'large'",
+      "matched": "top_logits:'large' (output-side)",
       "top_logits": [
        " large",
        " small",
@@ -2120,7 +3657,7 @@
      "act": 13.9375,
      "influence": 0.006088,
      "evidence": {
-      "matched": "top_logits:'grand'",
+      "matched": "top_logits:'grand' (output-side)",
       "top_logits": [
        "雄",
        "辽",
@@ -2154,7 +3691,7 @@
      "act": 13.125,
      "influence": 0.011211,
      "evidence": {
-      "matched": "top_logits:'更大'",
+      "matched": "top_logits:'更大' (output-side)",
       "top_logits": [
        "更大",
        " bigger",

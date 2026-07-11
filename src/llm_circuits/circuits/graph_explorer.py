@@ -218,7 +218,6 @@ _TEMPLATE = """<!DOCTYPE html>
   #graphwrap { flex:1.6; overflow:hidden; }
   #subwrap { flex:1; overflow:hidden; border-top:1px solid #eee; }
   #g, #sg { display:block; background:#fff; width:100%; height:100%; cursor:grab; }
-  #g { background:rgb(235,212,178); }
   #g:active, #sg:active { cursor:grabbing; }
   .node.dim { opacity:.15; }
   .frow { display:flex; justify-content:space-between; gap:8px; padding:1px 3px; white-space:nowrap; }

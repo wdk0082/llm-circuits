@@ -1283,3 +1283,28 @@ stated alongside (Summary rows updated in place).
   (library/serve/housekeeping, outside the reproductions).
 - Node state: bf16 transcoder caches (57 + 91 GB), ~45 GB feature labels, both models
   under `.cache/`; artifacts regenerated under `artifacts/paper_{addition,multilingual}/`.
+
+### Same-day addendum — intervention-method audit (solidify before any protocol cleanup)
+
+Prompted by the constrained-only-cleanup question: our constrained patching was
+re-audited **line-by-line against the pinned circuit-tracer source** (the paper
+authors' reference implementation) and the methods paper's own description. Mechanics
+are identical: MLP outputs pinned to clean inside [0, ℓ] with deltas anchored on
+*clean* activations (`value − clean`), attention patterns frozen everywhere with live
+V/O (so within-range attention responds linearly — circuit-tracer's reading of the
+paper's stricter "run forward from the last layer of the range" prose; we follow the
+implementation), LayerNorm frozen iff the range covers all layers, real model after ℓ.
+Two deliberate divergences, both safety-positive: we **raise** on ℓ < l_max where
+circuit-tracer **silently drops** out-of-range interventions (`intervention_hook` only
+fires for in-range layers), and steering conventions differ per the documented
+m/M/value mapping. `verify_intervention.py` extended from one parity case to three —
+single m=−2, a two-layer coupled stack with ℓ above the top steer, and a `value=`
+donor injection on a clean≈0 recipient feature — **3/3 PASS at the noise floor**
+(max Δ-diff ≤ 3e-5 on ‖Δ‖ 37–130, cosine 1.00000; A100 fp32). Every intervention
+primitive the reproductions use is therefore cross-verified in the headline
+(constrained) mode. Reading of the fourth-session constrained failures stands
+strengthened: **not a method bug** — the paper's protocol paired with our
+influence-top supernode *selections* (which reach L27–35) leaves no recompute room;
+the fair paper-style test, queued for when the reproduction work resumes, is
+re-selecting the swap supernodes the paper's way (early/mid hand-curated concept
+groups) and re-running the constrained ℓ-sweep.

@@ -27,11 +27,19 @@ numerically. Nothing in `src/` depends on this folder.
 
 - **`verify_intervention.py`** — runs our `run_feature_intervention`
   and circuit-tracer's `ReplacementModel.feature_intervention` on the same Qwen3 model,
-  the same transcoders, the same prompt/feature/m, and a matching constrained layer range,
-  then compares the steering effect on the logits. Because the two use different model
-  implementations (HF vs TransformerLens), it compares the **steering delta**
-  (steered − clean), which cancels the baseline implementation offset, and PASSes when the
-  deltas agree to within a few× the clean-logit noise floor (and cosine > 0.99).
+  the same transcoders, the same prompt/features/values, with matching constrained layer
+  ranges, then compares the steering effect on the logits. **Three cases** cover every
+  intervention primitive the reproductions use: (A) single-feature negative steer
+  (m=−2) constrained to its own layer; (B) a **two-layer coupled suppression stack**
+  with the patch end layer above the top steer — exercising clean-anchored deltas for
+  multiple features, the no-second-order-effects pin inside the range, and the
+  within-range attention response (frozen patterns, live V); (C) a **`value=` donor
+  injection** (a feature near-inactive at the target position set to an absolute
+  positive value — the swap protocol's donor half) under the same constrained patching.
+  Because the two sides use different model implementations (HF vs TransformerLens), it
+  compares the **steering delta** (steered − clean), which cancels the baseline
+  implementation offset, and PASSes when the deltas agree to within a few× the
+  clean-logit noise floor (and cosine > 0.99). Exits 1 on any FAIL.
 
 Run (fp32 — needs RAM for two 0.6B models + transcoders; on a Mac force CPU to avoid the
 MPS allocator cap):

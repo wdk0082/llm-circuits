@@ -1,7 +1,25 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-11, after the FOURTH A100 session, branch
-> `fix/constrained-patching-pass`): **the pre-report scan queue is closed.** Every
+> **⏩ CURRENT STATE** (2026-07-11, after the FIFTH session, branch
+> `repro/constrained-supernodes`): **reproduction v2 is live for ADDITION** —
+> constrained patching only, supernodes loaded from a reviewed artifact
+> (`notebooks/supernodes/addition_4b.json`; grid-evidenced full-graph scan, membership
+> never by influence), graphs loaded from persisted dumps. v2 verdicts: input
+> suppressions substitute crisply at the paper's strengths ([ℓ=16] `3`@0.96, [ℓ=9]
+> `2`@0.94; ablation alone does nothing), the magnitude/ones dissociation holds at
+> every strength with the two-band supernode ([ℓ=7], ones 0.999, low-prec → 42–81% at
+> −2×), the **sum-side smear matches the paper** (width 5.26 at ℓ=35), polymer
+> lookups-only is protocol-exact (`1`@0.83, all six sums 0%), and the **donor swap
+> does not land at any ℓ** (p(`8`) ≤ 0.067) — with selection style/donor purity/
+> protocol all controlled, that is now a clean model difference vs Haiku (v1's
+> propagate route `8`@0.715 documents the mechanism). The supernode pipeline
+> (build_supernode_inputs.py → build_supernodes.py → human review gate → notebooks
+> load) is the durable workflow; MULTILINGUAL is parked mid-review (proposals emitted,
+> approved:false; open items: detector off-graph fallback policy, the 0.95-prune
+> regraph idea, per-language say-large flags). See "Fifth session" below.
+>
+> Previous state (2026-07-11, after the FOURTH A100 session, branch
+> `fix/constrained-patching-pass`): the pre-report scan queue is closed. Every
 > ✅-marked scan fix was independently re-verified against the code, the tests, the CI
 > config and the committed notebook outputs (all hold), and the §3.1 decision is
 > executed: **constrained patching is now the headline protocol** for every
@@ -1308,3 +1326,82 @@ influence-top supernode *selections* (which reach L27–35) leaves no recompute 
 the fair paper-style test, queued for when the reproduction work resumes, is
 re-selecting the swap supernodes the paper's way (early/mid hand-curated concept
 groups) and re-running the constrained ℓ-sweep.
+
+
+---
+
+## Fifth session: reproduction v2 — reviewable semantic supernodes + constrained-only (addition live, multilingual parked) (2026-07-11)
+
+Branch `repro/constrained-supernodes` (same A100-80GB node). Motivation: the fourth
+session showed constrained patching is method-exact but starved by influence-top
+supernode selection; the paper's own supernodes are small hand-curated concept
+clusters, and its membership is **activity-based** (20/27 members active vs 10/27 in
+its pruned graphs — biology digest).
+
+### The supernode pipeline (durable workflow)
+
+1. **`notebooks/build_supernode_inputs.py`** (GPU, once per config): persists the 13
+   pruned graphs as JSON (nodes with influence + labels + activation examples — the
+   explorer HTML had dropped influence), all-feature operand grids (3 single-pass
+   probes, `grids.npz`), polymer ones-moment activations, and a manifest
+   (prompts/positions/answers/git sha). Artifacts numbers-layer is now committed
+   (gitignore carve-out: JSONs/PNGs/npy in, heavy HTMLs/graph dumps/npz out).
+2. **`notebooks/build_supernodes.py`** (CPU): scans ALL pruned-graph feature nodes and
+   proposes paper-named supernodes by semantics — **both label sides** after a user
+   review catch (output side = top logits, what a feature promotes; **input side =
+   the peak-activation tokens of its examples**, what it fires ON; sides recorded per
+   member as provenance). Addition membership is by operand-grid receptive-field
+   class (+ on-pair fraction evidence); ≤6 members ranked by activation with
+   runners-up in `overflow`; disjointness enforced; influence recorded as evidence
+   only. Auto-flags: script-mismatch say-large matches, <30% on-pair lookups.
+   Reviewer explorer HTMLs per graph with proposed groups pre-loaded.
+3. **Review gate**: files ship `approved:false`; `load_supernodes` refuses unapproved/
+   rejected/overlapping files. Addition was reviewed by delegation (user waived the
+   manual pass for the grid-principled selection): one action — lookup L33f109892
+   rejected (20% on-pair) → L24f99664 promoted (63%); `review_log` in the file.
+4. **Notebooks load the reviewed file** and the persisted graph dumps (interventions
+   run against literally the graphs the review saw; `addition_input_ids` extracted so
+   the load path reconstructs identical tensors).
+
+Input-side lesson (user catches, both fixed in-session): top-logit-only matching had
+(a) starved the paper's INPUT supernodes — antonym went 3→6 members (the paper's own
+size) and small 2→6 once example-peak matching landed — and (b) produced a false
+"Qwen3 has no synonym-operation features" claim: a both-side any-position scan finds a
+clean cluster firing on ⟦synonym⟧/⟦synonymous⟧ at the operation-word token, now the
+paper-faithful `synonym (operation)` donor (say-answer demoted to alternative).
+
+### Addition v2 (constrained-only, reviewed supernodes; zero cell errors, ~13 min)
+
+| Experiment | ℓ (swept) | v2 result | vs paper |
+|---|---|---|---|
+| suppress `_6` | 16 | m=−1 nothing (`5`@0.996); −1× **`3`@0.961**; −2× `3`@0.736; sums→0% from −1× | crisp substitution at paper strength; no 9+9 numerology (paper warns on numerology) |
+| suppress `_9` | 9 | m=−1 nothing; −1× **`2`@0.940**; −2× `2`@0.899 | same shape |
+| inhibit magnitude (band pair) | 7 | ones `5`@0.999 ALL strengths (readouts 96–106%); first digit 0.526/0.478/0.422, low-prec supernode 87–97/68–91/**42–81%** | dissociation at full paper strength |
+| neg-steer lookup / sum (m=−3) | 25 / 35 | lookup flips `1`@0.84 (width 1.38); sum **smears width 5.26** (`1` .31/`3` .21/`2` .16/`4` .11) | sum-side smear matches; lookup-side still flips |
+| polymer lookups-only (m=−3) | 25 | `1`@0.83, **all six sums → 0%** | Fig A5 panel 2 protocol-exact |
+| lookup swap (6 reviewed (9,9) donors) | swept 27–35 | **p(`8`) ≤ 0.067 at every ℓ** (best ℓ=31 → `1`@0.267) | does NOT land — clean model difference (selection/donor/protocol all controlled; v1 propagate `8`@0.715 documents the needed route) |
+
+Notable protocol shape: under constrained patching with these supernodes, **ablation
+(m=−1) does nothing** for the input suppressions — the effects begin exactly at the
+paper's stated strengths. Runtime: graphs load from dumps (~6 min saved), ~13 min
+end-to-end.
+
+### Parked (multilingual) — state for resumption
+
+Proposals emitted and pushed (`multilingual_4b.json`, approved:false): antonym 6 (both
+sides), synonym (operation) 6 + say-answer alternative, small 6, hot 6 (+51 overflow),
+say-large trio+3, per-language say-large with script-mismatch flags, detectors =
+off-graph v1 fallback (RECORDED FINDING: pruned raw graphs keep NO early nodes at the
+quote position), raw antonym = chat-derived fallback (raw graphs keep almost nothing).
+Open decisions: fallback approval, the flagged members, and optionally re-dumping raw
+graphs at node_threshold 0.95 (`--node-threshold` knob added; user deferred — the
+paper's activity-based membership precedent argues for it or for activation-universe
+selection). One working-tree staleness incident (editor autosave reverted the
+supernode JSON; committed version was correct; restored) — reload editor tabs of
+files under `notebooks/supernodes/` before editing.
+
+### State of the world
+
+- Branch `repro/constrained-supernodes`, pushed. 121 tests green (loader suite added),
+  ruff clean, both --check validators OK. addition_4b.json approved; multilingual
+  parked unapproved. Node caches warm (weights + labels + supernode inputs).

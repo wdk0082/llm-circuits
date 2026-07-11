@@ -12,6 +12,14 @@ Paper reference values are digested in `../notes/biology_digest.md`; per-experim
 verdicts vs the paper are in each notebook's Summary and in `../DEVLOG.md`. Artifacts
 (explorer HTMLs, figures, result JSONs) land in `../artifacts/paper_{addition,multilingual}/<size>/`.
 
+**Supernode pipeline (v2).** Selection lives outside the notebooks:
+`build_supernode_inputs.py` (GPU, once per config) persists pruned graphs + operand
+grids; `build_supernodes.py` (CPU) scans them and emits reviewable supernode files
+under `notebooks/supernodes/` (evidence per member, `approved:false`); a human review
+gate approves them; the notebooks load ONLY the approved file (`load_supernodes`
+refuses anything else) and load the persisted graphs. Addition runs this pipeline
+(constrained patching only); multilingual is mid-review.
+
 **Artifact naming.** Files with no prefix are the chat-format main sections; a `raw_*`
 prefix (multilingual only) is section G's rerun of the *same* experiment in the paper's
 raw open-quote completion format; a `*_constrained` suffix is the same experiment under

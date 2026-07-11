@@ -2219,6 +2219,58 @@
    "note": "swap donor; injected value = +1x the stored act (paper +1x)"
   },
   {
+   "name": "add function (hunt)",
+   "paper_name": "add _9 / add ~57",
+   "role": "annotation",
+   "graph": "ones",
+   "position": "final",
+   "members": [
+    {
+     "layer": 33,
+     "feature": 152007,
+     "position": 10,
+     "act": 7.7812,
+     "influence": 0.000487,
+     "evidence": {
+      "matched": "grid:mod10-b(r9)",
+      "top_logits": [
+       "ionale",
+       "archs",
+       "趟",
+       " idiots",
+       "noinspection"
+      ],
+      "example": " And⏎Current location: There⏎Member since: Fri Jun 1⟦1⟧, 2004, 11:37 AM",
+      "grid_class": "mod10-b(r9)"
+     },
+     "review": "approved",
+     "review_note": "add-function candidate — verify labels/examples read as add-semantics and the grid visually shows a clean one-operand stripe/band (v1's single nominal flag was rejected as a diffuse texture)"
+    },
+    {
+     "layer": 25,
+     "feature": 28983,
+     "position": 10,
+     "act": 2.5,
+     "influence": 0.000459,
+     "evidence": {
+      "matched": "grid:mod10-b(r9)",
+      "top_logits": [
+       "ỏi",
+       "tags",
+       "orsch",
+       " tags",
+       "uger"
+      ],
+      "example": " broken, (7,755 record highs and 7,⟦5⟧17 record high overnight lows), according to Chris V",
+      "grid_class": "mod10-b(r9)"
+     },
+     "review": "approved",
+     "review_note": "add-function candidate — verify labels/examples read as add-semantics and the grid visually shows a clean one-operand stripe/band (v1's single nominal flag was rejected as a diffuse texture)"
+    }
+   ],
+   "note": "EXPECTED (EFFECTIVELY) EMPTY — the paper's add-function class at the answer position is a measured negative on Qwen3-4B: the pair-consistent scan yields only junk-labeled candidates. The operator-token mostly-active signature remains the only add-function-adjacent finding."
+  },
+  {
    "name": "input 46 (exact)",
    "paper_name": "36-analogue",
    "role": "annotation",

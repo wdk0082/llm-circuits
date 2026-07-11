@@ -808,6 +808,47 @@ def build_addition(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
         )
     )
 
+    # the paper's add-function class (`add _9`, `add ~57`): one-operand stripe/band
+    # signatures read at the answer position — a MEASURED NEGATIVE on Qwen3-4B (v1,
+    # third session). The supernode stays in the file so the negative is a live,
+    # reviewable scan result instead of a retired figure.
+    def addf_pred(r):
+        # PAIR-CONSISTENT one-operand signatures only: for 46+49 the paper's class
+        # would be `add _6`/`add _9` (the operands' residues) or `add ~46`/`add ~49`
+        # (their magnitudes). Unconstrained stripe/band classes at the answer position
+        # are dominated by junk-labeled textures (first scan: 13 candidates, all with
+        # off-pair classes like band-a(~6) or mod10-a(r9) — grid-class false positives).
+        label = lab(r)
+        return (
+            label.startswith(("mod10-a(r6)", "mod10-b(r9)"))
+            or (label.startswith("band-a") and 40 <= r.get("a_mean", -99) <= 52)
+            or (label.startswith("band-b") and 43 <= r.get("b_mean", -99) <= 55)
+        )
+
+    addf_cands = classed("ones", fin_ones, "ones", addf_pred, lambda r: f"grid:{lab(r)}")
+    for m in addf_cands:
+        m["review_note"] = (
+            "add-function candidate — verify labels/examples read as add-semantics and"
+            " the grid visually shows a clean one-operand stripe/band (v1's single"
+            " nominal flag was rejected as a diffuse texture)"
+        )
+    members, overflow = cap_members(addf_cands)
+    sns.append(
+        supernode(
+            "add function (hunt)",
+            "add _9 / add ~57",
+            "annotation",
+            "ones",
+            "final",
+            members,
+            overflow,
+            note="EXPECTED (EFFECTIVELY) EMPTY — the paper's add-function class at the"
+            " answer position is a measured negative on Qwen3-4B: the pair-consistent"
+            " scan yields only junk-labeled candidates. The operator-token"
+            " mostly-active signature remains the only add-function-adjacent finding.",
+        )
+    )
+
     # exact-value inputs (the paper's `36`/`59` nodes): cross class at digit positions
     for name, paper, val in (
         ("input 46 (exact)", "36-analogue", 46),

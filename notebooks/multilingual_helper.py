@@ -45,12 +45,27 @@ from llm_circuits.transcoders.registry import get_spec
 
 # ZH tick/legend labels (大/小/冷) need a CJK font; matplotlib >=3.6 falls back per glyph
 # across a **font.family list of concrete families** (the sans-serif alias list does NOT
-# trigger fallback), so Latin text keeps the DejaVu look and CJK glyphs fill in.  Guarded:
-# no CJK font installed -> unchanged rcParams (no findfont warnings).
+# trigger fallback), so Latin text keeps the DejaVu look and CJK glyphs fill in.
+# Resolution order: a system CJK font if one exists, else the Noto Sans CJK SC shipped
+# by the ``mplfonts`` package (notebook dependency group) — GPU nodes rarely have CJK
+# system fonts, which used to leave tofu boxes in the ZH sweep panels. Guarded: neither
+# available -> unchanged rcParams (no findfont warnings).
 _cjk_names = {f.name for f in _fm.fontManager.ttflist if "CJK" in f.name}
 _cjk = (
     "Noto Sans CJK SC" if "Noto Sans CJK SC" in _cjk_names else next(iter(sorted(_cjk_names)), None)
 )
+if not _cjk:
+    try:
+        import pathlib as _pathlib
+
+        import mplfonts as _mplfonts
+
+        _otf = _pathlib.Path(_mplfonts.__file__).parent / "fonts" / "NotoSansCJKsc-Regular.otf"
+        if _otf.exists():
+            _fm.fontManager.addfont(str(_otf))
+            _cjk = "Noto Sans CJK SC"
+    except ImportError:
+        pass
 if _cjk:
     plt.rcParams["font.family"] = ["DejaVu Sans", _cjk]
 

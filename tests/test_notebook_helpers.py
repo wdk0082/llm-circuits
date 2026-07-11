@@ -316,3 +316,17 @@ def test_paper_swap_patch_end_layer_passthrough(monkeypatch):
         patch_end_layer=7,
     )
     assert out == "result" and captured["patch_end_layer"] == 7 and captured["n_ivs"] == 2
+
+
+def test_cjk_font_registered_for_zh_panels():
+    # multilingual_helper's import-time font block must yield a usable CJK family
+    # (system font or the mplfonts-bundled Noto Sans CJK SC) so ZH sweep panels don't
+    # render tofu. mplfonts is in the notebook dependency group, present under CI's
+    # --all-groups install.
+    import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+
+    fams = plt.rcParams["font.family"]
+    assert any("CJK" in f for f in fams), f"no CJK family in font.family: {fams}"
+    resolved = font_manager.findfont(font_manager.FontProperties(family="Noto Sans CJK SC"))
+    assert "NotoSansCJK" in resolved.replace(" ", "")

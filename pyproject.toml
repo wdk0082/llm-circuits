@@ -36,6 +36,7 @@ notebook = [
     "jupyterlab",
     "ipykernel",
     "datasets>=4.5.0",
+    "mplfonts",
 ]
 serve = [
     "fastapi>=0.137.2",

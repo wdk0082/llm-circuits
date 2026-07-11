@@ -53,7 +53,40 @@ def _derive_label(gd: dict, gi: int) -> str:
     return label if label not in ("", "=") else (prompt[:24] or f"example {gi + 1}")
 
 
-def _graph_payload(gd: dict, label: str, width: int, height: int) -> dict:
+def resolve_groups(nodes: list[dict], groups: list[dict] | None) -> list[dict]:
+    """Resolve supernode specs into explorer group entries (node-index members).
+
+    Each spec is ``{"name": str, "members": [(layer, feature_idx), ...], "position":
+    int | "final" | None}`` (member tuples may carry extra entries, e.g. the stored
+    activation — ignored). ``position`` restricts matches to feature nodes at that
+    token position (``"final"`` = the graph's last position, ``None`` = any).
+    Groups with no matching nodes are dropped.
+    """
+    if not groups:
+        return []
+    index: dict[tuple[int, int], list[int]] = {}
+    n_final = max((nd["position"] for nd in nodes), default=0)
+    for i, nd in enumerate(nodes):
+        if nd["node_type"] == "feature":
+            index.setdefault((nd["layer"], nd.get("feature_idx")), []).append(i)
+    out = []
+    for g in groups:
+        pos = g.get("position")
+        pos = n_final if pos == "final" else pos
+        members: set[int] = set()
+        for m in g["members"]:
+            layer, feat = int(m[0]), int(m[1])
+            for i in index.get((layer, feat), []):
+                if pos is None or nodes[i]["position"] == pos:
+                    members.add(i)
+        if members:
+            out.append({"name": str(g["name"]), "members": sorted(members)})
+    return out
+
+
+def _graph_payload(
+    gd: dict, label: str, width: int, height: int, groups: list[dict] | None = None
+) -> dict:
     nodes = gd.get("nodes", [])
     edges = gd.get("edges", [])
     tokens = gd.get("tokens")
@@ -90,6 +123,7 @@ def _graph_payload(gd: dict, label: str, width: int, height: int) -> dict:
         "h": height,
         "yticks": _y_ticks(nodes, layout),
         "xticks": _x_ticks(nodes, layout, tokens),
+        "groups": resolve_groups(nodes, groups),
     }
 
 
@@ -148,15 +182,28 @@ def render_graph_explorer_html_str(
     title: str = "Attribution graph explorer",
     width: int = 1100,
     height: int = 620,
+    groups: list[list[dict]] | list[dict] | None = None,
 ) -> str:
     """Return the self-contained explorer HTML as a string (see :func:`render_graph_explorer_html`).
 
     Used by the interactive server, which embeds it in an ``<iframe srcdoc=...>``.
+
+    ``groups`` pre-loads supernodes into each graph's group panel (rendered collapsed
+    in the subgraph immediately): one spec list per graph — see :func:`resolve_groups`
+    for the spec shape. A single spec list is accepted for a single graph.
     """
     if isinstance(graphs, dict):
         graphs = [graphs]
+        if groups and isinstance(groups[0], dict):
+            groups = [groups]  # a bare spec list for the single-graph call
     examples = [
-        _graph_payload(gd, (labels[i] if labels else None) or _derive_label(gd, i), width, height)
+        _graph_payload(
+            gd,
+            (labels[i] if labels else None) or _derive_label(gd, i),
+            width,
+            height,
+            groups=(groups[i] if groups else None),
+        )
         for i, gd in enumerate(graphs)
     ]
     payload = {"title": title, "examples": examples}
@@ -172,15 +219,17 @@ def render_graph_explorer_html(
     title: str = "Attribution graph explorer",
     width: int = 1100,
     height: int = 620,
+    groups: list[list[dict]] | list[dict] | None = None,
 ) -> Path:
     """Render one or more graph dicts into a self-contained interactive explorer.
 
     *graphs* may be a single graph dict or a list of them; a dropdown switches
     between them and each keeps its own manual grouping.  *labels* optionally
     overrides the per-graph dropdown labels (else derived from ``prompt``).
+    ``groups`` pre-loads supernodes per graph (see :func:`resolve_groups`).
     """
     doc = render_graph_explorer_html_str(
-        graphs, labels=labels, title=title, width=width, height=height
+        graphs, labels=labels, title=title, width=width, height=height, groups=groups
     )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,7 +266,9 @@ _TEMPLATE = """<!DOCTYPE html>
   .legend svg { vertical-align:middle; margin:0 2px 0 9px; }
   #graphwrap { flex:1.6; overflow:hidden; }
   #subwrap { flex:1; overflow:hidden; border-top:1px solid #eee; }
+  :root { --tan: rgb(235,212,178); }  /* the serve UI's graph-panel theme color */
   #g, #sg { display:block; background:#fff; width:100%; height:100%; cursor:grab; }
+  #g { background:var(--tan); }
   #g:active, #sg:active { cursor:grabbing; }
   .node.dim { opacity:.15; }
   .frow { display:flex; justify-content:space-between; gap:8px; padding:1px 3px; white-space:nowrap; }
@@ -284,7 +335,10 @@ const PLACEHOLDER = "<em>Click a node to inspect its inputs, outputs, token pred
 
 let cur = 0, N, E, POS, W, H, XT, YT, amin, amax, arange, MAXW;
 let hideErr = false;  // hide reconstruction-error nodes + their edges for readability
-const allGroups = EX.map(() => []);
+// Pre-loaded supernodes (the notebooks' selections) seed each example's groups; the
+// user can rename/delete/extend them exactly like hand-made ones.
+const allGroups = EX.map(ex => (ex.groups || []).map((g, k) =>
+  ({name: g.name, members: g.members.slice(), color: PAL[k % PAL.length]})));
 let groups = allGroups[0];
 let selected = null;
 const selecting = new Set();

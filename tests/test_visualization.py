@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from llm_circuits.circuits.visualization import (
     render_graph_html,
     render_graph_html_str,
@@ -205,3 +207,69 @@ class TestRenderGraphExplorer:
         data = json.loads(re.search(r"const D = (\{.*?\});\nconst EX", t, re.S).group(1))
         assert len(data["examples"]) == 2  # both graphs embedded
         assert [e["label"] for e in data["examples"]] == ["1+2=3", "4+4=8"]  # derived labels
+
+
+class TestResolveGroups:
+    NODES: ClassVar = [
+        {"node_type": "embedding", "layer": -1, "position": 0},
+        {"node_type": "feature", "layer": 3, "position": 1, "feature_idx": 7},
+        {"node_type": "feature", "layer": 3, "position": 4, "feature_idx": 7},
+        {"node_type": "feature", "layer": 5, "position": 4, "feature_idx": 9},
+        {"node_type": "logit", "layer": 6, "position": 4, "token_id": 5},
+    ]
+
+    def test_position_final_any_and_extras_ignored(self):
+        from llm_circuits.circuits.graph_explorer import resolve_groups
+
+        groups = resolve_groups(
+            self.NODES,
+            [
+                {"name": "final only", "members": [(3, 7), (5, 9, 12.5)], "position": "final"},
+                {"name": "anywhere", "members": [(3, 7)], "position": None},
+                {"name": "at p1", "members": [(3, 7)], "position": 1},
+                {"name": "absent", "members": [(30, 1)], "position": None},
+            ],
+        )
+        by_name = {g["name"]: g["members"] for g in groups}
+        assert by_name["final only"] == [2, 3]  # position "final" = max pos (4)
+        assert by_name["anywhere"] == [1, 2]
+        assert by_name["at p1"] == [1]
+        assert "absent" not in by_name  # empty groups dropped
+
+    def test_groups_embedded_in_payload(self, tmp_path):
+        from llm_circuits.circuits.graph_explorer import render_graph_explorer_html_str
+
+        gd = {
+            "prompt": "p",
+            "tokens": ["a", "b"],
+            "nodes": [
+                {
+                    "node_type": "feature",
+                    "layer": 1,
+                    "position": 1,
+                    "feature_idx": 7,
+                    "activation": 2.0,
+                    "label": None,
+                },
+                {
+                    "node_type": "logit",
+                    "layer": 2,
+                    "position": 1,
+                    "token_id": 5,
+                    "activation": 1.0,
+                    "label": None,
+                },
+            ],
+            "edges": [],
+        }
+        doc = render_graph_explorer_html_str(
+            gd,
+            title="T",
+            groups=[{"name": "my supernode", "members": [(1, 7)], "position": "final"}],
+        )
+        import json
+        import re
+
+        m = re.search(r"const D = (\{.*?\});\n", doc, re.S)
+        payload = json.loads(m.group(1))
+        assert payload["examples"][0]["groups"] == [{"name": "my supernode", "members": [0]}]

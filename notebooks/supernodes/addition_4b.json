@@ -29,7 +29,7 @@
       "example": "2 sets of chromosomes in their nuclei. The human species contain 4⟦6⟧ chromosomes in their",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 5,
@@ -49,7 +49,7 @@
       "example": " control inflammatory triggers such as interleukin 6, or IL-⟦6⟧.⏎\"If you can connect all t",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 8,
@@ -69,7 +69,7 @@
       "example": " is +7 3537; postal codes - 4⟦6⟧2400-462455.⏎Orsk",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 8,
@@ -89,7 +89,7 @@
       "example": " material is carried on chromosomes. Humans have 23 pairs (4⟦6⟧ in total) of these. One of",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 6,
@@ -109,7 +109,7 @@
       "example": " ensure GPS relay accuracy. The satellite constellation is operated by the 4⟦6⟧0th Space W",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 4,
@@ -129,7 +129,7 @@
       "example": "3-1794⏎Joseph Priestly, 17⟦6⟧6-1844⏎Marie Curie, 1",
       "grid_class": "lookup(a%10=6,b%10=6)"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ],
    "overflow": [
@@ -400,7 +400,7 @@
       "example": " who compromised the interests of the people.”⏎Remembering Malcolm X 4⟦9⟧ Years On⏎by Ama ",
       "grid_class": "lookup(a%10=9,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 5,
@@ -420,7 +420,7 @@
       "example": "6. http://dx.doi.org/10.15⟦9⟧0/S0365-0596201",
       "grid_class": "lookup(a%10=9,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 7,
@@ -440,7 +440,7 @@
       "example": "<|im_start|>user⏎Phone: +4⟦9⟧ (0) 106-3362⏎N",
       "grid_class": "lookup(a%10=9,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 4,
@@ -460,7 +460,7 @@
       "example": "4 swordfish, 887 seafire, 8⟦9⟧7 spitfire, 885 seafire squadrons.",
       "grid_class": "lookup(a%10=9,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 6,
@@ -480,7 +480,7 @@
       "example": " air masses produces frequent and sometimes violent thunderstorms, particularly from April",
       "grid_class": "lookup(a%10=4,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 5,
@@ -500,7 +500,7 @@
       "example": " is the delicate communication between employers and employees working in exchange of pay.",
       "grid_class": "lookup(a%10=9,b%10=9)"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ],
    "overflow": [
@@ -811,7 +811,7 @@
       "example": "ics. Using phonics helps children to decode words using the 4⟦4⟧ sounds in the English lan",
       "grid_class": "band-a(~45)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 6,
@@ -831,7 +831,7 @@
       "example": " entire world will rejoice in God’s salvation.⏎Isaiah 4⟦0⟧:1-26 — Speak to Her Heart⏎God b",
       "grid_class": "band-a(~40)"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ]
   },
@@ -860,7 +860,7 @@
       "example": " without knowing it.⏎The temperature in some parts of Russia is 5⟦0⟧ degrees below zero. R",
       "grid_class": "band-b(~49)"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ]
   },
@@ -890,7 +890,7 @@
       "grid_class": "lookup(a%10=3,b%10=9)",
       "on_pair_frac_of_max": 0.933
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 24,
@@ -911,7 +911,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.487
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -932,29 +932,7 @@
       "grid_class": "lookup(a%10=5,b%10=9)",
       "on_pair_frac_of_max": 0.552
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 33,
-     "feature": 109892,
-     "position": 10,
-     "act": 10.875,
-     "influence": 0.009306,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=0)",
-      "top_logits": [
-       "五",
-       " Fifth",
-       " five",
-       " Five",
-       "5"
-      ],
-      "example": ", there will still be 5.4 million deaths in children under⟦ ⟧5 in 2035,\" lead author Dr. N",
-      "grid_class": "lookup(a%10=5,b%10=0)",
-      "on_pair_frac_of_max": 0.199
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 20% of grid max — verify the receptive field really includes the studied pair"
+     "review": "approved"
     },
     {
      "layer": 24,
@@ -975,7 +953,7 @@
       "grid_class": "lookup(a%10=3,b%10=3)",
       "on_pair_frac_of_max": 0.372
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -996,10 +974,8 @@
       "grid_class": "lookup(a%10=6,b%10=6)",
       "on_pair_frac_of_max": 0.547
      },
-     "review": "proposed"
-    }
-   ],
-   "overflow": [
+     "review": "approved"
+    },
     {
      "layer": 24,
      "feature": 99664,
@@ -1019,7 +995,31 @@
       "grid_class": "lookup(a%10=4,b%10=4)",
       "on_pair_frac_of_max": 0.627
      },
-     "review": "proposed"
+     "review": "approved"
+    }
+   ],
+   "overflow": [
+    {
+     "layer": 33,
+     "feature": 109892,
+     "position": 10,
+     "act": 10.875,
+     "influence": 0.009306,
+     "evidence": {
+      "matched": "grid:lookup(a%10=5,b%10=0)",
+      "top_logits": [
+       "五",
+       " Fifth",
+       " five",
+       " Five",
+       "5"
+      ],
+      "example": ", there will still be 5.4 million deaths in children under⟦ ⟧5 in 2035,\" lead author Dr. N",
+      "grid_class": "lookup(a%10=5,b%10=0)",
+      "on_pair_frac_of_max": 0.199
+     },
+     "review": "rejected",
+     "review_note": "on-pair activation only 20% of grid max — verify the receptive field really includes the studied pair REVIEW (2026-07-11, delegated): rejected — on-pair activation 20% of grid max fails the >=30% receptive-field sanity; replaced by the top act-ranked overflow qualifier L24f99664 (on-pair 63%)"
     },
     {
      "layer": 25,
@@ -1695,7 +1695,7 @@
       "example": "8 pgs, HB, 6.25x9.⟦2⟧5, photos.<|im_end|>⏎<|im_start|>user⏎",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 33,
@@ -1715,7 +1715,7 @@
       "example": " even a way to slow disease progression:⏎HUMAN TOLL: About⟦ ⟧5.4 million Americans are suf",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 35,
@@ -1735,7 +1735,7 @@
       "example": ", much like the Voting Rights Act that would follow in 19⟦6⟧5.⏎PBS NewsHour has already st",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 27,
@@ -1755,7 +1755,7 @@
       "example": " male of this species weighed 4.77 kg (10⟦.⟧5 lb), whereas females can typically range up ",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 31,
@@ -1775,7 +1775,7 @@
       "example": "0 adults (13,500 men and 10⟦,⟧550 women) in the United States will be diagnosed with multi",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 30,
@@ -1795,7 +1795,7 @@
       "example": "'s like a five-pointed star made by connecting every other vertex of⟦ a⟧ regular pentagon.",
       "grid_class": "mod10-sum(r5)"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ],
    "overflow": [
@@ -2087,7 +2087,7 @@
       "example": " paintings and other remains testify.⏎2 On August 24, ⟦7⟧9 C.E., Mount Vesuvius began to e",
       "grid_class": "magnitude-diag"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 34,
@@ -2107,7 +2107,7 @@
       "example": " The outcome of the various conferences held, from Agenda 21 (⟦1⟧992), through the Barbado",
       "grid_class": "magnitude-diag"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 32,
@@ -2127,7 +2127,7 @@
       "example": " a pseudonymous person or persons named Satoshi Nakamoto in 20⟦0⟧9 and has since gone on t",
       "grid_class": "magnitude-diag"
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 34,
@@ -2147,7 +2147,7 @@
       "example": " multidrug-resistant tuberculosis are successfully treated.⏎The Belarus trial success rate",
       "grid_class": "magnitude-diag"
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ]
   },
@@ -2177,7 +2177,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.792
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -2198,7 +2198,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.571
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -2219,7 +2219,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.722
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 23,
@@ -2240,7 +2240,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.592
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 23,
@@ -2261,7 +2261,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.831
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 27,
@@ -2282,7 +2282,7 @@
       "grid_class": "lookup(a%10=9,b%10=9)",
       "on_pair_frac_of_max": 0.464
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ],
    "overflow": [
@@ -2486,7 +2486,7 @@
       "grid_class": "lookup(a%10=3,b%10=9)",
       "on_pair_frac_of_max": 0.933
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -2507,7 +2507,7 @@
       "grid_class": "lookup(a%10=5,b%10=9)",
       "on_pair_frac_of_max": 0.552
      },
-     "review": "proposed"
+     "review": "approved"
     },
     {
      "layer": 25,
@@ -2528,11 +2528,12 @@
       "grid_class": "lookup(a%10=6,b%10=6)",
       "on_pair_frac_of_max": 0.547
      },
-     "review": "proposed"
+     "review": "approved"
     }
    ],
    "note": "members = lookup (6,9-class) ∩ active at 'K. Whang…, 199' predicting 5; acts are the polymer-moment activations"
   }
  ],
- "approved": false
+ "approved": true,
+ "review_log": "2026-07-11: grid-principled selection reviewed by delegation (user waived manual gate for addition). One action: lookup (6,9-class) L33f109892 rejected (20% on-pair) -> L24f99664 promoted. All other members approved as proposed."
 }

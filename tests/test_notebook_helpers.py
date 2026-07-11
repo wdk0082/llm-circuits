@@ -330,3 +330,57 @@ def test_cjk_font_registered_for_zh_panels():
     assert any("CJK" in f for f in fams), f"no CJK family in font.family: {fams}"
     resolved = font_manager.findfont(font_manager.FontProperties(family="Noto Sans CJK SC"))
     assert "NotoSansCJK" in resolved.replace(" ", "")
+
+
+# ---------------------------------------------------------------------------
+# Supernode loader (reproduction v2: selection lives in the reviewed artifact)
+# ---------------------------------------------------------------------------
+
+
+def _sn_doc(**over):
+    doc = {
+        "approved": True,
+        "supernodes": [
+            {
+                "name": "a",
+                "graph": "g",
+                "position": "final",
+                "members": [
+                    {"layer": 1, "feature": 2, "act": 3.0, "review": "approved"},
+                ],
+            }
+        ],
+    }
+    doc.update(over)
+    return doc
+
+
+def test_load_supernodes_happy_path(tmp_path):
+    import json
+
+    p = tmp_path / "sn.json"
+    p.write_text(json.dumps(_sn_doc()))
+    out = A.load_supernodes(p)
+    assert A.supernode_members(out["a"]) == [(1, 2, 3.0)]
+    assert A.supernode_members(out["a"], with_acts=False) == [(1, 2)]
+
+
+def test_load_supernodes_refuses_unapproved_rejected_and_overlap(tmp_path):
+    import json
+
+    p = tmp_path / "sn.json"
+    p.write_text(json.dumps(_sn_doc(approved=False)))
+    with pytest.raises(ValueError, match="approved=false"):
+        A.load_supernodes(p)
+
+    doc = _sn_doc()
+    doc["supernodes"][0]["members"][0]["review"] = "rejected"
+    p.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="rejected member"):
+        A.load_supernodes(p)
+
+    doc = _sn_doc()
+    doc["supernodes"].append(dict(doc["supernodes"][0], name="b"))
+    p.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="in both"):
+        A.load_supernodes(p)

@@ -313,6 +313,22 @@ def _attach_labels_and_dump(
     return pruned_dict
 
 
+def addition_input_ids(tokenizer, a, b, device, *, target: str = "first", style: str = "calc"):
+    """The exact ``input_ids`` :func:`build_addition_graph` attributes from.
+
+    Factored out so the notebooks' dump-loading fast path (graphs persisted by
+    ``build_supernode_inputs.py``) reconstructs identical tensors without a model:
+    ``target="ones"`` teacher-forces every answer digit except the last.
+    """
+    prompt_ids = tokenize_addition(tokenizer, a, b, device, style)
+    if target != "ones":
+        return prompt_ids
+    ans_ids = tokenizer(str(a + b), add_special_tokens=False, return_tensors="pt").input_ids.to(
+        device
+    )
+    return torch.cat([prompt_ids, ans_ids[:, :-1]], dim=1)
+
+
 def build_addition_graph(
     model,
     tc,
@@ -342,15 +358,11 @@ def build_addition_graph(
     ``out_html`` if given.
     """
     device = next(model.parameters()).device
-    prompt_ids = tokenize_addition(tokenizer, a, b, device, style)
+    input_ids = addition_input_ids(tokenizer, a, b, device, target=target, style=style)
     if target == "ones":
-        ans_ids = tokenizer(str(a + b), add_special_tokens=False, return_tensors="pt").input_ids.to(
-            device
-        )
-        input_ids = torch.cat([prompt_ids, ans_ids[:, :-1]], dim=1)  # teacher-force the prefix
+        ans_ids = tokenizer(str(a + b), add_special_tokens=False, return_tensors="pt").input_ids
         answer_id = int(ans_ids[0, -1])  # the ground-truth ones-digit token
     else:
-        input_ids = prompt_ids
         with torch.no_grad():
             answer_id = int(model(input_ids).logits[0, -1].argmax())
 
@@ -744,6 +756,45 @@ def feature_label(node) -> str:
 # ---------------------------------------------------------------------------
 
 
+def load_supernodes(path):
+    """Load a REVIEWED supernode file (see ``build_supernodes.py``) for the notebook.
+
+    Refuses files that are not ``approved``, contain ``rejected`` members, or violate
+    disjointness (a feature@graph+position in two supernodes). Returns
+    ``{name: supernode_dict}`` with members as emitted (layer/feature/position/act/
+    evidence/...). The notebook derives its intervention/readout sets ONLY from this
+    file — selection lives in the reviewed artifact, not in notebook code.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    doc = _json.loads(_Path(path).read_text())
+    if not doc.get("approved"):
+        raise ValueError(f"{path}: approved=false — review the supernode file first")
+    seen: dict[tuple, str] = {}
+    out: dict[str, dict] = {}
+    for sn in doc["supernodes"]:
+        for m in sn["members"]:
+            if m.get("review") == "rejected":
+                raise ValueError(
+                    f"{path}: rejected member L{m['layer']}f{m['feature']} still in"
+                    f" {sn['name']!r} members"
+                )
+            key = (sn["graph"], str(sn["position"]), m["layer"], m["feature"])
+            if key in seen and seen[key] != sn["name"]:
+                raise ValueError(f"{path}: {key} in both {seen[key]!r} and {sn['name']!r}")
+            seen[key] = sn["name"]
+        out[sn["name"]] = sn
+    return out
+
+
+def supernode_members(sn, *, with_acts: bool = True):
+    """``[(layer, feature, act)]`` (or ``[(layer, feature)]``) from a supernode dict."""
+    if with_acts:
+        return [(m["layer"], m["feature"], float(m["act"])) for m in sn["members"]]
+    return [(m["layer"], m["feature"]) for m in sn["members"]]
+
+
 def steer_interventions(feats, *, m: float, position: int | None = None):
     """``[(layer, idx, act)]`` -> the :class:`FeatureIntervention` list steering each
     feature by ``m`` at ``position`` (``None`` = every non-BOS position, per
@@ -775,18 +826,19 @@ def steer_and_report(
     tokenizer,
     *,
     m: float,
+    patch_end_layer: int,
     position: int | None = None,
     readout: list[tuple[int, int, int]] | None = None,
-    patch_end_layer: int | None = None,
 ):
     """Steer ``feats`` (``[(layer, idx, act)]``) by ``m`` at ``position`` (``None`` =
     every non-BOS position — how the magnitude supernodes are steered).
 
-    ``patch_end_layer`` selects the paper's **constrained patching** (activations up to
-    layer ``ell`` clamped at their perturbed values, real model after ``ell``); ``None`` =
-    fully-propagating clean-anchored deltas (the no-pinning robustness variant).
-    Readout entries at layers ``<= patch_end_layer`` are pinned by the protocol and
-    reported as ``pinned: True`` (their %-of-baseline is not meaningful).
+    ``patch_end_layer`` is REQUIRED (v2, constrained-only reproduction): the paper's
+    **constrained patching** — activations up to layer ``ell`` clamped at their
+    perturbed values, the real model after ``ell``; choose ``ell`` with
+    :func:`choose_patch_end_layer` (the paper's end-layer sweep). Readout entries at
+    layers ``<= patch_end_layer`` are pinned by the protocol and reported as
+    ``pinned: True`` (their %-of-baseline is not meaningful).
 
     Returns dict with top tokens (baseline/steered), the 0-9 digit distribution + smear
     metrics for both, and each ``readout`` feature's activation as % of baseline
@@ -829,7 +881,7 @@ def steer_and_report(
                 "steered": a0,
                 "pct_of_baseline": (a0 / b0 * 100.0) if abs(b0) > 1e-6 else None,
             }
-            if patch_end_layer is not None and patch_end_layer >= L:
+            if patch_end_layer >= L:
                 entry["pinned"] = True  # clamped by the protocol; % not meaningful
             pct[f"L{L}f{i}@p{p}"] = entry
         report["readout_pct"] = pct

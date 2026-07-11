@@ -60,6 +60,16 @@ def main() -> None:
     ap.add_argument("--size", default="4b")
     ap.add_argument("--skip-multilingual", action="store_true")
     ap.add_argument("--skip-addition", action="store_true")
+    ap.add_argument(
+        "--node-threshold",
+        type=float,
+        default=0.8,
+        help="graph pruning node threshold for the dumps (recorded per graph in the"
+        " manifest). The multilingual review pages use 0.95: the paper's supernode"
+        " membership is activity-based (20/27 active vs 10/27 in its pruned graphs),"
+        " and the explorer-export workflow can only pick GRAPH nodes, so selection"
+        " needs the larger graph; notebooks re-prune in-memory where they need 0.8.",
+    )
     args = ap.parse_args()
     size = args.size
 
@@ -75,7 +85,14 @@ def main() -> None:
         f"qwen3-{size}", device=device, dtype=torch.bfloat16, lazy_decoder=False
     ).transcoder
 
-    manifest: dict = {"size": size, "git": sha.stdout.strip(), "graphs": {}}
+    # MERGE with an existing manifest: a partial rebuild (e.g. --skip-addition at a
+    # different threshold) must not clobber the other task's entries.
+    mpath = out / "manifest.json"
+    manifest: dict = (
+        json.loads(mpath.read_text()) if mpath.exists() else {"size": size, "graphs": {}}
+    )
+    manifest["size"] = size
+    manifest["git"] = sha.stdout.strip()
 
     # ---- multilingual graphs (labels + examples embedded by build_graph) -------------
     if not args.skip_multilingual:
@@ -88,12 +105,21 @@ def main() -> None:
         ml_prompts["raw_synonym_en"] = (M.raw_synonym_prompt("small", "en"), True)
         ml_prompts["hot_en"] = (M.antonym_prompt("hot", "en"), False)
         for name, (prompt, raw) in ml_prompts.items():
-            gd, ans_id, ids = M.build_graph(model, tc, tokenizer, prompt, size_key=size, raw=raw)
+            gd, ans_id, ids = M.build_graph(
+                model,
+                tc,
+                tokenizer,
+                prompt,
+                size_key=size,
+                raw=raw,
+                node_threshold=args.node_threshold,
+            )
             dump_graph(out, name, gd)
             operand = "hot" if name == "hot_en" else M.WORD["small"][name.split("_")[-1]]
             manifest["graphs"][name] = {
                 "prompt": prompt,
                 "raw": raw,
+                "node_threshold": args.node_threshold,
                 "answer": tokenizer.decode([ans_id]),
                 "answer_token_id": int(ans_id),
                 "n_tokens": int(ids.shape[1]),
@@ -113,13 +139,22 @@ def main() -> None:
             "donor99": (DA, DB, "ones"),
         }.items():
             gd, ans_id, ids = A.build_addition_graph(
-                model, tc, tokenizer, a, b, target=target, style="calc", size_key=size
+                model,
+                tc,
+                tokenizer,
+                a,
+                b,
+                target=target,
+                style="calc",
+                size_key=size,
+                node_threshold=args.node_threshold,
             )
             add_graphs[name] = gd
             dump_graph(out, name, gd)
             manifest["graphs"][name] = {
                 "prompt": A.addition_prompt(a, b, "calc"),
                 "pair": [a, b],
+                "node_threshold": args.node_threshold,
                 "target": target,
                 "answer": tokenizer.decode([ans_id]),
                 "answer_token_id": int(ans_id),
@@ -127,7 +162,14 @@ def main() -> None:
                 "final_position": int(ids.shape[1] - 1),
                 "digit_positions": A.digit_token_positions(tokenizer, ids, a, b),
             }
-        pg, _p_aid, _ = A.build_graph_raw(model, tc, tokenizer, A.POLYMER_PROMPT, size_key=size)
+        pg, _p_aid, _ = A.build_graph_raw(
+            model,
+            tc,
+            tokenizer,
+            A.POLYMER_PROMPT,
+            size_key=size,
+            node_threshold=args.node_threshold,
+        )
         dump_graph(out, "polymer", pg)
         manifest["graphs"]["polymer"] = {
             "prompt": A.POLYMER_PROMPT,
@@ -189,7 +231,7 @@ def main() -> None:
         )
         print(f"  polymer_ones_acts.json: {len(active_final)} active at the ones moment")
 
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
+    mpath.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
     print(f"DONE -> {out}")
 
 

@@ -42,11 +42,6 @@ import numpy as np
 
 from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
 from llm_circuits.settings import artifacts_dir
-from llm_circuits.transcoders.feature_labels import (
-    load_feature_examples,
-    load_feature_labels,
-)
-from llm_circuits.transcoders.registry import get_spec
 
 SUPERNODE_DIR = Path(__file__).resolve().parent / "supernodes"
 MAX_MEMBERS = 6
@@ -257,7 +252,6 @@ LANGS = ("en", "fr", "zh")
 def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
     sns: list[dict] = []
     mg = manifest["graphs"]
-    repo_id = get_spec(f"qwen3-{size}").transcoder_repo
 
     def final(name):
         return mg[name]["final_position"]
@@ -307,27 +301,6 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             "operation-swap source; steered -5x (m=-6) at each member's own node"
             " position per recipient graph"
         )
-        if (
-            not members
-            and tag == "raw "
-            and any(s["name"] == "antonym (multilingual)" for s in sns)
-        ):
-            chat_members = next(s for s in sns if s["name"] == "antonym (multilingual)")["members"]
-            note += (
-                " — EMPTY under raw-graph semantic selection (RECORDED FINDING: the small"
-                " pruned raw graphs keep almost no antonym-operation nodes; only"
-                " L7f79606 survives, in raw_fr). Members below are the CHAT-derived"
-                " antonym supernode as an off-graph fallback (same model features,"
-                " steered on the raw prompts at the operation-word positions) — approve"
-                " or reject at review."
-            )
-            for m in chat_members:
-                mm = json.loads(json.dumps(m))
-                mm["source"] = "chat-graph-fallback"
-                mm["review_note"] = (
-                    mm.get("review_note", "") + " not a raw-graph node (chat-derived fallback)"
-                ).strip()
-                members.append(mm)
         sns.append(
             supernode(
                 f"{tag}antonym (multilingual)",
@@ -520,56 +493,9 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
     for lg in LANGS:
         for m in detect_cands[lg]:
             counts[(m["layer"], m["feature"])] += 1
-    fallback_path = (
-        artifacts_dir() / "paper_multilingual" / size / "raw_language_detection_supernodes.json"
-    )
-    fallback = json.loads(fallback_path.read_text()) if fallback_path.exists() else {}
     for lg in LANGS:
         uniq = [m for m in detect_cands[lg] if counts[(m["layer"], m["feature"])] == 1]
         members, overflow = cap_members(uniq)
-        note = "language-swap source/donor (graph-first, raw open-quote graphs)"
-        if not members:
-            note += (
-                " — EMPTY under graph-first selection (RECORDED FINDING: the pruned raw"
-                " graphs contain NO early-layer nodes at the quote position at all, so"
-                " the paper's detector supernodes cannot be graph nodes here). Members"
-                " below are the OFF-GRAPH fallback: the v1 activation scan"
-                " (early_language_detection_supernode on the raw prompts, committed in"
-                f" {fallback_path.name}), marked source=off-graph — approve or reject at"
-                " review."
-            )
-            fb = (fallback.get(lg) or [])[:MAX_MEMBERS]
-            by_layer: dict[int, list[int]] = defaultdict(list)
-            for L, i, _a in fb:
-                by_layer[int(L)].append(int(i))
-            labs: dict[tuple[int, int], dict] = {}
-            for L, idxs in by_layer.items():
-                for fi, lab_obj in load_feature_labels(repo_id, L, idxs).items():
-                    d = lab_obj.to_dict()
-                    d["examples"] = load_feature_examples(repo_id, L, idxs).get(fi, [])
-                    labs[(L, fi)] = d
-            for L, i, act in fb:
-                lab_d = labs.get((int(L), int(i)))
-                langs = example_langs(lab_d)
-                members.append(
-                    {
-                        "layer": int(L),
-                        "feature": int(i),
-                        "position": "final",
-                        "act": round(float(act), 4),
-                        "influence": None,
-                        "source": "off-graph-fallback",
-                        "evidence": {
-                            "matched": "v1 activation scan (early, language-unique); "
-                            f"example langs {langs}",
-                            "top_logits": (lab_d or {}).get("top_logits", [])[:8],
-                            "example": example_snippet(lab_d),
-                            "grid_class": None,
-                        },
-                        "review": "proposed",
-                        "review_note": "not a pruned-graph node; off-graph activation pick",
-                    }
-                )
         sns.append(
             supernode(
                 f"detect ({lg})",
@@ -579,7 +505,10 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 "final",
                 members,
                 overflow,
-                note=note,
+                note="language-swap source/donor seed (graph-first on the raw"
+                " open-quote graphs). If empty even at 0.95 pruning, the pruned"
+                " graphs genuinely lack early quote-position nodes (recorded"
+                " finding, DEVLOG) — pick what the page shows, or leave unselected.",
             )
         )
 
@@ -943,14 +872,7 @@ def build_addition(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
 
 # First-pass reviewer flags (2026-07-11 evidence read): members I would question but
 # do not decide on — the review gate owns the verdicts. Keyed (supernode, layer, feature).
-MANUAL_FLAGS = {
-    ("small (multilingual)", 22, 113890): "top logits look unrelated (mistake/Sized/gest/"
-    "intestine) and the example is an HTML tag list — doubtful 'small' feature",
-    ("say cold", 29, 53713): "cold evidence weak (top: soft/heavy/冷/粗; example is about "
-    "Pliny the Elder) — verify before keeping",
-    ("say large (multilingual)", 31, 126548): "generic top logits (Very/Simple/Large/More) "
-    "— check the activation examples before keeping",
-}
+MANUAL_FLAGS: dict = {}  # (supernode, layer, feature) -> reviewer note, if ever needed
 
 
 # Delegated review record (2026-07-11; the user waived the manual gate for the
@@ -966,92 +888,6 @@ APPROVED_TASKS = {
     "addition": "grid-principled selection reviewed by delegation (user waived the"
     " manual gate); rejections in REJECTED_MEMBERS; all other members approved",
 }
-
-
-def merge_manual_overrides(task: str, size: str, doc: dict, graphs: dict) -> None:
-    """Merge hand-picked selections from ``supernodes/<task>_<size>.manual.json``.
-
-    The auto-selector OVERWRITES its output file on every run, so manual review edits
-    must live here to survive re-emits. Schema (all sections optional)::
-
-        {"add_supernodes": [{"name", "paper_name", "role", "graph", "position",
-                             "members": [{"layer", "feature", "act"?, "note"?}]}],
-         "add_members":    {"<supernode name>": [{"layer", "feature", "act"?, "note"?}]},
-         "remove_members": {"<supernode name>": [[layer, feature], ...]}}
-
-    Added members are marked ``source: "manual"``; when the (layer, feature) is a node
-    of the supernode's graph its evidence (label/example/act/influence) is auto-filled
-    from the graph dump so the file stays self-reviewable.
-    """
-    path = SUPERNODE_DIR / f"{task}_{size}.manual.json"
-    if not path.exists():
-        return
-    manual = json.loads(path.read_text())
-    by_name = {sn["name"]: sn for sn in doc["supernodes"]}
-
-    def build_member(spec, graph_field, position):
-        L, f = int(spec["layer"]), int(spec["feature"])
-        for gname in str(graph_field).split(";"):
-            for n in feature_nodes(graphs.get(gname, {"nodes": []})):
-                if n["layer"] == L and n["feature_idx"] == f:
-                    m = member_entry(n, matched="manual selection")
-                    break
-            else:
-                continue
-            break
-        else:
-            m = {
-                "layer": L,
-                "feature": f,
-                "position": position,
-                "act": float(spec.get("act", 0.0)),
-                "influence": None,
-                "evidence": {
-                    "matched": "manual selection (not a dump node)",
-                    "top_logits": [],
-                    "example": "",
-                    "grid_class": None,
-                },
-                "review": "proposed",
-            }
-        m["source"] = "manual"
-        if spec.get("act") is not None:
-            m["act"] = float(spec["act"])
-        if spec.get("note"):
-            m["review_note"] = spec["note"]
-        m["review"] = "approved"  # a manual pick IS the review
-        return m
-
-    for sn_spec in manual.get("add_supernodes", []):
-        members = [
-            build_member(s, sn_spec["graph"], sn_spec.get("position")) for s in sn_spec["members"]
-        ]
-        doc["supernodes"].append(
-            supernode(
-                sn_spec["name"],
-                sn_spec.get("paper_name", sn_spec["name"]),
-                sn_spec.get("role", "manual"),
-                sn_spec["graph"],
-                sn_spec.get("position"),
-                members,
-                [],
-                note=sn_spec.get("note", "manually selected at review"),
-            )
-        )
-        by_name[sn_spec["name"]] = doc["supernodes"][-1]
-    for name, specs in manual.get("add_members", {}).items():
-        sn = by_name[name]
-        sn["members"] += [build_member(s, sn["graph"], sn["position"]) for s in specs]
-    for name, keys in manual.get("remove_members", {}).items():
-        sn = by_name[name]
-        drop = {tuple(k) for k in keys}
-        removed = [m for m in sn["members"] if (m["layer"], m["feature"]) in drop]
-        sn["members"] = [m for m in sn["members"] if (m["layer"], m["feature"]) not in drop]
-        for m in removed:
-            m["review"] = "rejected"
-            m["review_note"] = (m.get("review_note", "") + " removed at manual review").strip()
-        sn["overflow"] = removed + sn.get("overflow", [])
-    doc["manual_overrides"] = str(path.name)
 
 
 def apply_review_decisions(task: str, doc: dict) -> None:
@@ -1139,14 +975,165 @@ def emit_review_htmls(root: Path, graphs: dict, docs: list[dict]) -> None:
                 )
     for gname, gspecs in per_graph.items():
         out_html = root / f"review_{gname}.html"
-        render_graph_explorer_html(graphs[gname], out_html, title=f"review {gname}", groups=gspecs)
-        print(f"  {out_html.name}: {len(gspecs)} proposed supernodes")
+        render_graph_explorer_html(
+            graphs[gname],
+            out_html,
+            labels=[gname],  # exports carry this as "example" -> unambiguous mapping
+            title=f"review {gname}",
+            groups=gspecs,
+        )
+        print(f"  {out_html.name}: {len(gspecs)} seeded supernodes")
+
+
+# Metadata for group names the notebooks know how to drive. Unknown names ingest fine
+# (role "custom") but need wiring in the notebook before they steer anything.
+ROLE_BY_NAME = {
+    "antonym (multilingual)": ("antonym", "source"),
+    "raw antonym (multilingual)": ("antonym", "source"),
+    "synonym (operation)": ("synonym", "donor"),
+    "raw synonym (operation)": ("synonym", "donor"),
+    "synonym (say-answer)": ("synonym", "donor-alternative"),
+    "raw synonym (say-answer)": ("synonym", "donor-alternative"),
+    "small (multilingual)": ("small", "source"),
+    "hot": ("hot", "donor"),
+    "say cold": ("say cold", "readout"),
+    "say large (multilingual)": ("say large", "readout"),
+    "raw say large (multilingual)": ("say large", "readout"),
+    **{f"say large ({lg})": (f"say large ({lg})", "readout") for lg in ("en", "fr", "zh")},
+    **{f"raw say large ({lg})": (f"say large ({lg})", "readout") for lg in ("en", "fr", "zh")},
+    **{f"detect ({lg})": (f"open-quote-in-{lg}", "source+donor") for lg in ("en", "fr", "zh")},
+}
+
+
+def ingest_exports(size, files, root, manifest, graphs) -> None:
+    """Write the multilingual supernode file FROM the explorer 'Export groups' JSONs.
+
+    The exports are the review: every listed node was hand-picked in the UI, so members
+    arrive ``review: "approved"`` and the file ships ``approved: true``. Same-named
+    groups across several graph pages merge into one multi-graph supernode (per-graph
+    ``acts``/``positions`` recorded — donors take value = mult x their own graph's act;
+    sources steer at each member's node position per recipient). Evidence is
+    auto-filled from the graph dumps. Disjointness within the final set is enforced.
+    """
+    merged: dict[str, dict] = {}
+    for f in files:
+        exp = json.loads(Path(f).read_text())
+        gname = str(exp.get("example", "")).strip()
+        if gname not in graphs:
+            raise SystemExit(
+                f"{f}: example label {gname!r} is not a dumped graph — re-export from"
+                f" the CURRENT review pages (known: {sorted(graphs)})"
+            )
+        nodes_at = {
+            (n["layer"], n["feature_idx"], n["position"]): n for n in feature_nodes(graphs[gname])
+        }
+        claimed: dict[tuple, str] = {}
+        for grp in exp.get("groups", []):
+            name = str(grp["name"]).strip()
+            for nd in grp.get("nodes", []):
+                k = (int(nd["layer"]), int(nd["feature_idx"]), nd.get("position"))
+                if k in claimed and claimed[k] != name:
+                    raise SystemExit(
+                        f"{f}: node L{k[0]}f{k[1]}@p{k[2]} is in both {claimed[k]!r} and"
+                        f" {name!r} — supernodes must be disjoint; fix in the UI and"
+                        " re-export"
+                    )
+                claimed[k] = name
+            sn = merged.setdefault(
+                name,
+                {
+                    "name": name,
+                    "paper_name": ROLE_BY_NAME.get(name, (name, "custom"))[0],
+                    "role": ROLE_BY_NAME.get(name, (name, "custom"))[1],
+                    "graphs": set(),
+                    "members": {},
+                },
+            )
+            sn["graphs"].add(gname)
+            for nd in grp.get("nodes", []):
+                key = (int(nd["layer"]), int(nd["feature_idx"]))
+                node = nodes_at.get((key[0], key[1], nd.get("position")))
+                if key not in sn["members"]:
+                    if node is not None:
+                        m = member_entry(node, matched="manual (explorer export)")
+                    else:
+                        m = {
+                            "layer": key[0],
+                            "feature": key[1],
+                            "position": nd.get("position"),
+                            "act": 0.0,
+                            "influence": None,
+                            "evidence": {
+                                "matched": "manual (explorer export; not found in dump"
+                                " at that position)",
+                                "top_logits": [],
+                                "example": "",
+                                "grid_class": None,
+                            },
+                        }
+                    m["source"] = "explorer-export"
+                    m["review"] = "approved"
+                    m["acts"], m["positions"] = {}, {}
+                    sn["members"][key] = m
+                m = sn["members"][key]
+                if node is not None:
+                    m["acts"][gname] = round(float(node["activation"]), 4)
+                m["positions"][gname] = nd.get("position")
+
+    supernodes = []
+    for sn in merged.values():
+        members = sorted(sn["members"].values(), key=lambda m: -max(m["acts"].values() or [0]))
+        note = "hand-selected in the explorer review pages (Export groups)"
+        if sn["role"] == "custom":
+            note += " — UNKNOWN group name: wire its role in the notebook before use"
+        supernodes.append(
+            supernode(
+                sn["name"],
+                sn["paper_name"],
+                sn["role"],
+                ";".join(sorted(sn["graphs"])),
+                "member-positions",
+                members,
+                [],
+                note=note,
+            )
+        )
+    doc = {
+        "task": "multilingual",
+        "size": size,
+        "built_from": f"{root}@{manifest.get('git', '?')}",
+        "selection": "explorer-export",
+        "source_files": [str(Path(f).name) for f in files],
+        "supernodes": supernodes,
+        "approved": True,
+        "review_log": "selected and reviewed by hand in the explorer (Export groups);"
+        " ingested by build_supernodes.py --from-exports",
+    }
+    errs = validate(doc, require_approved=True)
+    if errs:
+        raise SystemExit(
+            "ingest: validation failed (fix the groups in the UI and re-export):\n  "
+            + "\n  ".join(errs)
+        )
+    out = SUPERNODE_DIR / f"multilingual_{size}.json"
+    out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
+    print(f"{out} written from {len(files)} exports:")
+    for sn in supernodes:
+        print(f"   {sn['name']:34s} {len(sn['members'])} members  [{sn['role']}]  {sn['graph']}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--size", default="4b")
     ap.add_argument("--check", action="store_true", help="validate committed files only")
+    ap.add_argument(
+        "--from-exports",
+        nargs="+",
+        metavar="EXPORT_JSON",
+        help="ingest explorer 'Export groups' JSONs (one per graph) and write the"
+        " multilingual supernode file from them — the ONLY multilingual selection"
+        " source; membership evidence is auto-filled from the graph dumps",
+    )
     args = ap.parse_args()
 
     if args.check:
@@ -1166,30 +1153,38 @@ def main() -> None:
     root, manifest, graphs = load_inputs(args.size)
     SUPERNODE_DIR.mkdir(exist_ok=True)
 
+    if args.from_exports:
+        ingest_exports(args.size, args.from_exports, root, manifest, graphs)
+        return
+
     docs = []
-    for task, builder in (("multilingual", build_multilingual), ("addition", build_addition)):
-        doc = builder(args.size, root, manifest, graphs)
-        merge_manual_overrides(task, args.size, doc, graphs)
-        apply_manual_flags(doc)
-        apply_review_decisions(task, doc)
-        errs = validate(doc, require_approved=False)
-        if errs:
-            raise SystemExit(f"{task}: validation failed:\n  " + "\n  ".join(errs))
-        out = SUPERNODE_DIR / f"{task}_{args.size}.json"
-        out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
-        docs.append(doc)
-        print(f"{out} written:")
-        for sn in doc["supernodes"]:
-            flag = "" if sn["members"] else "   <-- EMPTY"
-            print(
-                f"   {sn['name']:34s} {len(sn['members'])} members"
-                f" (+{len(sn.get('overflow', []))} overflow){flag}"
-            )
+    # ADDITION: the grid-evidenced scan IS the selection (delegated review encoded).
+    doc = build_addition(args.size, root, manifest, graphs)
+    apply_manual_flags(doc)
+    apply_review_decisions("addition", doc)
+    errs = validate(doc, require_approved=False)
+    if errs:
+        raise SystemExit("addition: validation failed:\n  " + "\n  ".join(errs))
+    out = SUPERNODE_DIR / f"addition_{args.size}.json"
+    out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
+    docs.append(doc)
+    print(f"{out} written:")
+    for sn in doc["supernodes"]:
+        print(f"   {sn['name']:34s} {len(sn['members'])} members")
+
+    # MULTILINGUAL: the scan only SEEDS the review pages. The authoritative selection
+    # is the human's explorer "Export groups" JSONs, ingested via --from-exports.
+    seed = build_multilingual(args.size, root, manifest, graphs)
+    docs.append(seed)
+    print("\nmultilingual: scan used as review-page seeds only (no file written)")
+    for sn in seed["supernodes"]:
+        flag = "" if sn["members"] else "   <-- empty seed"
+        print(f"   {sn['name']:34s} {len(sn['members'])} seeded{flag}")
 
     emit_review_htmls(root, graphs, docs)
     print(
-        "\nNEXT: review the JSONs (and/or the review_*.html pages), edit members,"
-        '\nset "approved": true — the notebooks refuse unapproved files.'
+        "\nNEXT (multilingual): adjust groups in the review_*.html pages, Export"
+        "\ngroups per page, then: build_supernodes.py --from-exports <files...>"
     )
 
 

@@ -467,14 +467,15 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             )
 
     # --- language detectors (graph-first; Fig B5 source/donor) ------------------------
-    n_layers = 36
+    # The paper's detectors sit at the final open-quote token, early layers. Qwen3's
+    # 0.95 graphs have NO layer<12 nodes at that position, so the seed keeps only the
+    # semantic filter (language-pure examples) and prefers the earliest layers instead
+    # of hard-cutting — the human review decides what actually counts as a detector.
     detect_cands: dict[str, list[dict]] = {}
     for lg in LANGS:
         name = f"raw_antonym_{lg}"
         cands = []
         for n in feature_nodes(graphs[name], final(name)):
-            if n["layer"] >= n_layers // 3:
-                continue
             langs = example_langs(n.get("label"))
             if not langs:
                 continue
@@ -484,7 +485,8 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                     member_entry(
                         n,
                         matched=f"examples:{langs.count(lg)}/{len(langs)} {lg}",
-                        note="graph-first detector (early layer, language-pure examples)",
+                        note="graph-first detector (language-pure examples;"
+                        " earliest layers preferred)",
                     )
                 )
         detect_cands[lg] = cands
@@ -495,7 +497,7 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
             counts[(m["layer"], m["feature"])] += 1
     for lg in LANGS:
         uniq = [m for m in detect_cands[lg] if counts[(m["layer"], m["feature"])] == 1]
-        members, overflow = cap_members(uniq)
+        members, overflow = cap_members(uniq, key=lambda m: (-m["layer"], m["act"]))
         sns.append(
             supernode(
                 f"detect ({lg})",
@@ -506,9 +508,9 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 members,
                 overflow,
                 note="language-swap source/donor seed (graph-first on the raw"
-                " open-quote graphs). If empty even at 0.95 pruning, the pruned"
-                " graphs genuinely lack early quote-position nodes (recorded"
-                " finding, DEVLOG) — pick what the page shows, or leave unselected.",
+                " open-quote graphs; language-pure examples, earliest layers"
+                " first — Qwen3's quote-position nodes all sit above L12, unlike"
+                " the paper's early detectors). The review decides membership.",
             )
         )
 

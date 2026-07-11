@@ -1,10 +1,11 @@
 {
  "size": "4b",
- "git": "9151262",
+ "git": "7b74310",
  "graphs": {
   "antonym_en": {
    "prompt": "What is the opposite of \"small\"? Reply with only the word, nothing else.",
    "raw": false,
+   "node_threshold": 0.95,
    "answer": "large",
    "answer_token_id": 16767,
    "n_tokens": 29,
@@ -14,6 +15,7 @@
   "raw_antonym_en": {
    "prompt": "The opposite of \"small\" is \"",
    "raw": true,
+   "node_threshold": 0.95,
    "answer": "large",
    "answer_token_id": 16767,
    "n_tokens": 9,
@@ -23,6 +25,7 @@
   "antonym_fr": {
    "prompt": "Quel est le contraire de \"petit\" ? Réponds avec un seul mot, rien d'autre.",
    "raw": false,
+   "node_threshold": 0.95,
    "answer": "Grand",
    "answer_token_id": 40151,
    "n_tokens": 37,
@@ -32,6 +35,7 @@
   "raw_antonym_fr": {
    "prompt": "Le contraire de \"petit\" est \"",
    "raw": true,
+   "node_threshold": 0.95,
    "answer": "grand",
    "answer_token_id": 52666,
    "n_tokens": 11,
@@ -41,6 +45,7 @@
   "antonym_zh": {
    "prompt": "\"小\"的反义词是什么？只回答一个词，不要其他内容。",
    "raw": false,
+   "node_threshold": 0.95,
    "answer": "大",
    "answer_token_id": 26288,
    "n_tokens": 30,
@@ -50,6 +55,7 @@
   "raw_antonym_zh": {
    "prompt": "\"小\"的反义词是\"",
    "raw": true,
+   "node_threshold": 0.95,
    "answer": "大",
    "answer_token_id": 26288,
    "n_tokens": 10,
@@ -59,6 +65,7 @@
   "synonym_en": {
    "prompt": "Give one synonym of \"small\". Reply with only the word, nothing else.",
    "raw": false,
+   "node_threshold": 0.95,
    "answer": "tiny",
    "answer_token_id": 46116,
    "n_tokens": 28,
@@ -68,6 +75,7 @@
   "raw_synonym_en": {
    "prompt": "A synonym of \"small\" is \"",
    "raw": true,
+   "node_threshold": 0.95,
    "answer": "tiny",
    "answer_token_id": 46116,
    "n_tokens": 9,
@@ -77,6 +85,7 @@
   "hot_en": {
    "prompt": "What is the opposite of \"hot\"? Reply with only the word, nothing else.",
    "raw": false,
+   "node_threshold": 0.95,
    "answer": "cold",
    "answer_token_id": 87072,
    "n_tokens": 29,

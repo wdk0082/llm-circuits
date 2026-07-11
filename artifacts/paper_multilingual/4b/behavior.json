@@ -1,0 +1,53 @@
+{
+ "antonym": {
+  "en": {
+   "token_id": 16767,
+   "token": "large",
+   "continuation": "large<|im_end|>"
+  },
+  "fr": {
+   "token_id": 40151,
+   "token": "Grand",
+   "continuation": "Grand<|im_end|>"
+  },
+  "zh": {
+   "token_id": 26288,
+   "token": "大",
+   "continuation": "大<|im_end|>"
+  }
+ },
+ "synonym": {
+  "en": {
+   "token_id": 46116,
+   "token": "tiny",
+   "continuation": "tiny<|im_end|>"
+  },
+  "fr": {
+   "token_id": 6862,
+   "token": "pet",
+   "continuation": "petit<|im_end|>"
+  },
+  "zh": {
+   "token_id": 30709,
+   "token": "小",
+   "continuation": "小<|im_end|>"
+  }
+ },
+ "antonym_hot": {
+  "en": {
+   "token_id": 87072,
+   "token": "cold",
+   "continuation": "cold<|im_end|>"
+  },
+  "fr": {
+   "token_id": 37,
+   "token": "F",
+   "continuation": "Froid<|im_end|>"
+  },
+  "zh": {
+   "token_id": 99476,
+   "token": "冷",
+   "continuation": "冷<|im_end|>"
+  }
+ }
+}

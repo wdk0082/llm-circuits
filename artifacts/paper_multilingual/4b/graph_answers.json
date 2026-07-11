@@ -1,0 +1,22 @@
+{
+ "antonym_en": {
+  "answer": "large",
+  "token_id": 16767
+ },
+ "antonym_fr": {
+  "answer": "Grand",
+  "token_id": 40151
+ },
+ "antonym_zh": {
+  "answer": "大",
+  "token_id": 26288
+ },
+ "synonym_en": {
+  "answer": "tiny",
+  "token_id": 46116
+ },
+ "hot_en": {
+  "answer": "cold",
+  "token_id": 87072
+ }
+}

@@ -1,0 +1,170 @@
+[
+ {
+  "layer": 30,
+  "feature": 12843,
+  "position": 11,
+  "w9": -0.3875,
+  "influence": 0.0009459734108751387,
+  "top_logits": [
+   " Yay",
+   "ija",
+   "ADR",
+   "四周",
+   "极"
+  ]
+ },
+ {
+  "layer": 31,
+  "feature": 4652,
+  "position": 4,
+  "w9": -0.3026,
+  "influence": 0.000746281891524496,
+  "top_logits": [
+   "ham",
+   "ern",
+   "-",
+   "_",
+   " "
+  ]
+ },
+ {
+  "layer": 32,
+  "feature": 149033,
+  "position": 11,
+  "w9": -0.272,
+  "influence": 0.015565086673349821,
+  "top_logits": [
+   "穿戴",
+   " <![",
+   " Slut",
+   "iability",
+   " "
+  ]
+ },
+ {
+  "layer": 28,
+  "feature": 8524,
+  "position": 11,
+  "w9": -0.2706,
+  "influence": 0.0003939230108390905,
+  "top_logits": [
+   ")\",",
+   "}',",
+   "}\",",
+   ")',",
+   "))),"
+  ]
+ },
+ {
+  "layer": 0,
+  "feature": 158266,
+  "position": 6,
+  "w9": -0.2223,
+  "influence": 0.0016410298292037786,
+  "top_logits": [
+   "dorf",
+   "agara",
+   " ${⏎",
+   "деся",
+   "-HT"
+  ]
+ },
+ {
+  "layer": 12,
+  "feature": 118161,
+  "position": 4,
+  "w9": -0.1987,
+  "influence": 0.0004761038419866843,
+  "top_logits": [
+   ".exports",
+   "inea",
+   "lete",
+   "ubes",
+   "发现自己"
+  ]
+ },
+ {
+  "layer": 4,
+  "feature": 43637,
+  "position": 6,
+  "w9": -0.1756,
+  "influence": 0.000997867274357274,
+  "top_logits": [
+   "↘",
+   "大家一起",
+   " ​​",
+   "-HT",
+   "деся"
+  ]
+ },
+ {
+  "layer": 34,
+  "feature": 8628,
+  "position": 5,
+  "w9": -0.1733,
+  "influence": 0.0007756336054427369,
+  "top_logits": [
+   " →→→→→",
+   " →→→→→→",
+   " →→→",
+   " →→→→",
+   " ​​"
+  ]
+ },
+ {
+  "layer": 2,
+  "feature": 23654,
+  "position": 1,
+  "w9": -0.171,
+  "influence": 0.0013128305870754734,
+  "top_logits": [
+   " Statistics",
+   "小姐姐",
+   "essler",
+   " STATS",
+   "ereum"
+  ]
+ },
+ {
+  "layer": 4,
+  "feature": 126500,
+  "position": 10,
+  "w9": -0.1679,
+  "influence": 0.0007953335461657516,
+  "top_logits": [
+   "赘",
+   "(Parameter",
+   "曳",
+   "-quarters",
+   "rd"
+  ]
+ },
+ {
+  "layer": 4,
+  "feature": 24433,
+  "position": 2,
+  "w9": -0.1666,
+  "influence": 0.0009499354935014438,
+  "top_logits": [
+   "Cascade",
+   "rase",
+   "雪山",
+   ":flex",
+   "[#"
+  ]
+ },
+ {
+  "layer": 34,
+  "feature": 129835,
+  "position": 11,
+  "w9": -0.1634,
+  "influence": 0.0035882515898956902,
+  "top_logits": [
+   " ...\"",
+   " ...⏎",
+   " ...)",
+   " ...",
+   " ...)⏎"
+  ]
+ }
+]

@@ -1,0 +1,347 @@
+{
+ "strength_1x": {
+  "L30f27666": {
+   "baseline": 28.0,
+   "steered": 27.125
+  },
+  "L31f11436": {
+   "baseline": 14.25,
+   "steered": 12.688
+  },
+  "L32f100307": {
+   "baseline": 10.188,
+   "steered": 8.688
+  },
+  "L35f123612": {
+   "baseline": 67.5,
+   "steered": 77.0
+  },
+  "L35f47465": {
+   "baseline": 55.0,
+   "steered": 53.75
+  },
+  "L35f38998": {
+   "baseline": 53.25,
+   "steered": 50.0
+  },
+  "L34f62038": {
+   "baseline": 38.75,
+   "steered": 38.0
+  },
+  "L32f89898": {
+   "baseline": 31.25,
+   "steered": 30.75
+  },
+  "L33f110355": {
+   "baseline": 29.125,
+   "steered": 28.375
+  },
+  "L34f2606": {
+   "baseline": 27.125,
+   "steered": 26.0
+  },
+  "L33f1230": {
+   "baseline": 25.0,
+   "steered": 25.125
+  },
+  "L35f125301": {
+   "baseline": 23.75,
+   "steered": 23.25
+  },
+  "L31f91347": {
+   "baseline": 22.75,
+   "steered": 22.25
+  },
+  "L34f141619": {
+   "baseline": 22.0,
+   "steered": 20.75
+  },
+  "L30f57180": {
+   "baseline": 21.0,
+   "steered": 20.5
+  },
+  "L35f14570": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f50957": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f131709": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f66898": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f70082": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L34f69056": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f25337": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f34472": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L31f21719": {
+   "baseline": 15.25,
+   "steered": 20.0
+  },
+  "L31f104452": {
+   "baseline": 0.0,
+   "steered": 0.355
+  },
+  "L29f56902": {
+   "baseline": 4.688,
+   "steered": 4.312
+  },
+  "L33f105473": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "_supernode_means": {
+   "say_big_pct_baseline": 90.4,
+   "en_say_pct_baseline": 98.6,
+   "zh_say_pct_stored": 7.6
+  }
+ },
+ "strength_3x": {
+  "L30f27666": {
+   "baseline": 28.0,
+   "steered": 28.875
+  },
+  "L31f11436": {
+   "baseline": 14.25,
+   "steered": 10.062
+  },
+  "L32f100307": {
+   "baseline": 10.188,
+   "steered": 8.188
+  },
+  "L35f123612": {
+   "baseline": 67.5,
+   "steered": 81.5
+  },
+  "L35f47465": {
+   "baseline": 55.0,
+   "steered": 60.5
+  },
+  "L35f38998": {
+   "baseline": 53.25,
+   "steered": 46.25
+  },
+  "L34f62038": {
+   "baseline": 38.75,
+   "steered": 39.25
+  },
+  "L32f89898": {
+   "baseline": 31.25,
+   "steered": 23.25
+  },
+  "L33f110355": {
+   "baseline": 29.125,
+   "steered": 28.5
+  },
+  "L34f2606": {
+   "baseline": 27.125,
+   "steered": 27.625
+  },
+  "L33f1230": {
+   "baseline": 25.0,
+   "steered": 18.75
+  },
+  "L35f125301": {
+   "baseline": 23.75,
+   "steered": 23.625
+  },
+  "L31f91347": {
+   "baseline": 22.75,
+   "steered": 18.625
+  },
+  "L34f141619": {
+   "baseline": 22.0,
+   "steered": 19.75
+  },
+  "L30f57180": {
+   "baseline": 21.0,
+   "steered": 17.625
+  },
+  "L35f14570": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f50957": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f131709": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f66898": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f70082": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L34f69056": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f25337": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f34472": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L31f21719": {
+   "baseline": 15.25,
+   "steered": 9.5
+  },
+  "L31f104452": {
+   "baseline": 0.0,
+   "steered": 4.125
+  },
+  "L29f56902": {
+   "baseline": 4.688,
+   "steered": 4.344
+  },
+  "L33f105473": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "_supernode_means": {
+   "say_big_pct_baseline": 84.7,
+   "en_say_pct_baseline": 93.6,
+   "zh_say_pct_stored": 5.9
+  }
+ },
+ "strength_6x": {
+  "L30f27666": {
+   "baseline": 28.0,
+   "steered": 27.25
+  },
+  "L31f11436": {
+   "baseline": 14.25,
+   "steered": 4.062
+  },
+  "L32f100307": {
+   "baseline": 10.188,
+   "steered": 5.594
+  },
+  "L35f123612": {
+   "baseline": 67.5,
+   "steered": 62.25
+  },
+  "L35f47465": {
+   "baseline": 55.0,
+   "steered": 56.25
+  },
+  "L35f38998": {
+   "baseline": 53.25,
+   "steered": 27.625
+  },
+  "L34f62038": {
+   "baseline": 38.75,
+   "steered": 36.0
+  },
+  "L32f89898": {
+   "baseline": 31.25,
+   "steered": 14.688
+  },
+  "L33f110355": {
+   "baseline": 29.125,
+   "steered": 27.875
+  },
+  "L34f2606": {
+   "baseline": 27.125,
+   "steered": 22.25
+  },
+  "L33f1230": {
+   "baseline": 25.0,
+   "steered": 13.75
+  },
+  "L35f125301": {
+   "baseline": 23.75,
+   "steered": 18.375
+  },
+  "L31f91347": {
+   "baseline": 22.75,
+   "steered": 12.5
+  },
+  "L34f141619": {
+   "baseline": 22.0,
+   "steered": 16.75
+  },
+  "L30f57180": {
+   "baseline": 21.0,
+   "steered": 13.875
+  },
+  "L35f14570": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f50957": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f131709": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f66898": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f70082": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L34f69056": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f25337": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L35f34472": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "L31f21719": {
+   "baseline": 15.25,
+   "steered": 12.812
+  },
+  "L31f104452": {
+   "baseline": 0.0,
+   "steered": 3.641
+  },
+  "L29f56902": {
+   "baseline": 4.688,
+   "steered": 0.902
+  },
+  "L33f105473": {
+   "baseline": 0.0,
+   "steered": 0.0
+  },
+  "_supernode_means": {
+   "say_big_pct_baseline": 60.2,
+   "en_say_pct_baseline": 74.5,
+   "zh_say_pct_stored": 5.4
+  }
+ }
+}

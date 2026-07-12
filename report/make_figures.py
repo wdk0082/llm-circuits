@@ -559,7 +559,7 @@ def fig_qk_probe():
 def fig_overlap():
     c4 = json.loads((ART / "overlap_curves.json").read_text())
     c8 = json.loads((REPO / "artifacts/paper_multilingual/8b/overlap_curves.json").read_text())
-    fig, axes = plt.subplots(1, 2, figsize=(10.8, 3.1))
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 2.55))
     colors = {"en-fr": "#1f77b4", "en-zh": "#2ca02c", "fr-zh": "#9467bd"}
     ax = axes[0]
     for pair, col in colors.items():

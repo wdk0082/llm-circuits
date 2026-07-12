@@ -27,6 +27,9 @@
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage[colorlinks=true,linkcolor=BrickRed,citecolor=NavyBlue,urlcolor=NavyBlue]{hyperref}
 \usepackage{placeins}  % \FloatBarrier keeps Section 3's floats inside Section 3
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.85}
 \usepackage{CJKutf8}   % 大/小/冷 in tables (fonts: latex-cjk-chinese-arphic-gbsn00lp)
 \newcommand{\zh}[1]{\begin{CJK}{UTF8}{gbsn}#1\end{CJK}}
 
@@ -506,6 +509,18 @@ attention probe is in Appendix~\ref{app:qk}.}
 
 \subsection{Cross-lingual overlap, scale, and the default language}\label{sec:exp:overlap}
 
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_ml_overlap.pdf}
+\caption{Cross-lingual feature overlap by layer. \emph{Left:} 4B overlap for
+translated pairs (solid) against the unrelated-pair baseline (dashed); the residual
+baseline reflects the shared chat scaffold and the dictionary's granularity.
+\emph{Right:} baseline-subtracted curves, 4B (solid) vs.\ 8B (dashed, same-recipe
+transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale
+growth does not.}
+\label{fig:ml-overlap}
+\end{figure}
+
 \paragraph{Cross-lingual overlap and scale.}
 Following the paper, we compute the per-layer intersection-over-union of the feature
 sets active anywhere in the context for translated paragraph pairs, against an
@@ -525,18 +540,6 @@ The paper's Claude-specific claim is that English is the mechanistic default. He
 the mean direct decoder effect of the shared say-large features on the three answer
 tokens is zh $0.766 >$ en $0.664 \gg$ fr $0.309$: \emph{some} language is privileged,
 but for EN/ZH-trained Qwen3 the role is shared between English and Chinese.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_ml_overlap.pdf}
-\caption{Cross-lingual feature overlap by layer. \emph{Left:} 4B overlap for
-translated pairs (solid) against the unrelated-pair baseline (dashed); the residual
-baseline reflects the shared chat scaffold and the dictionary's granularity.
-\emph{Right:} baseline-subtracted curves, 4B (solid) vs.\ 8B (dashed, same-recipe
-transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale
-growth does not.}
-\label{fig:ml-overlap}
-\end{figure}
 
 \subsection{Verdicts}\label{sec:exp:verdicts}
 

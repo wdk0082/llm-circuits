@@ -259,6 +259,19 @@ def test_swap_ivs_fn_ramp_hits_endpoint_pair():
     assert half[0].m == pytest.approx(-3.0) and half[1].value == pytest.approx(15.0)
 
 
+def test_swap_ivs_fn_strengths_override_extends_same_ramp():
+    src = _sn("s", [{"layer": 2, "feature": 1, "positions": {"g": 3}, "acts": {"g": 2.0}}])
+    don = _sn("d", [{"layer": 6, "feature": 9, "acts": {"dg": 5.0}}], role="donor")
+    # (-14, 15) preserves the operand coupling (src_max-1)/don_max = -1, so the ladder
+    # passes through the paper endpoint (-0.5x, +1.5x) at s = 1.5 on its way to 15
+    fn = M.swap_ivs_fn(src, "g", 4, don, "dg", [4], kind="operand", strengths=(-14.0, 15.0))
+    at_paper = fn(1.5)
+    assert at_paper[0].m == pytest.approx(-1.5)  # M_paper = -0.5 -> m = -1.5
+    assert at_paper[1].value == pytest.approx(7.5)  # +1.5x the 5.0 stored act
+    at_end = fn(15.0)
+    assert at_end[0].m == pytest.approx(-15.0) and at_end[1].value == pytest.approx(75.0)
+
+
 def test_steer_interventions_m_and_position():
     ivs = A.steer_interventions([(3, 7, 1.5), (5, 9, 0.2)], m=-2.0, position=None)
     assert [(iv.layer, iv.feature_idx, iv.position, iv.m) for iv in ivs] == [

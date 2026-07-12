@@ -1646,3 +1646,37 @@ the final position.
 1. Revisit ADDITION supernodes via the same export-review workflow.
 2. Raw-primary vs chat-primary framing: partially superseded by the v3 separation —
    what remains open is which arm the paper-comparison headline should quote.
+
+## Ninth session (2026-07-12, same day): the operand swap as a strength ablation — it lands
+
+User question ("why cap at 6? what's the paper's order?") surfaced that the paper
+never states a selection algorithm (hand-grouping; the ONE disclosed criterion is
+"highest graph influence" for the operand swap) — and led to a user-directed
+beyond-paper ablation: `multilingual_extra_operand_swap.ipynb`, the operand swap only,
+three selection arms x an extended strength ladder. Machinery: `swap_ivs_fn` /
+`supernode_swap_sweep` gained a `strengths` override; (-14, 15) extends the paper's
+operand ramp tenfold along the same coupling (passes the paper endpoint at s=1.5,
+marked on every panel). ell swept at the extended endpoint; readouts fixed to the
+reviewed v3 say-cold/say-large groups; arm 1 = the reviewed files verbatim, arms 2/3
+re-rank the same lexicon+shared pool in-cell (the ablation IS the selection study;
+the reviewed files stay the reproduction of record).
+
+**Result: the operand swap lands under the paper's constrained protocol at 1.5-7x the
+paper's strength — 14/15 configurations flip** (crossovers 2.25-10.5x vs the paper's
+1.5x endpoint; nothing flips at paper strength in any arm). v3's "room without
+strength" is quantified. Highlights: arm 3 (influence-chosen before-middle — the
+paper's own described recipe; chat-only, its raw pool is empty and its chat small
+pool is the single L0f133356) is the showcase — chat zh flips at 2.25x under ell=8 to
+冷 @ 1.000 with say-cold recruited to 70% and say-large down to 21%, the full Fig B4
+phenomenology. Push-pull readouts at 15x: say-cold 49-167% of donor level where flips
+happen, say-large 0-30%. Failure modes: raw zh never flips in any arm (大 holds at
+±14/15x); arm 2's chat en over-drive echoes the injected operand (`hot` @ .54) — v1's
+propagate-endpoint echo, back at high constrained strength. One dissociation: arm 1
+chat en flips with the reviewed say-cold group nearly silent (0.7%) — extreme-strength
+flips can route around the reviewed readout features.
+
+Also this session (earlier turns): answered the readout `None%` semantics (all-pinned
+rows), the small (multilingual) late-layer question (the >=2-graph sharing gate kills
+early language-specific detokenization features; act-ranking cut the two early shared
+survivors), and the cap-6 rationale (paper sizes 3-6; under earliest-first a bigger
+cap re-latens the sets: cap-15 would move chat floors 13->22 / 22->28).

@@ -624,7 +624,15 @@ def supernode_inject_ivs(sn, donor_graph, positions, *, mult):
 
 
 def swap_ivs_fn(
-    source_sn, recipient_graph, source_fallback_pos, donor_sn, donor_graph, donor_positions, *, kind
+    source_sn,
+    recipient_graph,
+    source_fallback_pos,
+    donor_sn,
+    donor_graph,
+    donor_positions,
+    *,
+    kind,
+    strengths=None,
 ):
     """``ivs(s)`` for the paper ramp: at strength ``s`` (0 -> donor endpoint) the donor
     is injected at ``s x`` its stored donor-graph act and the source steered to
@@ -632,8 +640,14 @@ def swap_ivs_fn(
     exactly at ``s = don_max`` (operation -5x/+6x, operand -0.5x/+1.5x, language
     -5x/+6x).  Source and donor supernodes are disjoint by the file invariant, so no
     dedup is needed.
+
+    ``strengths`` overrides the endpoint pair ``(src_max, don_max)`` — for
+    beyond-paper extended ladders (multilingual_extra_operand_swap.ipynb).  An
+    override that preserves the ratio ``(src_max - 1) / don_max`` keeps the SAME ramp
+    line, so the ladder still passes through the paper endpoint on the way (operand:
+    (-14, 15) extends (-0.5, 1.5) tenfold along the identical coupling).
     """
-    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
+    src_max, don_max = strengths if strengths is not None else PAPER_SWAP_STRENGTHS[kind]
 
     def ivs(s: float):
         if s == 0.0:
@@ -675,6 +689,7 @@ def supernode_swap_sweep(
     expected_token: int,
     patch_end_layer: int,
     n_steps: int = 13,
+    strengths=None,
 ):
     """Fig B3/B4/B5 strength sweep 0 -> the donor endpoint, every step under the
     paper's constrained patching at the fixed ``patch_end_layer`` (choose it first with
@@ -682,9 +697,10 @@ def supernode_swap_sweep(
     strength ``s`` (:func:`swap_ivs_fn`); ``s = 0`` is the clean forward.  Tracks
     P(baseline answer) and P(expected swapped answer) and reports the **crossover** =
     smallest ``s`` with P(expected) > P(baseline) (paper: ~4x for the operation swap,
-    consistent across languages).
+    consistent across languages).  ``strengths`` overrides the endpoint pair for
+    beyond-paper extended ladders (must match the ``ivs_fn``'s own override).
     """
-    _, don_max = PAPER_SWAP_STRENGTHS[kind]
+    _, don_max = strengths if strengths is not None else PAPER_SWAP_STRENGTHS[kind]
     strengths = [don_max * i / (n_steps - 1) for i in range(n_steps)]
     p_base, p_exp, tops = [], [], []
     for s in strengths:

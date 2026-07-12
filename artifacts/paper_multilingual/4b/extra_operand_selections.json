@@ -1,0 +1,513 @@
+{
+ "arm1_early": {
+  "chat": {
+   "small": [
+    {
+     "layer": 22,
+     "feature": 113890,
+     "acts": {
+      "antonym_en": 9.6875,
+      "antonym_fr": 7.1875
+     },
+     "influence": 0.020359
+    },
+    {
+     "layer": 22,
+     "feature": 42644,
+     "acts": {
+      "antonym_en": 6.0,
+      "antonym_zh": 4.75
+     },
+     "influence": 0.008491
+    },
+    {
+     "layer": 0,
+     "feature": 133356,
+     "acts": {
+      "antonym_en": 5.9688,
+      "antonym_zh": 4.25
+     },
+     "influence": 0.039863
+    },
+    {
+     "layer": 22,
+     "feature": 38866,
+     "acts": {
+      "antonym_en": 5.625,
+      "antonym_zh": 4.2188
+     },
+     "influence": 0.007125
+    },
+    {
+     "layer": 21,
+     "feature": 120516,
+     "acts": {
+      "antonym_en": 5.4688,
+      "antonym_zh": 4.125
+     },
+     "influence": 0.00635
+    },
+    {
+     "layer": 19,
+     "feature": 77492,
+     "acts": {
+      "antonym_en": 4.1562,
+      "antonym_zh": 3.4844
+     },
+     "influence": 0.007837
+    }
+   ],
+   "hot": [
+    {
+     "layer": 5,
+     "feature": 134029,
+     "acts": {
+      "hot_en": 4.7188
+     },
+     "influence": 0.014146
+    },
+    {
+     "layer": 4,
+     "feature": 32249,
+     "acts": {
+      "hot_en": 3.2344
+     },
+     "influence": 0.008071
+    },
+    {
+     "layer": 3,
+     "feature": 75392,
+     "acts": {
+      "hot_en": 3.0625
+     },
+     "influence": 0.015788
+    },
+    {
+     "layer": 5,
+     "feature": 18203,
+     "acts": {
+      "hot_en": 2.9844
+     },
+     "influence": 0.003051
+    },
+    {
+     "layer": 3,
+     "feature": 131394,
+     "acts": {
+      "hot_en": 2.8125
+     },
+     "influence": 0.016228
+    },
+    {
+     "layer": 5,
+     "feature": 51825,
+     "acts": {
+      "hot_en": 2.1562
+     },
+     "influence": 0.002667
+    }
+   ]
+  },
+  "raw": {
+   "small": [
+    {
+     "layer": 28,
+     "feature": 36616,
+     "acts": {
+      "raw_antonym_en": 24.375,
+      "raw_antonym_fr": 14.5625,
+      "raw_antonym_zh": 16.625
+     },
+     "influence": 0.013046
+    },
+    {
+     "layer": 27,
+     "feature": 29715,
+     "acts": {
+      "raw_antonym_en": 21.625,
+      "raw_antonym_fr": 10.8125,
+      "raw_antonym_zh": 11.8125
+     },
+     "influence": 0.018075
+    },
+    {
+     "layer": 26,
+     "feature": 58650,
+     "acts": {
+      "raw_antonym_en": 13.0,
+      "raw_antonym_fr": 15.3125,
+      "raw_antonym_zh": 20.5
+     },
+     "influence": 0.005386
+    },
+    {
+     "layer": 28,
+     "feature": 97177,
+     "acts": {
+      "raw_antonym_en": 17.625,
+      "raw_antonym_fr": 14.8125,
+      "raw_antonym_zh": 19.625
+     },
+     "influence": 0.002012
+    },
+    {
+     "layer": 26,
+     "feature": 163015,
+     "acts": {
+      "raw_antonym_en": 17.25,
+      "raw_antonym_fr": 10.125
+     },
+     "influence": 0.003822
+    },
+    {
+     "layer": 26,
+     "feature": 30805,
+     "acts": {
+      "raw_antonym_en": 15.5,
+      "raw_antonym_fr": 9.9375
+     },
+     "influence": 0.006724
+    }
+   ],
+   "hot": [
+    {
+     "layer": 27,
+     "feature": 143324,
+     "acts": {
+      "raw_hot_en": 39.5
+     },
+     "influence": 0.024191
+    },
+    {
+     "layer": 24,
+     "feature": 127078,
+     "acts": {
+      "raw_hot_en": 26.5
+     },
+     "influence": 0.086801
+    },
+    {
+     "layer": 26,
+     "feature": 119024,
+     "acts": {
+      "raw_hot_en": 22.375
+     },
+     "influence": 0.018761
+    },
+    {
+     "layer": 27,
+     "feature": 58824,
+     "acts": {
+      "raw_hot_en": 20.375
+     },
+     "influence": 0.007771
+    },
+    {
+     "layer": 25,
+     "feature": 110576,
+     "acts": {
+      "raw_hot_en": 17.0
+     },
+     "influence": 0.006958
+    },
+    {
+     "layer": 24,
+     "feature": 8689,
+     "acts": {
+      "raw_hot_en": 14.0625
+     },
+     "influence": 0.03126
+    }
+   ]
+  }
+ },
+ "arm2_influence": {
+  "chat": {
+   "small": [
+    {
+     "layer": 0,
+     "feature": 133356,
+     "acts": {
+      "antonym_en": 5.9688,
+      "antonym_zh": 4.25
+     },
+     "influence": 0.03986268951691135
+    },
+    {
+     "layer": 22,
+     "feature": 113890,
+     "acts": {
+      "antonym_en": 9.6875,
+      "antonym_fr": 7.1875
+     },
+     "influence": 0.020359021748898375
+    },
+    {
+     "layer": 24,
+     "feature": 24991,
+     "acts": {
+      "antonym_en": 15.375,
+      "antonym_zh": 10.1875
+     },
+     "influence": 0.016526539743554867
+    },
+    {
+     "layer": 27,
+     "feature": 29715,
+     "acts": {
+      "antonym_en": 23.0,
+      "antonym_fr": 10.8125,
+      "antonym_zh": 12.25
+     },
+     "influence": 0.014771115965186541
+    },
+    {
+     "layer": 28,
+     "feature": 36616,
+     "acts": {
+      "antonym_en": 26.0,
+      "antonym_fr": 15.0,
+      "antonym_zh": 17.125
+     },
+     "influence": 0.013543672619594856
+    },
+    {
+     "layer": 23,
+     "feature": 99795,
+     "acts": {
+      "antonym_en": 9.9375,
+      "antonym_zh": 7.75
+     },
+     "influence": 0.008838235101643905
+    }
+   ],
+   "hot": [
+    {
+     "layer": 24,
+     "feature": 127078,
+     "acts": {
+      "hot_en": 26.125
+     },
+     "influence": 0.03524591483230679
+    },
+    {
+     "layer": 3,
+     "feature": 131394,
+     "acts": {
+      "hot_en": 2.8125
+     },
+     "influence": 0.01622762738345476
+    },
+    {
+     "layer": 3,
+     "feature": 75392,
+     "acts": {
+      "hot_en": 3.0625
+     },
+     "influence": 0.015788257932864737
+    },
+    {
+     "layer": 22,
+     "feature": 85454,
+     "acts": {
+      "hot_en": 9.0
+     },
+     "influence": 0.014152638269406612
+    },
+    {
+     "layer": 5,
+     "feature": 134029,
+     "acts": {
+      "hot_en": 4.7188
+     },
+     "influence": 0.014145912484273444
+    },
+    {
+     "layer": 27,
+     "feature": 143324,
+     "acts": {
+      "hot_en": 38.25
+     },
+     "influence": 0.013776259159210429
+    }
+   ]
+  },
+  "raw": {
+   "small": [
+    {
+     "layer": 27,
+     "feature": 29715,
+     "acts": {
+      "raw_antonym_en": 21.625,
+      "raw_antonym_fr": 10.8125,
+      "raw_antonym_zh": 11.8125
+     },
+     "influence": 0.018074641582079998
+    },
+    {
+     "layer": 28,
+     "feature": 36616,
+     "acts": {
+      "raw_antonym_en": 24.375,
+      "raw_antonym_fr": 14.5625,
+      "raw_antonym_zh": 16.625
+     },
+     "influence": 0.013045515678080587
+    },
+    {
+     "layer": 26,
+     "feature": 30805,
+     "acts": {
+      "raw_antonym_en": 15.5,
+      "raw_antonym_fr": 9.9375
+     },
+     "influence": 0.006723530220168186
+    },
+    {
+     "layer": 26,
+     "feature": 58650,
+     "acts": {
+      "raw_antonym_en": 13.0,
+      "raw_antonym_fr": 15.3125,
+      "raw_antonym_zh": 20.5
+     },
+     "influence": 0.005385529734960992
+    },
+    {
+     "layer": 26,
+     "feature": 163015,
+     "acts": {
+      "raw_antonym_en": 17.25,
+      "raw_antonym_fr": 10.125
+     },
+     "influence": 0.0038217027497641737
+    },
+    {
+     "layer": 28,
+     "feature": 97177,
+     "acts": {
+      "raw_antonym_en": 17.625,
+      "raw_antonym_fr": 14.8125,
+      "raw_antonym_zh": 19.625
+     },
+     "influence": 0.0020121551998564897
+    }
+   ],
+   "hot": [
+    {
+     "layer": 24,
+     "feature": 127078,
+     "acts": {
+      "raw_hot_en": 26.5
+     },
+     "influence": 0.08680129013116526
+    },
+    {
+     "layer": 24,
+     "feature": 8689,
+     "acts": {
+      "raw_hot_en": 14.0625
+     },
+     "influence": 0.031259653113073875
+    },
+    {
+     "layer": 27,
+     "feature": 143324,
+     "acts": {
+      "raw_hot_en": 39.5
+     },
+     "influence": 0.02419146315425649
+    },
+    {
+     "layer": 26,
+     "feature": 119024,
+     "acts": {
+      "raw_hot_en": 22.375
+     },
+     "influence": 0.018760685912167546
+    },
+    {
+     "layer": 28,
+     "feature": 32630,
+     "acts": {
+      "raw_hot_en": 19.125
+     },
+     "influence": 0.008231661900376311
+    },
+    {
+     "layer": 27,
+     "feature": 58824,
+     "acts": {
+      "raw_hot_en": 20.375
+     },
+     "influence": 0.007771215938219509
+    }
+   ]
+  }
+ },
+ "arm3_influence_early": {
+  "chat": {
+   "small": [
+    {
+     "layer": 0,
+     "feature": 133356,
+     "acts": {
+      "antonym_en": 5.9688,
+      "antonym_zh": 4.25
+     },
+     "influence": 0.03986268951691135
+    }
+   ],
+   "hot": [
+    {
+     "layer": 3,
+     "feature": 131394,
+     "acts": {
+      "hot_en": 2.8125
+     },
+     "influence": 0.01622762738345476
+    },
+    {
+     "layer": 3,
+     "feature": 75392,
+     "acts": {
+      "hot_en": 3.0625
+     },
+     "influence": 0.015788257932864737
+    },
+    {
+     "layer": 5,
+     "feature": 134029,
+     "acts": {
+      "hot_en": 4.7188
+     },
+     "influence": 0.014145912484273444
+    },
+    {
+     "layer": 8,
+     "feature": 66332,
+     "acts": {
+      "hot_en": 9.1875
+     },
+     "influence": 0.012978989118395989
+    },
+    {
+     "layer": 7,
+     "feature": 109065,
+     "acts": {
+      "hot_en": 5.0938
+     },
+     "influence": 0.011418088569451952
+    },
+    {
+     "layer": 4,
+     "feature": 32249,
+     "acts": {
+      "hot_en": 3.2344
+     },
+     "influence": 0.008070852448401588
+    }
+   ]
+  }
+ }
+}

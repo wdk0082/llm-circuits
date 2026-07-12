@@ -1680,3 +1680,37 @@ rows), the small (multilingual) late-layer question (the >=2-graph sharing gate 
 early language-specific detokenization features; act-ranking cut the two early shared
 survivors), and the cap-6 rationale (paper sizes 3-6; under earliest-first a bigger
 cap re-latens the sets: cap-15 would move chat floors 13->22 / 22->28).
+
+## Tenth session (2026-07-12, same day): v3.1 — the main notebook on the extended axis
+
+User directive: re-run `multilingual.ipynb` with every swap ladder extended to 15x
+(raw-zh operand: 30x), nothing else changed. Implementation: the ablation's
+`strengths` override wired into all three swap cells — (-14, 15) along the paper's
+coupling ((-29, 30) for raw-zh operand), 21 grid points so the paper endpoints (1.5x /
+6x) stay exact grid points (marked on every panel), ell swept at the extended
+endpoint, %-readouts at BOTH endpoints. Executed 13/13 cells, zero errors; Summary
+rewritten (v3.1).
+
+### The three swaps now have three distinct characters
+
+- **Operand = the paper's result with a bigger constant.** Flips in all six
+  configurations: chat 2.25/4.5/4.5x, raw 5.25/6x, and the raw-zh hold-out (which the
+  15x ablation never flipped) crosses at **18x** — 冷 @ 0.998 by 30x (ell=35, every
+  readout pinned: a flip the protocol can produce but not annotate here). Push-pull
+  where readable: say-cold 18-65% of donor level at 15x, say-large down to 4-26%;
+  chat-en again flips with the reviewed say-cold nearly silent (0.7%).
+- **Language = the paper's result at the paper's scale, with a ceiling.** en→zh
+  crossover 5.25x, 大 @ 0.636 at the 6x grid point (0.685 @ 9x), then over-drive junk
+  by 15x (独 @ 0.82); fr→en big @ 0.753 at 6x holding to 9x, then a wrong-language
+  intrusion (大 @ 0.42 by 15x); zh→fr never lands (grand <= 0.07 everywhere — the
+  nominal 11.25x crossover is two collapsing curves in the noise). Unlike the operand
+  swap, MORE strength hurts: the late quote handle saturates then breaks.
+- **Operation = no steerable handle at any tested strength.** Raw unmoved even at
+  ±14/15x (direct-effect regime). Chat, with full room (ell 13-17) and readable
+  annotations, moves into ADJACENT semantics at 15x — en lands on `medium` @ 0.70,
+  zh puts the echo-synonym 小 second at 0.066 — with say-small recruited only to
+  10-37%; antonym→synonym never executes.
+
+Non-swap sections byte-stable (overlap 0.107/0.089/0.077; default zh > en >> fr;
+8b > 4b). The v3 paper-strength numbers remain quotable as the marked grid points of
+the v3.1 curves.

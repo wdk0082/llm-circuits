@@ -398,8 +398,7 @@ examples against per-concept lexicons, ranks candidates earliest-layer-first, an
 caps each group at six members; the chat and raw formats get fully separate
 selections, frozen in reviewed artifacts with per-graph activations and node
 positions per member, and enforced disjoint by (layer, feature).
-Figure~\ref{fig:feature-examples} shows the evidence this selection matches against
-for example members. Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs
+Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs
 for the three raw antonym prompts: the paper's skeleton --- language-specific
 \emph{opposite} and \emph{quote} input groups, a shared multilingual \emph{small}
 group, and a shared \emph{say large} stage feeding the answer --- is present in all
@@ -407,20 +406,8 @@ three languages, with 107 (chat) and 67 (raw) individual features appearing in a
 three languages' pruned graphs. One structural difference is visible immediately: the
 groups sit late (the raw \emph{antonym} group has a single L34 member; \emph{quote}
 members span L23--L34), where the paper describes early detection features. The chat
-counterpart of Figure~\ref{fig:ml-graphs} and full interactive-explorer views of all
-six antonym pages are in Appendix~\ref{app:snapshots}.
-
-% TODO(screenshots): feature-example screenshot to be provided.
-\begin{figure}[t]
-\centering
-\fbox{\parbox[c][4.2cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
-example reviewed features (labels, top output logits, top-activating dataset
-examples); screenshot to be provided}}
-\caption{Examples of reviewed supernode members: each feature's top output logits and
-top-activating dataset examples --- the evidence the semantic selection matches
-against.}
-\label{fig:feature-examples}
-\end{figure}
+counterpart of Figure~\ref{fig:ml-graphs} and interactive-explorer views of the
+English page in each format are in Appendix~\ref{app:snapshots}.
 
 \begin{figure}[t]
 \centering
@@ -666,7 +653,7 @@ Figure~\ref{fig:ml-graphs} (chat pages have no quote-position nodes, so the
 \emph{quote} groups exist only on the raw side). Full attribution graphs (all pruned
 nodes and edges, with the reviewed supernodes pre-loaded as groups) are best inspected
 in the interactive explorer shipped with the repository; the snapshots below show the
-six antonym pages.
+English page in each format.
 
 \begin{figure}[h]
 \centering
@@ -676,23 +663,18 @@ six antonym pages.
 \label{fig:ml-graphs-chat}
 \end{figure}
 
-% TODO(screenshots): replace the two placeholders with explorer screenshots
-% (chat pages: antonym_en/fr/zh; raw pages: raw_antonym_en/fr/zh), provided
-% separately.
 \begin{figure}[h]
 \centering
-\fbox{\parbox[c][7cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
-explorer screenshots, chat antonym pages (en\,/\,fr\,/\,zh)}}
-\caption{Explorer views of the chat-format antonym graphs with the reviewed
-supernodes as groups.}
+\includegraphics[width=\textwidth]{figures/explorer_chat_antonym_en.png}
+\caption{Explorer view of the chat antonym page (en) with the reviewed supernodes
+as groups.}
 \label{fig:app-chat}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\fbox{\parbox[c][7cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
-explorer screenshots, raw antonym pages (en\,/\,fr\,/\,zh)}}
-\caption{Explorer views of the raw open-quote antonym graphs (the paper's format).}
+\includegraphics[width=\textwidth]{figures/explorer_raw_antonym_en.png}
+\caption{Explorer view of the raw open-quote antonym page (en; the paper's format).}
 \label{fig:app-raw}
 \end{figure}
 

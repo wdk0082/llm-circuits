@@ -1880,3 +1880,12 @@ instead of `RBEH` raw answers — only fr→en's legend changes ('large' → 'bi
 data had already picked up the corrected artifact JSON. `main.tex` §3.2: dropped the
 "under-reports this flip" parenthetical, added crossover 4.5x; Figure 4 caption states
 the expected-token convention. Layout unchanged (Fig 6 still p. 9, 17 pp).
+
+**Explorer screenshots in (user-provided).** Two subgraph views under `screenshot/`
+(chat_antonym_en, raw_antonym_en) — full-subgraph explorer snapshots use one language
+(en) per format. Auto-cropped white margins (PIL bbox, 8 px pad) into
+`report/figures/explorer_{chat,raw}_antonym_en.png` and slotted into the two Appendix C
+placeholders. The main-text feature-example placeholder figure is dropped per the
+same decision ("just use these two"); its evidence description already lives in the
+§3.1 selection paragraph. Later figures renumber (overlap 6→5, still p. 9); Appendix C
+= Figs 6-8 on one page; 17 pp. Remaining placeholder: §4 Discussion only.

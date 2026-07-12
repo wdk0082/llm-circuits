@@ -8,6 +8,7 @@ notebook + its task-specific helper module):
 | Addition (biology.html §Addition + methods supplement) | `addition.ipynb` | `addition_helper.py` |
 | Multilingual circuits (biology.html §Multilingual) | `multilingual.ipynb` | `multilingual_helper.py` |
 | Multilingual extra (**beyond-paper**): the operand swap as a selection-policy × strength ablation — early-first vs influence-first vs influence-before-middle, ladder to 15× | `multilingual_extra_operand_swap.ipynb` | `multilingual_helper.py` |
+| Multilingual extra (**beyond-paper**): why the operation swap never lands — strength/injection-site/answer-side arms + the frozen-vs-live-attention QK probe | `multilingual_extra_operation_swap.ipynb` | `multilingual_helper.py` |
 
 Paper reference values are digested in `../notes/biology_digest.md`; per-experiment
 verdicts vs the paper are in each notebook's Summary and in `../DEVLOG.md`. Artifacts

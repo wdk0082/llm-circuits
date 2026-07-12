@@ -1714,3 +1714,47 @@ rewritten (v3.1).
 Non-swap sections byte-stable (overlap 0.107/0.089/0.077; default zh > en >> fr;
 8b > 4b). The v3 paper-strength numbers remain quotable as the marked grid points of
 the v3.1 curves.
+
+## Eleventh session (2026-07-12, same day): the diverse corpus + why the operation swap never lands
+
+Two user directives. **(1) §F corpus upgrade (v3.2):** the old 28 short same-register
+items are replaced by `CORPUS_DIVERSE` — 18 register-diverse parallel paragraphs
+(news, science, recipe, sports, legal, weather, tech docs, finance, history, travel,
+review, dialogue, fairy tale, email, philosophy, health, criticism, manual), authored
+in EN and translated to FR/ZH in-repo, the paper's own recipe. Motivated by the
+tenth-session probe of the inflated unrelated-pair baseline (chat scaffold = 58% of
+the unrelated intersection; 163k-dictionary granularity; register uniformity; NB the
+probe also showed raw tokenization would be WORSE — bare text is off-distribution for
+the instruct model and activates 5x more features). Main notebook re-executed:
+
+- **Overlap sharpens**: baseline mid-third halves (0.11–0.12 vs 0.21–0.25), mains hold
+  (~0.25–0.32) -> baseline-subtracted mid-third en-fr 0.198 > en-zh 0.175 > fr-zh
+  0.142 (was 0.107/0.089/0.077). Shape + pair ordering reproduce with double margin.
+- **The 4b->8b scale verdict flips**: on the diverse corpus the same-recipe pair shows
+  NO consistent growth (en-fr +6%, en-zh −3%, fr-zh flat) — the earlier clean
+  "8b > 4b on every pair" was a property of the uniform short-sentence corpus.
+  Summary row rewritten to **not clearly reproduced (corpus-sensitive)**.
+- Swap sections reproduce v3.1 bit-for-bit (selection/strengths untouched).
+
+**(2) `multilingual_extra_operation_swap.ipynb`** (beyond-paper; executed clean):
+four arms on the one swap that never lands, testing the user's two hypotheses
+(selection, strength) plus the paper's own QK caveat. `supernode_swap_sweep` gained
+`freeze_attention` + None-ell passthrough for the propagate arms.
+
+- **Arm 4 (QK probe) is decisive**: the identical paper-faithful configuration in
+  propagate mode does NOTHING with attention patterns frozen and **lands
+  language-appropriate synonyms with patterns live** — en `little` @ 0.735 (the
+  paper's exact Fig B3 token; crossover 6.75x), fr `pet` @ 0.515 (4.5x); zh crosses
+  mid-ladder then reverts. The operation swap's channel on Qwen3 is
+  attention-pattern-mediated — precisely the mechanism the paper flags as QK-mediated
+  and method-invisible on Haiku. Constrained patching always freezes patterns
+  (circuit-tracer coupling), so NO constrained configuration could ever land it: the
+  v3/v3.1 operation nulls are protocol-assumption meets QK-mediated circuit.
+- Arms 1–2 rule out the alternatives: 30x with paper-faithful geometry still lands on
+  adjacent semantics (`medium` @ .72), donors moved to the final position change
+  little. Arm 3: the answer-side route (reviewed `say small` donors at final) DOES
+  land under constrained patching (zh 小 @ 1.000, crossover 3x) — retroactively,
+  v1's influence-top selection landed via this answer-side route.
+- **Three-swap mechanism taxonomy, completed**: operand = MLP-pathway (works frozen,
+  needs strength), language = direct-path (works at ell=35, saturates), operation =
+  QK-mediated (needs live attention) — matching the paper's own Fig B6 sketch.

@@ -1843,3 +1843,16 @@ not influence rank) with a main-text placeholder for a feature-example screensho
 Graph boxes use the "en (6)" member-count style; a chat-format counterpart of the
 simplified-graphs figure joins Appendix C beside the two explorer-snapshot
 placeholders. texcount: 3,129 words.
+
+### Section 3.2 revision (same session, user feedback)
+
+Per-swap figures replace the composite: each swap gets three chat intervention
+diagrams (language-parameterised, measured readouts, data-driven output labels) over
+six notebook-style ladder panels (baseline vs expected, crossover and paper endpoint
+marked); the language swap gets three raw diagrams over its three direction panels.
+Prose tightened to paragraph heads + a few sentences each, no bracketed subtitles;
+the QK narrative stays in the main text while the frozen-vs-live probe figure moves
+to Appendix D. Fixes en route: the zh raw prompt's trailing open-quote was being
+dropped inside the CJK group (moved outside), language diagram labels no longer
+report noise-crossings as flips, FloatBarrier keeps Appendix C's placeholders ahead
+of Appendix D. texcount: 3,007 words.

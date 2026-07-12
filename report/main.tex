@@ -431,73 +431,77 @@ net-negative). The paper's shared-core skeleton appears in all three languages.}
 
 \subsection{Swap interventions}\label{sec:exp:swaps}
 
-All swaps run the paper's constrained-patching protocol
-(Section~\ref{sec:method:interv}): source members are steered to a negative multiple
-of their clean activation at their own node positions, donors are injected at an
-absolute multiple of their donor-graph activation, the patch end layer $\ell$ is swept
-and the most effective value reported, and supernode readouts are means of
-per-feature ratios with rows at layers $\le\ell$ pinned by the protocol. Strength
-ladders extend tenfold beyond the paper's endpoints along the same source--donor
-coupling (the paper endpoint is an exact, marked grid point), so paper-strength
-readings and what-it-takes readings come from one run. Figure~\ref{fig:ml-interv}
-summarises all three swaps.
+All swaps run the constrained-patching protocol of Section~\ref{sec:method:interv}:
+source supernodes are steered to a negative multiple of their clean activation at
+their own node positions, donors are injected at an absolute multiple of their
+donor-graph activation, and the patch end layer $\ell$ is swept per job. Strength
+ladders extend tenfold beyond the paper's endpoint along the same source--donor
+coupling, with the paper endpoint marked in every panel.
 
-\textbf{Operand swap} (small $\to$ hot; paper: $-0.5\times$/$+1.5\times$ gives
-cold\,/\,f[roid]\,/\,\zh{冷}). This reproduces in \emph{all six} format--language
-configurations, but nothing moves at the paper's endpoint: crossovers sit at
-$2.25$--$4.5\times$ (chat), $5.25$--$6\times$ (raw en/fr), and $18\times$ (raw zh),
-with endpoint outputs cold $0.81$--$0.93$, f $0.73$--$0.97$, \zh{冷} $0.998$. Where
-readouts are readable the paper's push--pull appears at amplitude --- \emph{say cold}
-recruited to $18$--$65\%$ of its donor-prompt level, \emph{say large} suppressed to
-$4$--$26\%$. The paper's own caveat that required strengths are ``quite high''
-transfers with a larger constant.
-
-\textbf{Language swap} (quote$_X \to$ quote$_Y$; paper: the output language changes,
-operation and operand preserved). Two of three directions reproduce at the paper's own
-scale: en$\to$zh yields \zh{大} at $0.636$ (crossover $5.25\times$), and fr$\to$en
-turns the output English --- \emph{big} at $0.753$, the paper's exact token (the
-figure's curve tracks the model's own answer ``large'' and so under-reports this
-flip). zh$\to$fr never lands. Beyond ${\sim}9\times$ both working directions
-\emph{degrade} (junk or wrong-language intrusions): unlike the operand swap, this
-handle saturates. The one readable annotation matches the paper's pattern
-(\emph{say large (fr)} $\to 0\%$ under fr$\to$en). Because Qwen3's pruned raw graphs
-keep no early quote-position nodes, the causal handle here is \emph{late}
-(L23--L34) rather than the paper's early detection features.
-
-\textbf{Operation swap} (antonym $\to$ synonym; paper: language-appropriate synonyms
-top-1, crossover ${\approx}4\times$). This never crosses --- at the paper's endpoint,
-at $2.5\times$ it, or at $5\times$ it ($\pm29/30\times$), in either format. The chat
-configuration has full protocol room ($\ell$ swept over $[13,35]$) and readable
-annotations, which show the mechanism moving in the right direction but far too
-weakly: \emph{say small} recruits to at most $37\%$ of donor level and the output
-drifts to adjacent semantics (\emph{medium} at $0.70$) without executing the
-operation. A probe isolates the cause: running the identical configuration in
-fully-propagating mode with attention patterns \emph{frozen} reproduces the flat null,
-while letting patterns \emph{re-form} lands the paper's exact outcome tokens ---
-\emph{little} at $0.735$ (en, crossover $6.75\times$) and \emph{pet} at $0.515$ (fr,
-$4.5\times$) (Figure~\ref{fig:ml-interv}, bottom left). The swap's channel is
-QK-mediated --- the very interaction the paper reports for Haiku as ``mediated by
-changing where attention heads attend'' and invisible to its method --- and
-constrained patching freezes attention patterns by construction, so no constrained
-configuration can land it. In sum, the three swaps have three characters on Qwen3-4B:
-the operand swap is the paper's result with a bigger constant; the language swap is
-the paper's result at the paper's scale, with a ceiling; the operation swap is blocked
-by the protocol's frozen-QK assumption meeting a QK-mediated circuit.
+\paragraph{Operand swap.}
+Steering small $\to$ hot reproduces in all six format--language configurations, at
+$1.5$--$12\times$ the paper's strengths (Figure~\ref{fig:swap-operand}): nothing moves
+at the paper endpoint, crossovers sit at $2.25$--$4.5\times$ (chat),
+$5.25$--$6\times$ (raw en/fr), and $18\times$ (raw zh), and where readouts are
+readable \emph{say cold} recruits to $18$--$65\%$ of its donor-prompt level while
+\emph{say large} falls to $4$--$26\%$.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig_ml_interventions.pdf}
-\caption{Swap interventions. \emph{Top:} intervention diagrams with measured
-supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer
-$\ell$, clamped by the protocol); badges give the paper's steering multiples.
-\emph{Bottom:} strength ladders, $P(\text{expected answer})$ vs.\ donor multiple
-$s$, with the paper endpoint dotted. Left: the operation swap under the constrained
-protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated
-channel. Middle: the operand swap crosses in all six configurations (dots mark
-crossovers; raw-zh at $18\times$). Right: the language swap peaks near the paper's own
-$6\times$ and saturates; fr$\to$en's curve tracks ``large'' while the actual output is
-the paper's token ``big'' ($0.753$ at $6\times$).}
-\label{fig:ml-interv}
+\includegraphics[width=\textwidth]{figures/fig_ml_swap_operand.pdf}
+\caption{The operand swap. \emph{Top:} intervention diagrams (chat) with measured
+supernode readouts at the paper endpoint; grey percentages are means of per-feature
+ratios, ``pinned'' marks groups at or below the swept $\ell$. \emph{Below:} strength
+ladders per format and language; red dashed lines mark crossovers, grey dotted the
+paper endpoint.}
+\label{fig:swap-operand}
+\end{figure}
+
+\paragraph{Language swap.}
+Two of three directions reproduce at the paper's own scale
+(Figure~\ref{fig:swap-language}): en$\to$zh flips to \zh{大} ($0.636$, crossover
+$5.25\times$), and fr$\to$en turns the output English --- \emph{big} at $0.753$, the
+paper's exact token (the curve tracks the model's own answer ``large'' and so
+under-reports this flip) --- while zh$\to$fr never lands. Past ${\sim}9\times$ both
+working directions degrade into junk or wrong-language intrusions: this handle
+saturates. The quote features sit at L23--L34 (no early quote-position nodes survive
+pruning), so the causal handle is late rather than the paper's early detectors.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_swap_language.pdf}
+\caption{The language swap (raw prompts only; chat pages have no quote nodes).
+Conventions as in Figure~\ref{fig:swap-operand}; the raw selection has no
+\emph{say large (zh)} group, so that readout box is absent in the en$\to$zh panel.}
+\label{fig:swap-language}
+\end{figure}
+
+\paragraph{Operation swap.}
+Steering antonym $\to$ synonym never crosses at any tested strength --- up to
+$\pm29/30\times$ --- in either format (Figure~\ref{fig:swap-operation}), even though
+the chat side has full sweep room ($\ell \in [13,35]$) and its readouts show the
+mechanism moving in the right direction but weakly (\emph{say small} recruits to at
+most $37\%$; the output drifts to adjacent semantics such as \emph{medium}). The
+paper itself flags the antonym$\to$large interaction on Haiku as QK-mediated ---
+``mediated by changing where attention heads attend'' --- and invisible to its
+frozen-attention method; since constrained patching freezes attention patterns by
+construction, we ran an extra experiment: the identical configuration in
+fully-propagating mode, once with patterns frozen and once with patterns free to
+re-form (Appendix~\ref{app:qk}, Figure~\ref{fig:qk-probe}). Frozen stays flat; live
+lands the paper's exact tokens --- \emph{little} at $0.735$ (en, crossover
+$6.75\times$) and \emph{pet} at $0.515$ (fr, $4.5\times$). The operation swap's
+channel is QK-mediated, so no frozen-pattern configuration can land it at any
+strength or selection. The three swaps thus separate cleanly by causal route:
+MLP-pathway (operand: works frozen, needs strength), direct-path (language: works at
+$\ell=35$, saturates), and QK-mediated (operation: needs live attention).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_swap_operation.pdf}
+\caption{The operation swap under the constrained protocol: no crossover in any
+configuration. Conventions as in Figure~\ref{fig:swap-operand}; the frozen-vs-live
+attention probe is in Appendix~\ref{app:qk}.}
+\label{fig:swap-operation}
 \end{figure}
 
 \subsection{Cross-lingual overlap, scale, and the default language}\label{sec:exp:overlap}
@@ -627,7 +631,7 @@ graph & format & prompt (chat: the user line of the templated input; raw: sink t
 \texttt{hot\_en} & chat & \texttt{What is the opposite of "hot"? Reply with only the word, nothing else.} & cold \\
 \texttt{raw\_antonym\_en} & raw & \texttt{The opposite of "small" is "} & large \\
 \texttt{raw\_antonym\_fr} & raw & \texttt{Le contraire de "petit" est "} & grand \\
-\texttt{raw\_antonym\_zh} & raw & \zh{"小"的反义词是"} & \zh{大} \\
+\texttt{raw\_antonym\_zh} & raw & \zh{"小"的反义词是}\texttt{"} & \zh{大} \\
 \texttt{raw\_synonym\_en} & raw & \texttt{A synonym of "small" is "} & tiny \\
 \texttt{raw\_hot\_en} & raw & \texttt{The opposite of "hot" is "} & cold \\
 \bottomrule
@@ -675,6 +679,23 @@ supernodes as groups.}
 explorer screenshots, raw antonym pages (en\,/\,fr\,/\,zh)}}
 \caption{Explorer views of the raw open-quote antonym graphs (the paper's format).}
 \label{fig:app-raw}
+\end{figure}
+
+\FloatBarrier
+
+\section{The operation swap with live attention patterns}\label{app:qk}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_qk_probe.pdf}
+\caption{The frozen-vs-live attention probe for the operation swap
+(Section~\ref{sec:exp:swaps}): the paper-faithful chat configuration in
+fully-propagating mode with attention patterns frozen (top) vs.\ free to re-form
+(bottom). With live patterns the paper's exact outcome tokens appear (\emph{little},
+\emph{pet}); frozen, nothing moves --- the swap's channel is QK-mediated. The en
+curves track the model's own chat answer ``tiny''; the top token past the crossover
+is \emph{little} ($0.735$ at $15\times$).}
+\label{fig:qk-probe}
 \end{figure}
 
 \end{document}

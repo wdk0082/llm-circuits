@@ -269,220 +269,288 @@ def diagram(ax, spec):
     ax.set_title(spec["title"], fontsize=8.5)
 
 
-def fig_interventions():
-    fig, axes = plt.subplots(2, 3, figsize=(11.4, 6.2), height_ratios=[1.05, 1])
+BEH = json.loads((ART / "behavior.json").read_text())
+RBEH = json.loads((ART / "raw_behavior.json").read_text())
+LANG_NAME = {"en": "English", "fr": "French", "zh": "Chinese"}
 
-    # --- top row: diagrams (measured values; chat en for the first two, raw fr->en) --
-    ro = op_ro["chat_en@6x"]
-    diagram(
-        axes[0][0],
-        {
-            "title": "operation swap (chat en, paper endpoint 6×)",
-            "boxes": [
-                {"xy": (0.15, 0.13), "lines": ["opposite", "en"], "w": 0.24, "pct": "pinned"},
-                {
-                    "xy": (0.46, 0.13),
-                    "lines": ["small", "multilingual"],
-                    "w": 0.26,
-                    "pct": "pinned",
-                },
-                {
-                    "xy": (0.24, 0.45),
-                    "lines": ["antonym", "multilingual"],
-                    "w": 0.28,
-                    "kind": "steer",
-                    "badge": "−5×",
-                    "pct": "pinned",
-                },
-                {
-                    "xy": (0.68, 0.45),
-                    "lines": ["synonym", "multilingual"],
-                    "w": 0.28,
-                    "kind": "donor",
-                    "badge": "+6×",
-                },
-                {
-                    "xy": (0.26, 0.75),
-                    "lines": ["say large", "multilingual"],
-                    "w": 0.27,
-                    "pct": pct(ro, "say_large_pct_baseline"),
-                },
-                {
-                    "xy": (0.70, 0.75),
-                    "lines": ["say small", "multilingual"],
-                    "w": 0.27,
-                    "pct": pct(ro, "say_small_pct_stored"),
-                },
-                {"xy": (0.48, 0.95), "lines": ["“large” 0.86 — no flip"], "kind": "out", "w": 0.44},
-            ],
-            "arrows": [
-                ((0.15, 0.19), (0.22, 0.39), True),
-                ((0.46, 0.19), (0.27, 0.69), True),
-                ((0.26, 0.51), (0.26, 0.69), True),
-                ((0.68, 0.51), (0.70, 0.69), True),
-                ((0.28, 0.81), (0.44, 0.90), True),
-            ],
-        },
+
+def curve_panel(ax, r, base_tok, exp_tok, paper_s):
+    """One notebook-style sweep panel: baseline vs expected with crossover marked."""
+    ax.plot(
+        r["strengths"],
+        r["p_baseline"],
+        "o-",
+        ms=3,
+        lw=1.2,
+        color="#1f77b4",
+        label=f"baseline {base_tok!r}",
     )
-    ro = od_ro["chat_en@1.5x"]
-    diagram(
-        axes[0][1],
-        {
-            "title": "operand swap (chat en, paper endpoint 1.5×)",
-            "boxes": [
-                {"xy": (0.14, 0.13), "lines": ["opposite", "en"], "w": 0.22, "pct": "pinned"},
-                {
-                    "xy": (0.45, 0.13),
-                    "lines": ["small", "multilingual"],
-                    "w": 0.26,
-                    "kind": "steer",
-                    "badge": "−0.5×",
-                    "pct": "pinned",
-                },
-                {
-                    "xy": (0.80, 0.13),
-                    "lines": ["hot", "multilingual"],
-                    "w": 0.26,
-                    "kind": "donor",
-                    "badge": "+1.5×",
-                },
-                {
-                    "xy": (0.26, 0.75),
-                    "lines": ["say large", "multilingual"],
-                    "w": 0.27,
-                    "pct": pct(ro, "say_large_pct_baseline"),
-                },
-                {
-                    "xy": (0.70, 0.75),
-                    "lines": ["say cold", "multilingual"],
-                    "w": 0.27,
-                    "pct": pct(ro, "say_cold_pct_stored"),
-                },
-                {
-                    "xy": (0.48, 0.95),
-                    "lines": ["“large” 0.92 — flips at 2.25×"],
-                    "kind": "out",
-                    "w": 0.5,
-                },
-            ],
-            "arrows": [
-                ((0.14, 0.19), (0.24, 0.69), True),
-                ((0.45, 0.19), (0.28, 0.69), True),
-                ((0.80, 0.19), (0.72, 0.69), True),
-                ((0.28, 0.81), (0.44, 0.90), True),
-            ],
-        },
+    ax.plot(
+        r["strengths"],
+        r["p_expected"],
+        "s-",
+        ms=3,
+        lw=1.2,
+        color="#ff7f0e",
+        label=f"expected {exp_tok!r}",
     )
-    ro = lang_ro["fr->en@6x"]
-    diagram(
-        axes[0][2],
+    ax.axvline(paper_s, color="grey", ls=":", lw=0.9)
+    ax.text(paper_s, 0.97, " paper", color="grey", fontsize=6, va="top")
+    if r["crossover"] is not None:
+        ax.axvline(r["crossover"], color="red", ls="--", lw=0.9, alpha=0.75)
+        ax.text(r["crossover"], 0.5, f" ×{r['crossover']:g}", color="red", fontsize=6.5)
+    ax.set_ylim(-0.02, 1.02)
+    ax.grid(alpha=0.25, lw=0.4)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(fontsize=5.6, frameon=True, framealpha=0.85, borderpad=0.25)
+    ax.tick_params(labelsize=6.5)
+
+
+def out_label(r, paper_s, *, suffix=True):
+    i = r["strengths"].index(paper_s)
+    tok, prob = r["top_tokens"][i][0]
+    if not suffix:
+        return f"“{tok}” {float(prob):.2f}"
+    note = f"flips at {r['crossover']:g}×" if r["crossover"] is not None else "no flip"
+    return f"“{tok}” {float(prob):.2f} — {note}"
+
+
+def _operation_spec(lg):
+    ro = op_ro[f"chat_{lg}@6x"]
+    return {
+        "title": LANG_NAME[lg],
+        "boxes": [
+            {"xy": (0.15, 0.13), "lines": ["opposite", lg], "w": 0.24, "pct": "pinned"},
+            {"xy": (0.46, 0.13), "lines": ["small", "multilingual"], "w": 0.26, "pct": "pinned"},
+            {
+                "xy": (0.24, 0.45),
+                "lines": ["antonym", "multilingual"],
+                "w": 0.28,
+                "kind": "steer",
+                "badge": "−5×",
+                "pct": "pinned",
+            },
+            {
+                "xy": (0.68, 0.45),
+                "lines": ["synonym", "multilingual"],
+                "w": 0.28,
+                "kind": "donor",
+                "badge": "+6×",
+            },
+            {
+                "xy": (0.26, 0.75),
+                "lines": ["say large", "multilingual"],
+                "w": 0.27,
+                "pct": pct(ro, "say_large_pct_baseline"),
+            },
+            {
+                "xy": (0.70, 0.75),
+                "lines": ["say small", "multilingual"],
+                "w": 0.27,
+                "pct": pct(ro, "say_small_pct_stored"),
+            },
+            {
+                "xy": (0.48, 0.95),
+                "lines": [out_label(op[f"chat_{lg}"], 6.0)],
+                "kind": "out",
+                "w": 0.52,
+            },
+        ],
+        "arrows": [
+            ((0.15, 0.19), (0.22, 0.39), True),
+            ((0.46, 0.19), (0.27, 0.69), True),
+            ((0.26, 0.51), (0.26, 0.69), True),
+            ((0.68, 0.51), (0.70, 0.69), True),
+            ((0.28, 0.81), (0.44, 0.90), True),
+        ],
+    }
+
+
+def _operand_spec(lg):
+    ro = od_ro[f"chat_{lg}@1.5x"]
+    return {
+        "title": LANG_NAME[lg],
+        "boxes": [
+            {"xy": (0.14, 0.13), "lines": ["opposite", lg], "w": 0.22, "pct": "pinned"},
+            {
+                "xy": (0.45, 0.13),
+                "lines": ["small", "multilingual"],
+                "w": 0.26,
+                "kind": "steer",
+                "badge": "−0.5×",
+                "pct": "pinned",
+            },
+            {
+                "xy": (0.80, 0.13),
+                "lines": ["hot", "multilingual"],
+                "w": 0.26,
+                "kind": "donor",
+                "badge": "+1.5×",
+            },
+            {
+                "xy": (0.26, 0.75),
+                "lines": ["say large", "multilingual"],
+                "w": 0.27,
+                "pct": pct(ro, "say_large_pct_baseline"),
+            },
+            {
+                "xy": (0.70, 0.75),
+                "lines": ["say cold", "multilingual"],
+                "w": 0.27,
+                "pct": pct(ro, "say_cold_pct_stored"),
+            },
+            {
+                "xy": (0.48, 0.95),
+                "lines": [out_label(od[f"chat_{lg}"], 1.5)],
+                "kind": "out",
+                "w": 0.52,
+            },
+        ],
+        "arrows": [
+            ((0.14, 0.19), (0.24, 0.69), True),
+            ((0.45, 0.19), (0.28, 0.69), True),
+            ((0.80, 0.19), (0.72, 0.69), True),
+            ((0.28, 0.81), (0.44, 0.90), True),
+        ],
+    }
+
+
+def _language_spec(a, b):
+    key = f"{a}->{b}"
+    ro = lang_ro[f"{key}@6x"]
+    boxes = [
+        {"xy": (0.13, 0.13), "lines": ["opposite", a], "w": 0.22, "pct": "pinned"},
         {
-            "title": "language swap (raw fr→en, paper endpoint 6×)",
-            "boxes": [
-                {"xy": (0.13, 0.13), "lines": ["opposite", "fr"], "w": 0.22, "pct": "pinned"},
-                {
-                    "xy": (0.45, 0.13),
-                    "lines": ["quote", "fr"],
-                    "w": 0.24,
-                    "kind": "steer",
-                    "badge": "−5×",
-                    "pct": "pinned",
-                },
-                {
-                    "xy": (0.80, 0.13),
-                    "lines": ["quote", "en"],
-                    "w": 0.24,
-                    "kind": "donor",
-                    "badge": "+6×",
-                },
-                {
-                    "xy": (0.15, 0.75),
-                    "lines": ["say large", "multiling."],
-                    "w": 0.24,
-                    "pct": "pinned",
-                },
-                {
-                    "xy": (0.48, 0.75),
-                    "lines": ["say large", "fr"],
-                    "w": 0.24,
-                    "pct": pct(ro, "say_large_src_pct_baseline"),
-                },
-                {"xy": (0.83, 0.75), "lines": ["say large", "en"], "w": 0.24, "pct": "pinned"},
-                {
-                    "xy": (0.5, 0.95),
-                    "lines": ["“big” 0.75 — English out"],
-                    "kind": "out",
-                    "w": 0.46,
-                },
-            ],
-            "arrows": [
-                ((0.45, 0.19), (0.48, 0.69), False),
-                ((0.80, 0.19), (0.83, 0.69), True),
-                ((0.48, 0.81), (0.48, 0.90), False),
-                ((0.83, 0.81), (0.56, 0.90), True),
-            ],
+            "xy": (0.45, 0.13),
+            "lines": ["quote", a],
+            "w": 0.24,
+            "kind": "steer",
+            "badge": "−5×",
+            "pct": "pinned",
         },
-    )
+        {"xy": (0.80, 0.13), "lines": ["quote", b], "w": 0.24, "kind": "donor", "badge": "+6×"},
+        {"xy": (0.16, 0.75), "lines": ["say large", "multiling."], "w": 0.24, "pct": "pinned"},
+        {
+            "xy": (0.5, 0.95),
+            "lines": [out_label(lang[key], 6.0, suffix=False)],
+            "kind": "out",
+            "w": 0.5,
+        },
+    ]
+    arrows = [((0.45, 0.19), (0.48, 0.69), False), ((0.28, 0.81), (0.42, 0.90), True)]
+    if f"say_large_src_pct_baseline" in ro:
+        boxes.append(
+            {
+                "xy": (0.48, 0.75),
+                "lines": ["say large", a],
+                "w": 0.24,
+                "pct": pct(ro, "say_large_src_pct_baseline"),
+            }
+        )
+        arrows.append(((0.48, 0.81), (0.48, 0.90), False))
+    if f"say_large_tgt_pct_stored" in ro:
+        boxes.append(
+            {
+                "xy": (0.83, 0.75),
+                "lines": ["say large", b],
+                "w": 0.24,
+                "pct": pct(ro, "say_large_tgt_pct_stored"),
+            }
+        )
+        arrows.append(((0.80, 0.19), (0.83, 0.69), True))
+        arrows.append(((0.83, 0.81), (0.56, 0.90), True))
+    return {"title": f"{a}→{b}", "boxes": boxes, "arrows": arrows}
 
-    # --- bottom row    # --- bottom row: measured strength curves ---------------------------------------
-    ax = axes[1][0]
-    for lg in ("en", "fr", "zh"):
-        r = op[f"chat_{lg}"]
-        ax.plot(r["strengths"], r["p_expected"], color=C_LANG[lg], lw=1.2, ls="-")
-        rl = extra_op["arm2_qk_probe"][f"chat_{lg}_live"]
-        ax.plot(rl["strengths"], rl["p_expected"], color=C_LANG[lg], lw=1.8, ls="--")
-    ax.axvline(6, color="grey", ls=":", lw=0.9)
-    ax.text(6.2, 0.96, "paper", fontsize=7, color="grey")
-    ax.plot([], [], color="k", ls="-", lw=1.2, label="frozen patterns (protocol)")
-    ax.plot([], [], color="k", ls="--", lw=1.8, label="live patterns (probe)")
-    ax.legend(fontsize=6.5, loc="upper left", frameon=False)
-    ax.set_xlabel("strength $s$ (donor ×)")
-    ax.set_ylabel("P(expected synonym)")
-    ax.set_ylim(-0.02, 1.02)
 
-    ax = axes[1][1]
-    for lg in ("en", "fr", "zh"):
-        for fmt, ls in (("chat", "-"), ("raw", "--")):
-            r = od[f"{fmt}_{lg}"]
-            ax.plot(r["strengths"], r["p_expected"], color=C_LANG[lg], lw=1.4, ls=ls)
-            if r["crossover"] is not None:
-                i = r["strengths"].index(r["crossover"])
-                ax.plot(r["crossover"], r["p_expected"][i], "o", color=C_LANG[lg], ms=3.5)
-    ax.axvline(1.5, color="grey", ls=":", lw=0.9)
-    ax.text(1.9, 0.96, "paper", fontsize=7, color="grey")
-    ax.plot([], [], color="k", ls="-", lw=1.4, label="chat")
-    ax.plot([], [], color="k", ls="--", lw=1.4, label="raw")
-    ax.legend(fontsize=6.5, loc="center right", frameon=False)
-    ax.set_xlabel("strength $s$ (donor ×)")
-    ax.set_ylabel("P(expected cold-answer)")
-    ax.set_ylim(-0.02, 1.02)
-
-    ax = axes[1][2]
-    for key, color in (
-        ("en->zh", C_LANG["en"]),
-        ("fr->en", C_LANG["fr"]),
-        ("zh->fr", C_LANG["zh"]),
-    ):
-        r = lang[key]
-        lab = key.replace("->", "→")
-        ax.plot(r["strengths"], r["p_expected"], color=color, lw=1.4, label=lab)
-    # fr->en actually flips to 'big'; p_expected tracks the model's own 'large' — show
-    # the measured P('big') proxy via top_tokens is not stored per step; curve caveat
-    # lives in the caption instead.
-    ax.axvline(6, color="grey", ls=":", lw=0.9)
-    ax.text(6.2, 0.96, "paper", fontsize=7, color="grey")
-    ax.legend(fontsize=6.5, frameon=False)
-    ax.set_xlabel("strength $s$ (donor ×)")
-    ax.set_ylabel("P(target-language answer)")
-    ax.set_ylim(-0.02, 1.02)
-
-    for ax in axes[1]:
-        ax.grid(alpha=0.25, lw=0.4)
-        ax.spines[["top", "right"]].set_visible(False)
+def fig_swap_operation():
+    fig, axes = plt.subplots(3, 3, figsize=(11.4, 8.6), height_ratios=[1.1, 1, 1])
+    for ci, lg in enumerate(("en", "fr", "zh")):
+        diagram(axes[0][ci], _operation_spec(lg))
+        for ri, (fmt, beh) in enumerate((("chat", BEH), ("raw", RBEH)), start=1):
+            r = op[f"{fmt}_{lg}"]
+            curve_panel(
+                axes[ri][ci],
+                r,
+                beh["antonym"][lg]["token"].strip(),
+                beh["synonym"][lg]["token"].strip(),
+                6.0,
+            )
+            if ci == 0:
+                axes[ri][ci].set_ylabel(f"{fmt}\nnext-token probability", fontsize=7.5)
+            if ri == 2:
+                axes[ri][ci].set_xlabel("intervention strength (× donor act)", fontsize=7)
     fig.tight_layout()
-    fig.savefig(OUT / "fig_ml_interventions.pdf", bbox_inches="tight")
+    fig.savefig(OUT / "fig_ml_swap_operation.pdf", bbox_inches="tight")
     plt.close(fig)
-    print("fig_ml_interventions.pdf")
+    print("fig_ml_swap_operation.pdf")
+
+
+def fig_swap_operand():
+    fig, axes = plt.subplots(3, 3, figsize=(11.4, 8.6), height_ratios=[1.1, 1, 1])
+    for ci, lg in enumerate(("en", "fr", "zh")):
+        diagram(axes[0][ci], _operand_spec(lg))
+        for ri, (fmt, beh) in enumerate((("chat", BEH), ("raw", RBEH)), start=1):
+            r = od[f"{fmt}_{lg}"]
+            curve_panel(
+                axes[ri][ci],
+                r,
+                beh["antonym"][lg]["token"].strip(),
+                beh["antonym_hot"][lg]["token"].strip(),
+                1.5,
+            )
+            if ci == 0:
+                axes[ri][ci].set_ylabel(f"{fmt}\nnext-token probability", fontsize=7.5)
+            if ri == 2:
+                axes[ri][ci].set_xlabel("intervention strength (× donor act)", fontsize=7)
+    fig.tight_layout()
+    fig.savefig(OUT / "fig_ml_swap_operand.pdf", bbox_inches="tight")
+    plt.close(fig)
+    print("fig_ml_swap_operand.pdf")
+
+
+def fig_swap_language():
+    fig, axes = plt.subplots(2, 3, figsize=(11.4, 5.9), height_ratios=[1.1, 1])
+    for ci, (a, b) in enumerate((("en", "zh"), ("fr", "en"), ("zh", "fr"))):
+        diagram(axes[0][ci], _language_spec(a, b))
+        r = lang[f"{a}->{b}"]
+        curve_panel(
+            axes[1][ci],
+            r,
+            RBEH["antonym"][a]["token"].strip(),
+            RBEH["antonym"][b]["token"].strip(),
+            6.0,
+        )
+        axes[1][ci].set_xlabel("intervention strength (× donor act)", fontsize=7)
+        if ci == 0:
+            axes[1][ci].set_ylabel("raw\nnext-token probability", fontsize=7.5)
+    fig.tight_layout()
+    fig.savefig(OUT / "fig_ml_swap_language.pdf", bbox_inches="tight")
+    plt.close(fig)
+    print("fig_ml_swap_language.pdf")
+
+
+def fig_qk_probe():
+    fig, axes = plt.subplots(2, 3, figsize=(11.4, 5.4))
+    for ri, (variant, tag) in enumerate((("frozen", "patterns frozen"), ("live", "patterns live"))):
+        for ci, lg in enumerate(("en", "fr", "zh")):
+            r = extra_op["arm2_qk_probe"][f"chat_{lg}_{variant}"]
+            curve_panel(
+                axes[ri][ci],
+                r,
+                BEH["antonym"][lg]["token"].strip(),
+                BEH["synonym"][lg]["token"].strip(),
+                6.0,
+            )
+            if ri == 0:
+                axes[ri][ci].set_title(LANG_NAME[lg], fontsize=8.5)
+            if ci == 0:
+                axes[ri][ci].set_ylabel(f"{tag}\nnext-token probability", fontsize=7.5)
+            if ri == 1:
+                axes[ri][ci].set_xlabel("intervention strength (× donor act)", fontsize=7)
+    fig.tight_layout()
+    fig.savefig(OUT / "fig_ml_qk_probe.pdf", bbox_inches="tight")
+    plt.close(fig)
+    print("fig_ml_qk_probe.pdf")
 
 
 # ---------------------------------------------------------------------------
@@ -521,6 +589,9 @@ def fig_overlap():
 
 fig_graphs("raw")
 fig_graphs("chat")
-fig_interventions()
+fig_swap_operation()
+fig_swap_operand()
+fig_swap_language()
+fig_qk_probe()
 fig_overlap()
 print("done ->", OUT)

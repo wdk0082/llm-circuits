@@ -120,11 +120,27 @@ def transcoder_cache(
     cache_dir: str | None = typer.Option(
         None, help="Local directory to cache into (default: .cache/transcoders)"
     ),
+    dtype: str | None = typer.Option(
+        None,
+        help="Dtype of the cached safetensors: 'bf16', 'fp16', or 'fp32' (default: "
+        "circuit-tracer's fp32). The mwhanna Qwen3 repos store bf16, so '--dtype bf16' "
+        "halves the on-disk cache losslessly (CLAUDE.md perf notes).",
+    ),
 ):
     """Cache transcoder weights to a local directory."""
+    import torch
+
     from llm_circuits.transcoders.circuit_tracer_loader import cache_transcoder
 
-    cache_transcoder(repo, cache_dir)
+    torch_dtype = None
+    if dtype is not None:
+        dtypes = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}
+        if dtype not in dtypes:
+            rprint(f"[red]Unknown --dtype {dtype!r}; use one of {sorted(dtypes)}[/red]")
+            raise typer.Exit(1)
+        torch_dtype = dtypes[dtype]
+
+    cache_transcoder(repo, cache_dir, dtype=torch_dtype)
     from llm_circuits.settings import transcoder_cache_dir
 
     resolved = cache_dir if cache_dir is not None else str(transcoder_cache_dir())

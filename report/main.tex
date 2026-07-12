@@ -384,8 +384,9 @@ nothing else.<|im_end|>
 first generated token: \texttt{large}
 \end{quote}
 The antonym task is intact in both formats and all three languages
-(large\,/\,grand\,/\,\zh{大}); the model's own synonym and hot-antonym answers, which
-serve as the swap targets below, are tabulated in Appendix~\ref{app:behaviour}.
+(large\,/\,grand\,/\,\zh{大}); all ten prompts (three antonym recipients plus the
+English synonym and hot donors, per format) and their answers are tabulated in
+Appendix~\ref{app:behaviour}.
 
 \paragraph{Supernodes and attribution graphs.}
 Supernodes are selected by \emph{semantics, not influence rank}: a scan over the
@@ -611,25 +612,31 @@ steering deltas (3 intervention primitives) & $\max|\Delta_\text{ours}-\Delta_\t
 \label{tab:verification}
 \end{table}
 
-\section{Model behaviour across formats and languages}\label{app:behaviour}
+\section{The ten prompts and their answers}\label{app:behaviour}
 
 \begin{table}[h]
-\centering\small
-\begin{tabular}{lccc}
+\centering\footnotesize
+\begin{tabular}{llp{7.6cm}l}
 \toprule
- & antonym of \emph{small} & synonym of \emph{small} & antonym of \emph{hot} \\
+graph & format & prompt (chat: the user line of the templated input; raw: sink token prepended) & answer \\
 \midrule
-en & large\,/\,large & tiny\,/\,tiny & cold\,/\,cold \\
-fr & Grand\,/\,grand & pet\,/\,pet (echo) & F\,/\,f(roid) \\
-zh & \zh{大}\,/\,\zh{大} & \zh{小}\,/\,\zh{小} (echo) & \zh{冷}\,/\,\zh{冷} \\
+\texttt{antonym\_en} & chat & \texttt{What is the opposite of "small"? Reply with only the word, nothing else.} & large \\
+\texttt{antonym\_fr} & chat & \texttt{Quel est le contraire de "petit" ? Réponds avec un seul mot, rien d'autre.} & Grand \\
+\texttt{antonym\_zh} & chat & \zh{"小"的反义词是什么？只回答一个词，不要其他内容。} & \zh{大} \\
+\texttt{synonym\_en} & chat & \texttt{Give one synonym of "small". Reply with only the word, nothing else.} & tiny \\
+\texttt{hot\_en} & chat & \texttt{What is the opposite of "hot"? Reply with only the word, nothing else.} & cold \\
+\texttt{raw\_antonym\_en} & raw & \texttt{The opposite of "small" is "} & large \\
+\texttt{raw\_antonym\_fr} & raw & \texttt{Le contraire de "petit" est "} & grand \\
+\texttt{raw\_antonym\_zh} & raw & \zh{"小"的反义词是"} & \zh{大} \\
+\texttt{raw\_synonym\_en} & raw & \texttt{A synonym of "small" is "} & tiny \\
+\texttt{raw\_hot\_en} & raw & \texttt{The opposite of "hot" is "} & cold \\
 \bottomrule
 \end{tabular}
-\caption{First generated token per task, chat\,/\,raw format. The paper's expected
-behaviours are big\,/\,grand\,/\,\zh{大} (Claude answers ``big''; Qwen3 answers
-``large''). The French and Chinese synonym behaviour is degenerate --- the model
-echoes the operand (petit\,$\to$\,pet, \zh{小}\,$\to$\,\zh{小}) in both formats ---
-so the operation-swap targets in Section~\ref{sec:exp:swaps} are the model's own
-answers rather than idealised synonyms.}
+\caption{The ten graph prompts and the model's answer (first generated token). Not
+shown: the French and Chinese synonym behaviour used as operation-swap targets in
+Section~\ref{sec:exp:swaps} is degenerate --- the model echoes the operand
+(petit\,$\to$\,pet, \zh{小}\,$\to$\,\zh{小}) in both formats --- and the
+hot-antonym targets are cold\,/\,F\,\textperiodcentered\,f(roid)\,/\,\zh{冷}.}
 \label{tab:behaviour}
 \end{table}
 

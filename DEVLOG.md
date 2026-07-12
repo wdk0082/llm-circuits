@@ -1481,3 +1481,95 @@ Resume commands: `python3 -m http.server 8000 --bind 0.0.0.0 --directory artifac
 (review pages); heavy dumps live on the studio disk and regenerate deterministically
 via `notebooks/build_supernode_inputs.py` at the manifest's recorded sha/thresholds
 (~35 min GPU) if ever lost.
+
+## Seventh session (2026-07-12, fresh studio): multilingual v2 executed — constrained-only from the reviewed file
+
+Studio disk from the sixth session did not persist; bootstrapped per HANDOFF.md (env,
+`uv sync --all-groups`, dumps restored from the orphan-branch `repro-dumps-4b` tarball).
+Sanity gates passed before any edit: `build_supernodes.py --size 4b` re-emitted the 13
+review pages, and `--from-exports` on the committed exports reproduced
+`multilingual_4b.json` **byte-for-byte** (clean tree). HANDOFF.md deleted (consumed);
+this entry + the repo are the record.
+
+### What shipped
+
+- **`multilingual.ipynb` is v2**: 25 cells (was 34), constrained patching ONLY, every
+  intervention/readout set from `supernodes/multilingual_4b.json`; graphs load from the
+  `supernode_inputs` dumps (tokenization re-derived and length-asserted against the
+  manifest); zero in-notebook selection. Chat + raw run side by side inside each
+  experiment cell (operation/operand: 2 formats x 3 languages per cell); the language
+  swap is raw-only by construction (quote supernodes exist only on the raw pages).
+  Executed end-to-end on an A100-80GB, 13/13 code cells, zero errors.
+- **`multilingual_helper` v2 API**: `load_supernodes` (approved gate + GLOBAL
+  (layer, feature) disjointness — stricter than the addition loader's per-graph key),
+  `supernode_suppress_ivs` (per-member recipient positions; documented fallback),
+  `supernode_inject_ivs` (value = mult x stored donor-graph act; members without a
+  stored act on that graph sit out), `swap_ivs_fn` (paper ramp; endpoint pair hit
+  exactly at s = don_max), `choose_swap_end_layer`, `supernode_swap_sweep` (every step
+  constrained at the fixed swept ell), `supernode_readout` (per-member positions;
+  ref = recipient baseline or stored act with max-act fallback; rows <= ell pinned),
+  `readout_layers_above`, `print_readout_row`. Deleted: position_supernode, run_graft,
+  the early/late detection scans, swap_interventions, paper_swap(+sweep),
+  run_swap_sweeps, the pre-paper top-k overlap variant, feature_label,
+  graph_features_at_position. Tests updated in kind (incl. the global-disjointness
+  refusal and the constrained-sweep plumbing).
+- **`load_transcoder` disk-cache bug found and fixed** (`d35f6e9`): the first-load path
+  never forwarded `dtype` to `cache_transcoder`, so the notebooks' bf16 loads wrote
+  circuit-tracer's fp32 default — 121 GB for the 4b alone (bf16: 57 GB); the 4b+8b pair
+  filled the 369 GB studio disk mid-§H and killed the first execution. Fixed (dtype
+  forwarded; regression test), caches rebuilt bf16 (4b 57 GB + 8b 91 GB), hub blobs
+  dropped after conversion. The rerun reproduced the aborted run's numbers exactly.
+
+### Executed verdicts (full table in the notebook Summary)
+
+- **Behavior**: raw large/grand/大, chat large/Grand/大; synonym tiny / pet(echo) /
+  小(echo); hot-antonym cold/f/冷. `behavior.json` byte-identical to v1's.
+- **Shared core**: 107 features in all three chat pruned graphs (of 437–621), 67 raw
+  (of 239–439); 11/20 members of the cross-language supernodes sit on all three chat
+  antonym pages (6/20 raw) vs the paper's 10/27-in-all-pruned-graphs comparator.
+- **Operation swap: not reproduced under the paper's protocol at this selection** —
+  p(expected) <= 0.003 in all six jobs, no crossover, baseline top-1 at the ±5x/6x
+  endpoint (chat zh 大 @ 1.0), no over-drive degeneration. Cause measured: the reviewed
+  antonym supernode's L34 member forces ell in {34, 35}, and the paper-faithful donors
+  inject at the mid-sequence operation-word span — unreachable to the final logit
+  through <= 1 recomputed layer with frozen attention patterns. All Fig B3 readout rows
+  <= L33 => pinned.
+- **Operand swap: same protocol-null** — p(expected) = 0.000 everywhere, ell in
+  [32, 35]; all say-cold/say-large rows pinned; the single readable row (raw zh
+  `opposite (zh)` L34) reads exactly 100% (upstream preserved).
+- **Language swap: works in 2/3 directions — reversing v1's null.** en→zh 大 top-1 @
+  0.636 (ell=35, crossover 5.5x); fr→en turns English — big @ 0.753 + great @ 0.19,
+  the paper's exact FR→EN token (the expected-token metric tracked the model's own
+  raw-EN answer `large`, so p_expected under-reports the flip); zh→fr no flip (p_exp
+  ~ 0 at every ell). Readouts: all pinned except fr→en's L33 rows — say large (fr)
+  **0.0%**, say large (en) **121.6%** of stored: the paper's old-suppressed /
+  new-recruited signature on the only readable rows. The reviewed quote features live
+  at L23–L34 (Qwen3's raw graphs keep NO early quote-position nodes), so the causal
+  handle is LATE — v1's null had steered early-layer (L4–11) activation-scan features
+  that carry nothing.
+- **Overlap**: en-fr 0.107 > en-zh 0.089 > fr-zh 0.077 mid-third (byte-identical to
+  v1). **Default language**: zh 0.766 > en 0.664 >> fr 0.309 (4 shared say-big
+  features). **Scale**: 8b > 4b on every pair — 0.132/0.098/0.082 vs 0.107/0.089/0.077
+  (en-fr gains most, +23%).
+- **The protocol x selection interaction is now measured on a hand-reviewed
+  selection**: ell floors 34 / 32 / 32–34 for operation / operand / language, so
+  Fig B3/B4 node annotations are unmeasurable here (every row <= ell) while B5's
+  measurable rows match the paper. It is a property of where Qwen3's defensible
+  supernodes live, not of automated selection.
+
+### Housekeeping
+
+- 23 stale propagate-era artifacts git-rm'd (propagate twins, the raw_* split files now
+  keyed inside the constrained JSONs, graph_answers.json, both detection-supernode
+  JSONs). New: language_readouts_constrained.json,
+  language_ladder_readouts_constrained.json.
+- notebooks/README.md: v2 pipeline paragraph covers both notebooks; artifact-naming
+  rewritten (constrained-only; `{chat,raw}_{lg}` job keys); the label-cache download
+  note dropped (dumps make it unnecessary).
+- addition_helper: ruff 0.15 SIM300 autofixes (grid-mask comparisons reordered).
+
+### NEXT (user-stated intent, unchanged)
+
+1. Revisit ADDITION supernodes via the same export-review workflow.
+2. Consider raw-primary vs chat-primary framing (paper is raw-only; raw synonym
+   caveat: FR echoes pet(it), ZH 小/微 near-tie).

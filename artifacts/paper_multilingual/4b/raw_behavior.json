@@ -32,5 +32,22 @@
    "token": "小",
    "continuation": "小\"，对"
   }
+ },
+ "antonym_hot": {
+  "en": {
+   "token_id": 87072,
+   "token": "cold",
+   "continuation": "cold\". The opposite"
+  },
+  "fr": {
+   "token_id": 69,
+   "token": "f",
+   "continuation": "froid\". Le"
+  },
+  "zh": {
+   "token_id": 99476,
+   "token": "冷",
+   "continuation": "冷\"，对"
+  }
  }
 }

@@ -74,7 +74,7 @@ def load_model_and_tokenizer(
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=dtype,
+        dtype=dtype,  # `torch_dtype` is deprecated since transformers 4.56 (see pyproject floor)
         device_map=device_map,
         trust_remote_code=trust_remote_code,
         cache_dir=resolved_cache_dir,

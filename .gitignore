@@ -219,6 +219,8 @@ artifacts/**
 !artifacts/**/*.png
 !artifacts/**/*.npy
 artifacts/supernode_inputs/**/graph_*.json
+# examples/demo.py outputs: regenerable, and graph.json (~104 MB) exceeds GitHub's limit.
+artifacts/demo/**
 .cache/
 *.code-workspace
 .vscode/

@@ -96,6 +96,10 @@ def _read_feature_blob(bin_path: str, offsets: list[int], feature_idx: int) -> d
         raise IndexError(f"Feature index {feature_idx} out of range (max {len(offsets) - 2})")
     start = offsets[feature_idx]
     end = offsets[feature_idx + 1]
+    if end <= start:
+        # Empty blob: the repo stores no label for this feature (0.4% of the 4b features).
+        # Absent upstream data, not damaged data — the caller skips it quietly.
+        raise KeyError(f"no label stored for feature {feature_idx}")
 
     with open(bin_path, "rb") as f:
         f.seek(start)
@@ -147,7 +151,9 @@ def load_feature_labels(
                 quantile_values=blob.get("quantile_values", []),
                 histogram=blob.get("histogram", []),
             )
-        except (IndexError, ValueError) as exc:
+        except KeyError:  # no label stored upstream — expected, not an error
+            log.debug("No label stored for layer %d feature %d", layer, feat_idx)
+        except (IndexError, ValueError) as exc:  # genuinely malformed blob
             log.warning("Failed to load label for layer %d feature %d: %s", layer, feat_idx, exc)
 
     return labels
@@ -196,7 +202,7 @@ def load_feature_examples(
     for feat_idx in feature_indices:
         try:
             blob = _read_feature_blob(bin_path, offsets, feat_idx)
-        except (IndexError, ValueError):
+        except (KeyError, IndexError, ValueError):  # KeyError: no blob stored for this feature
             continue
         grouped: list[dict] = []
         for q in blob.get("examples_quantiles", []):

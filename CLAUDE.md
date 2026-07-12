@@ -50,7 +50,7 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   - **`circuits/`** — Custom attribution graphs (`build_attribution_graph`), local/global replacement models, graph pruning, HTML visualization, and feature interventions (`run_feature_intervention` = circuit-tracer's `feature_intervention` on the real model: decoder delta with the M convention, M=0 no-change / -1 ablate / -2 flip; cross-verified in `verification/`).
   - **`utils/`** — `seed_everything`
 - **`notebooks/`** — **The paper reproductions live here**, two files per behavior: `addition.ipynb` + `addition_helper.py`, `multilingual.ipynb` + `multilingual_helper.py` (helpers are task-specific and stay out of the package). Verdicts vs the paper in each Summary + `DEVLOG.md`.
-- **`examples/`** — Two scripts only: `demo.py` (ONE end-to-end toolkit walkthrough on an addition example: load → replacement/local-replacement checks → graph → re-prune → labels → steer → end-layer sweep → progressive curve → explorer HTML; `sbatch hpc/run_demo.sbatch`) and `tpu_smoke_test.py` (device wiring). Not the paper reproduction.
+- **`examples/`** — Two scripts only: `demo.py` (ONE end-to-end toolkit walkthrough on an addition example, restricted to the machinery `multilingual.ipynb` actually uses: load → replacement model (raw swap lossy, + error nodes exact) → graph/prune/explorer → **propagate-mode** intervention (`patch_end_layer=None`) → **constrained patching** + end-layer sweep, run on the same steer so the two modes are directly comparable; `sbatch hpc/run_demo.sbatch`) and `tpu_smoke_test.py` (device wiring). Not the paper reproduction — the supernode/swap protocol lives in `notebooks/`.
 - **`src/llm_circuits/serve/`** — the interactive UI (FastAPI + static frontend): live build/re-prune/steer/sweep in the browser. Start with `uv run --group serve llm-circuits serve` (`--mock` for CPU dev; the `--group serve` is required at run time) or `hpc/run_interactive_server.sh` on a GPU allocation.
 
 ## Code Style
@@ -72,8 +72,10 @@ run on your laptop and read config from `.env` (via `gcp/lib.sh`).
   attribution jobs). Measured on an A100-80GB (2026-07-10): one `run_feature_intervention`
   call 9.3 s lazy → 0.18 s eager (the clean-baseline LocalReplacementModel forward decodes
   all 36 layers every call); `multilingual.ipynb` end-to-end ~50 → ~15 min. **Both
-  reproduction notebooks load the 4b eagerly** (`lazy_decoder=False`; ~57 GB bf16
-  transcoders + 8 GB model, graph-build peak ~68 GiB). Keep lazy for encode-only work —
+  reproduction notebooks and `examples/demo.py` load the 4b eagerly** (`lazy_decoder=False`;
+  ~57 GB bf16 transcoders + 8 GB model, graph-build peak ~68 GiB; the demo's sweep runs one
+  intervention per end layer, and it exposes `--lazy-decoder` as a small-VRAM escape hatch).
+  Keep lazy for encode-only work —
   e.g. the overlap analysis, which only calls `transcoder.encode()` and never touches
   `W_dec` (that is what keeps the 8b §H section feasible) — or models whose eager load
   exceeds VRAM (8b: ~91 GB bf16 + model).

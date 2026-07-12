@@ -11,7 +11,7 @@ license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "torch>=2.6",
-    "transformers>=4.51,<5",
+    "transformers>=4.56,<5",  # 4.56 renamed from_pretrained's torch_dtype -> dtype
     "accelerate",
     "safetensors",
     "huggingface_hub",

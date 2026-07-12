@@ -21,6 +21,6 @@ cd "$REPO"
 set -a; source .env; set +a
 uv sync --frozen
 
-echo "# Toolkit demo: load -> replace -> local -> graph -> reprune -> steer -> sweep -> curve -> explorer"
+echo "# Toolkit demo: load -> replacement model -> graph/explorer -> propagate -> constrained sweep"
 uv run --frozen python examples/demo.py
 echo "ALL DONE"

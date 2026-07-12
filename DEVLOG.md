@@ -1897,3 +1897,64 @@ activation distribution, top-activating examples) — cropped into
 its reference sentence. Later figures renumber back (language swap 3→4, overlap 5→6,
 overlap still p. 9); floats repack to 16 pp; References p. 11, appendices A-D fresh
 pages 13-16. Remaining placeholder: §4 Discussion only.
+
+## Fifteenth session — `examples/demo.py` audit (2026-07-12)
+
+Verified the toolkit demo end-to-end on the A100 before releasing the node. It ran
+(exit 0), but four defects and one package bug surfaced; the script is now rebuilt around
+the machinery `multilingual.ipynb` actually uses.
+
+**Rewrite.** demo.py was a 10-step grand tour; it is now 5 steps: load -> replacement model
+(raw transcoder swap is lossy: KL 4.81, top1 42%; + error nodes it is exact: |dlogit| 2.5e-1
+on logits of scale 50.2, rel 5e-3 = bf16 round-off) -> graph/prune/explorer -> **propagate**
+(`patch_end_layer=None`) -> **constrained patching** + end-layer sweep. Steps 4-5 run the same
+steer on the same features, so the two modes are directly comparable. Cut as stale: the
+progressive-steering curve (`run_progressive_intervention` — the notebook calls it 0 times),
+the re-prune-threshold showcase (a UI-slider demo, and the slowest step at ~8 min of CPU-bound
+pruning), and the top-1-vs-all split. The old demo never actually *contrasted* the two modes:
+it only ever called the default `patch_end_layer=None` without naming it.
+
+**Feature selection is now semantic, not by influence rank** — the supernode discipline, and
+the only selection where both modes bite. Measured on the cached graph (one 3-min job rather
+than 25-min guesses):
+
+| selection | layers | sweep pts | propagate | constrained (best L) |
+|---|---|---|---|---|
+| influence top-8 (was) | L0-L35 | **1** | 1.000->0.000 | L35: 1.000->0.001 |
+| layer<=25 | L0-L25 | 11 | 1.000->0.001 | L25: **1.000->1.000** |
+| operand positions | L0-L22 | 14 | 1.000->0.000 | L22: **1.000->1.000** |
+| **'five'-writing, L<=28** | **L23-L27** | **9** | **1.000->0.023** | **L30: 1.000->0.007** |
+
+Influence ranks the *answer-writing* features first and those sit at L33-35, so
+`sweep_patch_end_layer` (which runs `range(max_steered_layer, n_layers)`) had exactly ONE end
+layer — the sweep step was vacuous. Capping the layer instead selects junk L0 token features
+at chat-template positions, which propagate-mode destroys and constrained-mode cannot move.
+Operand-position features are *recovered* above the patch (a real redundancy finding). The
+shipped selection steers the 8 features that write '5' below a depth cap that leaves 8 end
+layers; the sweep's optimum L=30 is interior, and constrained is ~3x more suppressive than
+propagate.
+
+**Package bug: `feature_labels` misreported absent data as corruption.** ~0.4% of features
+(24,768 / 5.9M in the 4b repo) have a zero-length blob — the repo stores no label for them.
+`_read_feature_blob` searched the empty slice for gzip magic, failed, and raised ValueError,
+which the caller logged as `WARNING Failed to load label ... No gzip magic found` (~100 lines
+per demo run). Empty blobs now raise KeyError and are skipped at debug level; genuinely
+malformed blobs still raise ValueError loudly. **Near-miss:** `load_feature_examples` catches
+only `(IndexError, ValueError)`, so the new KeyError would have crashed it — and
+`multilingual_helper` calls it. Fixed and guarded by a test. `feature_labels.py` had no test
+coverage at all before this (`tests/test_feature_labels.py`, 5 tests).
+
+**Also fixed.** (1) demo loaded the transcoders with the lazy default (~9.3 s vs ~0.18 s per
+intervention); now eager, with `--lazy-decoder` as the small-VRAM escape hatch. (2) No seeding;
+now `seed_everything(seed, deterministic=True)` + `--seed`, like the notebooks. (3) No CI
+coverage — a GPU-only script can't run in CI, but API drift can: `tests/test_examples.py`
+parses each `examples/*.py`, resolves its imports, and checks all 21 call sites against the
+real `inspect.signature` (verified non-vacuous against a typo'd kwarg). (4) `requires_grad ->
+float()` warning in `attribution_graph.py` (detach). (5) demo requested labels once per
+*position* a feature occupies, not once per feature (dedup).
+(6) `torch_dtype` -> `dtype` in `hf_loader` (deprecated since transformers 4.56; pyproject
+floor bumped 4.51 -> 4.56, lock unchanged at 4.57.3).
+
+**Not changed.** The 109 MB graph.json / 33 MB explorer.html are the toolkit's default 0.8/0.98
+prune on a dense graph (the notebooks' own explorers are 2-14 MB) — a property of the prune, not
+a demo bug. Graph build is ~915 s and is NOT decoder-bound: it took 921 s lazy vs 928 s eager.

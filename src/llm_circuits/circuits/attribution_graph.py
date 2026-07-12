@@ -470,6 +470,7 @@ def build_attribution_graph(
     # cumulative softmax probability reaches desired_logit_prob, capped at max_n_logits.
     last_pos = seq_len - 1
     top_idx, top_p = _select_salient_logits(logits[last_pos], desired_logit_prob, max_n_logits)
+    top_p = top_p.detach()  # display / influence-seed values only; never backprop through them
     cutoff = len(top_idx)
     log.info("Selected %d logits with cumulative probability %.4f", cutoff, top_p.sum().item())
     for rank in range(cutoff):

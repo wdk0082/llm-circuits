@@ -1758,3 +1758,15 @@ four arms on the one swap that never lands, testing the user's two hypotheses
 - **Three-swap mechanism taxonomy, completed**: operand = MLP-pathway (works frozen,
   needs strength), language = direct-path (works at ell=35, saturates), operation =
   QK-mediated (needs live attention) — matching the paper's own Fig B6 sketch.
+
+## Twelfth session (2026-07-12, same day): result-based cleanup
+
+User directive. `multilingual_extra_operation_swap.ipynb` reduced to two arms —
+strength (→30x) and the frozen-vs-live QK probe (the donor-at-final and answer-side
+arms removed; their findings remain recorded in the eleventh-session entry). Re-executed
+clean; numbers unchanged. `multilingual.ipynb` prose pass (markdown-only; code cells
+verified byte-identical, no re-execution): version narration and old-corpus references
+removed throughout, §C/§D/§E protocol notes reduced to floors + one-line pointers to
+the two extra notebooks, §F describes the corpus as-is, Summary rewritten result-based
+(scale row now simply **not reproduced** with the measured numbers). Stale
+extra_operation_sweep_arm{3,4}.png removed.

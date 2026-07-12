@@ -359,367 +359,7 @@
    }
   }
  },
- "arm2_donor_at_final_chat_en@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": 28.6,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L28f76279@p28": 0.0,
-    "L27f139629@p28": 0.0,
-    "L27f83988@p28": 0.0,
-    "L18f74852@p28": 137.3,
-    "L22f56429@p28": 34.5,
-    "L28f92878@p28": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 74.8,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p28": 62.4,
-    "L30f57180@p28": 29.8,
-    "L30f156227@p28": 71.2,
-    "L27f87470@p28": 102.0,
-    "L29f54298@p28": 183.7,
-    "L23f125341@p28": 0.0
-   }
-  }
- },
- "arm2_donor_at_final_chat_en@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": 24.8,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L28f76279@p28": 13.4,
-    "L27f139629@p28": 0.0,
-    "L27f83988@p28": 0.0,
-    "L18f74852@p28": 135.6,
-    "L22f56429@p28": 0.0,
-    "L28f92878@p28": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 52.0,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p28": 0.0,
-    "L30f57180@p28": 83.2,
-    "L30f156227@p28": 0.0,
-    "L27f87470@p28": 111.1,
-    "L29f54298@p28": 117.9,
-    "L23f125341@p28": 0.0
-   }
-  }
- },
- "arm2_donor_at_final_chat_fr@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": 10.8,
-   "n_used": 5,
-   "n_skipped": 0,
-   "n_pinned": 1,
-   "per_feature": {
-    "L28f76279@p36": 0.0,
-    "L27f139629@p36": 0.0,
-    "L27f83988@p36": 0.0,
-    "L18f74852@p36": "pinned",
-    "L22f56429@p36": 54.0,
-    "L28f92878@p36": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 95.1,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p36": 85.3,
-    "L30f57180@p36": 129.6,
-    "L30f156227@p36": 97.5,
-    "L27f87470@p36": 103.2,
-    "L29f54298@p36": 155.2,
-    "L23f125341@p36": 0.0
-   }
-  }
- },
- "arm2_donor_at_final_chat_fr@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": 4.7,
-   "n_used": 5,
-   "n_skipped": 0,
-   "n_pinned": 1,
-   "per_feature": {
-    "L28f76279@p36": 0.0,
-    "L27f139629@p36": 0.0,
-    "L27f83988@p36": 0.0,
-    "L18f74852@p36": "pinned",
-    "L22f56429@p36": 23.6,
-    "L28f92878@p36": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 77.8,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p36": 51.1,
-    "L30f57180@p36": 152.6,
-    "L30f156227@p36": 16.9,
-    "L27f87470@p36": 103.7,
-    "L29f54298@p36": 142.5,
-    "L23f125341@p36": 0.0
-   }
-  }
- },
- "arm2_donor_at_final_chat_zh@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": 0.8,
-   "n_used": 5,
-   "n_skipped": 0,
-   "n_pinned": 1,
-   "per_feature": {
-    "L28f76279@p29": 0.0,
-    "L27f139629@p29": 0.0,
-    "L27f83988@p29": 0.0,
-    "L18f74852@p29": "pinned",
-    "L22f56429@p29": 3.8,
-    "L28f92878@p29": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 51.7,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p29": 50.0,
-    "L30f57180@p29": 78.1,
-    "L30f156227@p29": 16.6,
-    "L27f87470@p29": 59.9,
-    "L29f54298@p29": 105.7,
-    "L23f125341@p29": 0.0
-   }
-  }
- },
- "arm2_donor_at_final_chat_zh@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": 0.0,
-   "n_used": 5,
-   "n_skipped": 0,
-   "n_pinned": 1,
-   "per_feature": {
-    "L28f76279@p29": 0.0,
-    "L27f139629@p29": 0.0,
-    "L27f83988@p29": 0.0,
-    "L18f74852@p29": "pinned",
-    "L22f56429@p29": 0.0,
-    "L28f92878@p29": 0.0
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": 34.6,
-   "n_used": 6,
-   "n_skipped": 0,
-   "n_pinned": 0,
-   "per_feature": {
-    "L30f27666@p29": 0.0,
-    "L30f57180@p29": 61.2,
-    "L30f156227@p29": 12.7,
-    "L27f87470@p29": 28.0,
-    "L29f54298@p29": 105.7,
-    "L23f125341@p29": 0.0
-   }
-  }
- },
- "arm3_answer_side_chat_en@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p28": "pinned",
-    "L27f139629@p28": "pinned",
-    "L27f83988@p28": "pinned",
-    "L18f74852@p28": "pinned",
-    "L22f56429@p28": "pinned",
-    "L28f92878@p28": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p28": "pinned",
-    "L30f57180@p28": "pinned",
-    "L30f156227@p28": "pinned",
-    "L27f87470@p28": "pinned",
-    "L29f54298@p28": "pinned",
-    "L23f125341@p28": "pinned"
-   }
-  }
- },
- "arm3_answer_side_chat_en@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p28": "pinned",
-    "L27f139629@p28": "pinned",
-    "L27f83988@p28": "pinned",
-    "L18f74852@p28": "pinned",
-    "L22f56429@p28": "pinned",
-    "L28f92878@p28": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p28": "pinned",
-    "L30f57180@p28": "pinned",
-    "L30f156227@p28": "pinned",
-    "L27f87470@p28": "pinned",
-    "L29f54298@p28": "pinned",
-    "L23f125341@p28": "pinned"
-   }
-  }
- },
- "arm3_answer_side_chat_fr@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p36": "pinned",
-    "L27f139629@p36": "pinned",
-    "L27f83988@p36": "pinned",
-    "L18f74852@p36": "pinned",
-    "L22f56429@p36": "pinned",
-    "L28f92878@p36": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p36": "pinned",
-    "L30f57180@p36": "pinned",
-    "L30f156227@p36": "pinned",
-    "L27f87470@p36": "pinned",
-    "L29f54298@p36": "pinned",
-    "L23f125341@p36": "pinned"
-   }
-  }
- },
- "arm3_answer_side_chat_fr@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p36": "pinned",
-    "L27f139629@p36": "pinned",
-    "L27f83988@p36": "pinned",
-    "L18f74852@p36": "pinned",
-    "L22f56429@p36": "pinned",
-    "L28f92878@p36": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p36": "pinned",
-    "L30f57180@p36": "pinned",
-    "L30f156227@p36": "pinned",
-    "L27f87470@p36": "pinned",
-    "L29f54298@p36": "pinned",
-    "L23f125341@p36": "pinned"
-   }
-  }
- },
- "arm3_answer_side_chat_zh@6x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p29": "pinned",
-    "L27f139629@p29": "pinned",
-    "L27f83988@p29": "pinned",
-    "L18f74852@p29": "pinned",
-    "L22f56429@p29": "pinned",
-    "L28f92878@p29": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p29": "pinned",
-    "L30f57180@p29": "pinned",
-    "L30f156227@p29": "pinned",
-    "L27f87470@p29": "pinned",
-    "L29f54298@p29": "pinned",
-    "L23f125341@p29": "pinned"
-   }
-  }
- },
- "arm3_answer_side_chat_zh@15x": {
-  "say_small_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L28f76279@p29": "pinned",
-    "L27f139629@p29": "pinned",
-    "L27f83988@p29": "pinned",
-    "L18f74852@p29": "pinned",
-    "L22f56429@p29": "pinned",
-    "L28f92878@p29": "pinned"
-   }
-  },
-  "say_large_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 6,
-   "per_feature": {
-    "L30f27666@p29": "pinned",
-    "L30f57180@p29": "pinned",
-    "L30f156227@p29": "pinned",
-    "L27f87470@p29": "pinned",
-    "L29f54298@p29": "pinned",
-    "L23f125341@p29": "pinned"
-   }
-  }
- },
- "arm4_qk_probe_chat_en_frozen@6x": {
+ "arm2_qk_probe_chat_en_frozen@6x": {
   "say_small_pct_stored": {
    "mean_pct": 50.9,
    "n_used": 6,
@@ -749,7 +389,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_en_frozen@15x": {
+ "arm2_qk_probe_chat_en_frozen@15x": {
   "say_small_pct_stored": {
    "mean_pct": 73.2,
    "n_used": 6,
@@ -779,7 +419,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_en_live@6x": {
+ "arm2_qk_probe_chat_en_live@6x": {
   "say_small_pct_stored": {
    "mean_pct": 107.1,
    "n_used": 6,
@@ -809,7 +449,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_en_live@15x": {
+ "arm2_qk_probe_chat_en_live@15x": {
   "say_small_pct_stored": {
    "mean_pct": 124.0,
    "n_used": 6,
@@ -839,7 +479,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_fr_frozen@6x": {
+ "arm2_qk_probe_chat_fr_frozen@6x": {
   "say_small_pct_stored": {
    "mean_pct": 22.7,
    "n_used": 6,
@@ -869,7 +509,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_fr_frozen@15x": {
+ "arm2_qk_probe_chat_fr_frozen@15x": {
   "say_small_pct_stored": {
    "mean_pct": 23.5,
    "n_used": 6,
@@ -899,7 +539,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_fr_live@6x": {
+ "arm2_qk_probe_chat_fr_live@6x": {
   "say_small_pct_stored": {
    "mean_pct": 82.3,
    "n_used": 6,
@@ -929,7 +569,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_fr_live@15x": {
+ "arm2_qk_probe_chat_fr_live@15x": {
   "say_small_pct_stored": {
    "mean_pct": 86.1,
    "n_used": 6,
@@ -959,7 +599,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_zh_frozen@6x": {
+ "arm2_qk_probe_chat_zh_frozen@6x": {
   "say_small_pct_stored": {
    "mean_pct": 12.7,
    "n_used": 6,
@@ -989,7 +629,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_zh_frozen@15x": {
+ "arm2_qk_probe_chat_zh_frozen@15x": {
   "say_small_pct_stored": {
    "mean_pct": 5.8,
    "n_used": 6,
@@ -1019,7 +659,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_zh_live@6x": {
+ "arm2_qk_probe_chat_zh_live@6x": {
   "say_small_pct_stored": {
    "mean_pct": 17.3,
    "n_used": 6,
@@ -1049,7 +689,7 @@
    }
   }
  },
- "arm4_qk_probe_chat_zh_live@15x": {
+ "arm2_qk_probe_chat_zh_live@15x": {
   "say_small_pct_stored": {
    "mean_pct": 38.0,
    "n_used": 6,

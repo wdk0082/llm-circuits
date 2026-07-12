@@ -318,6 +318,11 @@ INPUT /usr/share/texmf/tex/latex/CJK/UTF8/c70gbsn.fdx
 INPUT /usr/share/texmf/tex/latex/CJK/UTF8/c70gbsn.fdx
 INPUT /usr/share/texmf/tex/latex/CJK/UTF8/c70gbsn.fdx
 INPUT /usr/share/texmf/fonts/tfm/arphic/gbsnu/gbsnu59.tfm
+INPUT ./figures/explorer_feature_example.png
+INPUT ./figures/explorer_feature_example.png
+INPUT ./figures/explorer_feature_example.png
+INPUT ./figures/explorer_feature_example.png
+INPUT ./figures/explorer_feature_example.png
 INPUT ./figures/fig_ml_graphs.pdf
 INPUT ./figures/fig_ml_graphs.pdf
 INPUT ./figures/fig_ml_graphs.pdf

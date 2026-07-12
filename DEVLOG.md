@@ -1889,3 +1889,11 @@ placeholders. The main-text feature-example placeholder figure is dropped per th
 same decision ("just use these two"); its evidence description already lives in the
 §3.1 selection paragraph. Later figures renumber (overlap 6→5, still p. 9); Appendix C
 = Figs 6-8 on one page; 17 pp. Remaining placeholder: §4 Discussion only.
+
+**Feature-example figure restored (user-provided).** `screenshot/feature_example.png`
+— the explorer evidence panel for a small (multilingual) member (top/bottom logits,
+activation distribution, top-activating examples) — cropped into
+`report/figures/explorer_feature_example.png` and reinstated as Figure 1 in §3.1 with
+its reference sentence. Later figures renumber back (language swap 3→4, overlap 5→6,
+overlap still p. 9); floats repack to 16 pp; References p. 11, appendices A-D fresh
+pages 13-16. Remaining placeholder: §4 Discussion only.

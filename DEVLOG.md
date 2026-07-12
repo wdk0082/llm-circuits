@@ -1770,3 +1770,21 @@ removed throughout, §C/§D/§E protocol notes reduced to floors + one-line poin
 the two extra notebooks, §F describes the corpus as-is, Summary rewritten result-based
 (scale row now simply **not reproduced** with the measured numbers). Stale
 extra_operation_sweep_arm{3,4}.png removed.
+
+## Multilingual reproduction: FINALIZED (2026-07-12)
+
+Merged to main. Final state: `multilingual.ipynb` (constrained-only, two per-format
+reviewed selections in `supernodes/multilingual_{chat,raw}_4b.json`, extended ladders
+with the paper endpoints as marked grid points, executed clean) + two beyond-paper
+companions, `multilingual_extra_operand_swap.ipynb` (selection x strength ablation)
+and `multilingual_extra_operation_swap.ipynb` (strength arm + the frozen-vs-live QK
+probe). Headline verdicts (full table in the notebook Summary): behavior + shared
+core + overlap reproduced; operand swap reproduced at 1.5-12x the paper's strengths;
+language swap partially reproduced (2/3 directions at the paper's scale, saturating
+handle); operation swap not reproducible under frozen-attention protocols (QK-mediated
+channel — the paper's own Haiku caveat); default language EN/ZH-shared (model
+difference); 4b->8b overlap growth not reproduced.
+
+Remaining queue (unchanged): revisit ADDITION supernodes via the export-review
+workflow. The orphan branch `repro-dumps-4b` stays — it is the dump-restore path for
+fresh studios (disks do not persist).

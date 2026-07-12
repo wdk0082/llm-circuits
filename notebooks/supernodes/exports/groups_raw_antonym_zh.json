@@ -1,204 +1,135 @@
 {
-  "example": "raw_antonym_zh",
-  "groups": [
+ "example": "raw_antonym_zh",
+ "groups": [
+  {
+   "name": "antonym (multilingual)",
+   "nodes": [
     {
-      "name": "antonym (multilingual)",
-      "nodes": [
-        {
-          "label": "L34 f67478 ( :⏎⏎⏎⏎)",
-          "layer": 34,
-          "position": 1,
-          "feature_idx": 67478
-        }
-      ]
-    },
-    {
-      "name": "small (multilingual)",
-      "nodes": [
-        {
-          "label": "L27 f29715 (ish)",
-          "layer": 27,
-          "position": 2,
-          "feature_idx": 29715
-        },
-        {
-          "label": "L28 f36616 ( doses)",
-          "layer": 28,
-          "position": 2,
-          "feature_idx": 36616
-        },
-        {
-          "label": "L28 f36616 ( doses)",
-          "layer": 28,
-          "position": 3,
-          "feature_idx": 36616
-        },
-        {
-          "label": "L29 f76918 (amount)",
-          "layer": 29,
-          "position": 2,
-          "feature_idx": 76918
-        },
-        {
-          "label": "L30 f86044 (scale)",
-          "layer": 30,
-          "position": 2,
-          "feature_idx": 86044
-        },
-        {
-          "label": "L32 f50377 (-radius)",
-          "layer": 32,
-          "position": 2,
-          "feature_idx": 50377
-        }
-      ]
-    },
-    {
-      "name": "say large (multilingual)",
-      "nodes": [
-        {
-          "label": "L30 f27666 (巨型)",
-          "layer": 30,
-          "position": 9,
-          "feature_idx": 27666
-        },
-        {
-          "label": "L30 f57180 (small)",
-          "layer": 30,
-          "position": 9,
-          "feature_idx": 57180
-        },
-        {
-          "label": "L31 f11436 ( large)",
-          "layer": 31,
-          "position": 9,
-          "feature_idx": 11436
-        },
-        {
-          "label": "L32 f100307 ( bigger)",
-          "layer": 32,
-          "position": 9,
-          "feature_idx": 100307
-        }
-      ]
-    },
-    {
-      "name": "quote (zh)",
-      "nodes": [
-        {
-          "label": "L30 f52035 ( GOOGLE)",
-          "layer": 30,
-          "position": 9,
-          "feature_idx": 52035
-        },
-        {
-          "label": "L31 f71095 (数)",
-          "layer": 31,
-          "position": 9,
-          "feature_idx": 71095
-        },
-        {
-          "label": "L32 f12584 (粉)",
-          "layer": 32,
-          "position": 9,
-          "feature_idx": 12584
-        },
-        {
-          "label": "L32 f105084 ( fluores)",
-          "layer": 32,
-          "position": 9,
-          "feature_idx": 105084
-        },
-        {
-          "label": "L33 f105473 (企图)",
-          "layer": 33,
-          "position": 9,
-          "feature_idx": 105473
-        },
-        {
-          "label": "L34 f69056 (羽)",
-          "layer": 34,
-          "position": 9,
-          "feature_idx": 69056
-        }
-      ]
-    },
-    {
-      "name": "opposite (zh)",
-      "nodes": [
-        {
-          "label": "L15 f24829 ( cel)",
-          "layer": 15,
-          "position": 2,
-          "feature_idx": 24829
-        },
-        {
-          "label": "L15 f24829 ( cel)",
-          "layer": 15,
-          "position": 5,
-          "feature_idx": 24829
-        },
-        {
-          "label": "L18 f148614 ( Ug)",
-          "layer": 18,
-          "position": 2,
-          "feature_idx": 148614
-        },
-        {
-          "label": "L18 f148614 ( Ug)",
-          "layer": 18,
-          "position": 5,
-          "feature_idx": 148614
-        },
-        {
-          "label": "L30 f154715 (是什么)",
-          "layer": 30,
-          "position": 7,
-          "feature_idx": 154715
-        },
-        {
-          "label": "L31 f105127 (words)",
-          "layer": 31,
-          "position": 6,
-          "feature_idx": 105127
-        },
-        {
-          "label": "L31 f93041 (Wh)",
-          "layer": 31,
-          "position": 7,
-          "feature_idx": 93041
-        },
-        {
-          "label": "L34 f15971 (f15971)",
-          "layer": 34,
-          "position": 2,
-          "feature_idx": 15971
-        },
-        {
-          "label": "L34 f15971 (f15971)",
-          "layer": 34,
-          "position": 3,
-          "feature_idx": 15971
-        },
-        {
-          "label": "L34 f15971 (f15971)",
-          "layer": 34,
-          "position": 7,
-          "feature_idx": 15971
-        },
-        {
-          "label": "L34 f15971 (f15971)",
-          "layer": 34,
-          "position": 8,
-          "feature_idx": 15971
-        },
-        {
-          "label": "L34 f15971 (f15971)",
-          "layer": 34,
-          "position": 9,
-          "feature_idx": 15971
-        }
-      ]
+     "layer": 34,
+     "feature_idx": 67478,
+     "position": 1
     }
-  ]
+   ]
+  },
+  {
+   "name": "small (multilingual)",
+   "nodes": [
+    {
+     "layer": 26,
+     "feature_idx": 58650,
+     "position": 2
+    },
+    {
+     "layer": 27,
+     "feature_idx": 29715,
+     "position": 2
+    },
+    {
+     "layer": 28,
+     "feature_idx": 36616,
+     "position": 2
+    },
+    {
+     "layer": 28,
+     "feature_idx": 97177,
+     "position": 2
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "nodes": [
+    {
+     "layer": 30,
+     "feature_idx": 27666,
+     "position": 9
+    },
+    {
+     "layer": 30,
+     "feature_idx": 57180,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 11436,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 56787,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "quote (zh)",
+   "nodes": [
+    {
+     "layer": 30,
+     "feature_idx": 52035,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 71095,
+     "position": 9
+    },
+    {
+     "layer": 32,
+     "feature_idx": 105084,
+     "position": 9
+    },
+    {
+     "layer": 32,
+     "feature_idx": 12584,
+     "position": 9
+    },
+    {
+     "layer": 33,
+     "feature_idx": 105473,
+     "position": 9
+    },
+    {
+     "layer": 34,
+     "feature_idx": 69056,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "opposite (zh)",
+   "nodes": [
+    {
+     "layer": 14,
+     "feature_idx": 96297,
+     "position": 5
+    },
+    {
+     "layer": 14,
+     "feature_idx": 77869,
+     "position": 5
+    },
+    {
+     "layer": 15,
+     "feature_idx": 24829,
+     "position": 5
+    },
+    {
+     "layer": 16,
+     "feature_idx": 45664,
+     "position": 5
+    },
+    {
+     "layer": 16,
+     "feature_idx": 153311,
+     "position": 5
+    },
+    {
+     "layer": 18,
+     "feature_idx": 148614,
+     "position": 5
+    }
+   ]
+  }
+ ]
 }

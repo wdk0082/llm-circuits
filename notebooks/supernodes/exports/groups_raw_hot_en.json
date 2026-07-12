@@ -1,75 +1,70 @@
 {
-  "example": "raw_hot_en",
-  "groups": [
+ "example": "raw_hot_en",
+ "groups": [
+  {
+   "name": "hot (multilingual)",
+   "nodes": [
     {
-      "name": "hot (multilingual)",
-      "nodes": [
-        {
-          "label": "L24 f127078 (hot)",
-          "layer": 24,
-          "position": 5,
-          "feature_idx": 127078
-        },
-        {
-          "label": "L26 f119024 (Ū)",
-          "layer": 26,
-          "position": 5,
-          "feature_idx": 119024
-        },
-        {
-          "label": "L27 f143324 ( unm)",
-          "layer": 27,
-          "position": 5,
-          "feature_idx": 143324
-        },
-        {
-          "label": "L28 f51031 ( stead)",
-          "layer": 28,
-          "position": 5,
-          "feature_idx": 51031
-        },
-        {
-          "label": "L29 f42050 (лив)",
-          "layer": 29,
-          "position": 5,
-          "feature_idx": 42050
-        },
-        {
-          "label": "L32 f120713 (abble)",
-          "layer": 32,
-          "position": 5,
-          "feature_idx": 120713
-        }
-      ]
+     "layer": 24,
+     "feature_idx": 127078,
+     "position": 5
     },
     {
-      "name": "say cold (multilingual)",
-      "nodes": [
-        {
-          "label": "L31 f102550 (Cold)",
-          "layer": 31,
-          "position": 8,
-          "feature_idx": 102550
-        },
-        {
-          "label": "L31 f160128 (warm)",
-          "layer": 31,
-          "position": 8,
-          "feature_idx": 160128
-        },
-        {
-          "label": "L32 f9227 ( cooling)",
-          "layer": 32,
-          "position": 8,
-          "feature_idx": 9227
-        },
-        {
-          "label": "L32 f93558 (冷)",
-          "layer": 32,
-          "position": 8,
-          "feature_idx": 93558
-        }
-      ]
+     "layer": 24,
+     "feature_idx": 8689,
+     "position": 5
+    },
+    {
+     "layer": 25,
+     "feature_idx": 110576,
+     "position": 5
+    },
+    {
+     "layer": 26,
+     "feature_idx": 119024,
+     "position": 5
+    },
+    {
+     "layer": 27,
+     "feature_idx": 143324,
+     "position": 5
+    },
+    {
+     "layer": 27,
+     "feature_idx": 58824,
+     "position": 5
     }
-  ]
+   ]
+  },
+  {
+   "name": "say cold (multilingual)",
+   "nodes": [
+    {
+     "layer": 27,
+     "feature_idx": 137832,
+     "position": 8
+    },
+    {
+     "layer": 31,
+     "feature_idx": 160128,
+     "position": 8
+    },
+    {
+     "layer": 31,
+     "feature_idx": 102550,
+     "position": 8
+    },
+    {
+     "layer": 32,
+     "feature_idx": 9227,
+     "position": 8
+    },
+    {
+     "layer": 32,
+     "feature_idx": 93558,
+     "position": 8
+    }
+   ]
+  }
+ ]
 }

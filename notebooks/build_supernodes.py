@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import addition_helper as A
 import numpy as np
+from multilingual_helper import OP_WORD
 
 from llm_circuits.circuits.graph_explorer import render_graph_explorer_html
 from llm_circuits.settings import artifacts_dir
@@ -242,6 +243,13 @@ def cap_members(cands: list[dict], key=lambda m: m["act"]) -> tuple[list[dict], 
     return ranked[:MAX_MEMBERS], ranked[MAX_MEMBERS:]
 
 
+# Multilingual ranking (user decision 2026-07-12): EARLIEST layer first, activation as
+# the tiebreak — early members leave the constrained-patching end-layer sweep room
+# (l_max = max steered layer), where act-ranking systematically picks late layers.
+def early_first(m: dict):
+    return (-m["layer"], m["act"])
+
+
 def supernode(name, paper_name, role, graph, position, members, overflow, note=""):
     sn = {
         "name": name,
@@ -266,6 +274,15 @@ LANGS = ("en", "fr", "zh")
 
 
 def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
+    """Seed proposal for the multilingual review pages.
+
+    v3 (2026-07-12, user decisions): **chat and raw are separate selections** — every
+    scan pools ONE format's graphs, identically-named groups merge per format at
+    ingestion (two files), and members are ranked **earliest layer first**
+    (:func:`early_first`) so the steered sets leave the constrained-patching end-layer
+    sweep room. Every member records per-graph ``acts``/``positions`` so seeds can be
+    materialized into export JSONs verbatim (``--materialize-seeds``).
+    """
     sns: list[dict] = []
     mg = manifest["graphs"]
 
@@ -300,52 +317,58 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                     hits[key]["positions"][name] = n["position"]
         return [dict(hits[k], graphs=seen_in[k]) for k in hits if len(seen_in[k]) >= min_graphs]
 
-    ant_names = [f"antonym_{lg}" for lg in LANGS]
-    raw_ant_names = [f"raw_antonym_{lg}" for lg in LANGS]
+    def single_graph_concept(gname, *, position=None, matcher=None):
+        """Best-act member per (L,f) on ONE graph, with acts/positions recorded.
 
-    # --- operation swap: antonym (multilingual) source + synonym donor ----------------
-    # Chat and raw scans seed the SAME paper name: identically-named groups merge at
-    # ingestion into one supernode — the joint over ALL prompts (review convention).
-    ant_keys: set[tuple[int, int]] = set()
-    for names, syn_graph in (
-        (ant_names, "synonym_en"),
-        (raw_ant_names, "raw_synonym_en"),
-    ):
+        ``matcher(node) -> provenance str | None`` decides membership; ``position``
+        restricts the scan (None = every position).
+        """
+        best: dict[tuple[int, int], dict] = {}
+        for n in feature_nodes(graphs[gname], position):
+            m = matcher(n)
+            if not m:
+                continue
+            key = (n["layer"], n["feature_idx"])
+            e = member_entry(n, matched=m)
+            if key not in best or e["act"] > best[key]["act"]:
+                e["acts"] = {gname: e["act"]}
+                e["positions"] = {gname: n["position"]}
+                best[key] = e
+        return list(best.values())
+
+    for fmt in ("chat", "raw"):
+        p = "" if fmt == "chat" else "raw_"
+        ant_names = [f"{p}antonym_{lg}" for lg in LANGS]
+        syn_graph = f"{p}synonym_en"
+        hot_graph = f"{p}hot_en"
+
+        # --- operation swap: antonym (multilingual) source + synonym donor ------------
         # the antonym-operation supernode lives mid-graph (paper Fig B1: opposite+small
         # -> antonym), not only on the final token: scan every position, BOTH sides
-        # (input-side = fires on "opposite"/"contraire"/反义; output-side = promotes them).
-        cands = shared_concept("opposite", names, lambda _n: None, side="both")
-        members, overflow = cap_members(cands)
-        ant_keys |= {(m["layer"], m["feature"]) for m in members + overflow}
-        note = (
-            "operation-swap source; steered -5x (m=-6) at each member's own node"
-            " position per recipient graph"
-        )
+        # (input-side = fires on "opposite"/"contraire"/反义; output-side = promotes).
+        cands = shared_concept("opposite", ant_names, lambda _n: None, side="both")
+        members, overflow = cap_members(cands, key=early_first)
+        ant_keys = {(m["layer"], m["feature"]) for m in members + overflow}
         sns.append(
             supernode(
                 "antonym (multilingual)",
                 "antonym",
                 "source",
-                ";".join(names),
+                ";".join(ant_names),
                 "member-positions",
                 members,
                 overflow,
-                note=note,
+                note="operation-swap source; steered -5x (m=-6) at each member's own"
+                " node position per recipient graph",
             )
         )
         # paper-faithful donor: synonym OPERATION features — they fire ON the word
         # "synonym"/"synonymous" (input-side peaks) at the operation-word token of the
         # donor prompt; found only once the input side was searched (2026-07-11 review).
-        op_best: dict[tuple[int, int], dict] = {}
-        for n in feature_nodes(graphs[syn_graph]):
-            m = concept_match(n.get("label"), "synonym", "both")
-            if not m:
-                continue
-            key = (n["layer"], n["feature_idx"])
-            entry = member_entry(n, matched=m)
-            if key not in op_best or entry["act"] > op_best[key]["act"]:
-                op_best[key] = entry
-        members, overflow = cap_members(list(op_best.values()))
+        op_best = single_graph_concept(
+            syn_graph, matcher=lambda n: concept_match(n.get("label"), "synonym", "both")
+        )
+        members, overflow = cap_members(op_best, key=early_first)
         note = (
             "operation-swap donor (paper-faithful): synonym-OPERATION features from the"
             " EN synonym prompt, injected at +6x the stored act. They live at the"
@@ -370,16 +393,17 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 note=note,
             )
         )
-        syn_cands = [
-            member_entry(
-                n,
-                matched=f"top_logits:{matches_concept(n.get('label'), 'synonym_answer')!r}",
-            )
-            for n in feature_nodes(graphs[syn_graph], final(syn_graph))
-            if matches_concept(n.get("label"), "synonym_answer")
-            and not matches_concept(n.get("label"), "large")
-        ]
-        members, overflow = cap_members(syn_cands)
+
+        def _say_small_match(n):
+            m = matches_concept(n.get("label"), "synonym_answer")
+            if m and not matches_concept(n.get("label"), "large"):
+                return f"top_logits:{m!r}"
+            return None
+
+        syn_cands = single_graph_concept(
+            syn_graph, position=final(syn_graph), matcher=_say_small_match
+        )
+        members, overflow = cap_members(syn_cands, key=early_first)
         sns.append(
             supernode(
                 "say small (multilingual)",
@@ -390,215 +414,205 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
                 members,
                 overflow,
                 note="operation-swap readout: say small/tiny features at the synonym"
-                " prompt's final position (they can also serve as the v1-style"
-                " answer-side donor; the paper-faithful donor is synonym (multilingual)"
-                " above).",
+                " prompt's final position.",
             )
         )
 
-    # --- operand swap: small (multilingual) source + hot donor + say-cold readout -----
-    cands = shared_concept(
-        "small",
-        ant_names + raw_ant_names,
-        lambda n: mg[n]["operand_position"],
-        side="both",
-    )
-    members, overflow = cap_members(cands)
-    sns.append(
-        supernode(
-            "small (multilingual)",
+        # --- operand swap: small (multilingual) source + hot donor + say-cold readout -
+        cands = shared_concept(
             "small",
-            "source",
-            ";".join(ant_names + raw_ant_names),
-            "operand",
-            members,
-            overflow,
-            note="operand-swap source; steered -0.5x (m=-1.5). Input-side matches (peak"
-            " example token = small/petit/...) are the paper's operand-feature analogue;"
-            " output-side matches at the operand token are say-small-ish — extra scrutiny"
-            " at review",
+            ant_names,
+            lambda n: mg[n]["operand_position"],
+            side="both",
         )
-    )
-    hot_names = [g for g in ("hot_en", "raw_hot_en") if g in graphs]
-    cands = shared_concept(
-        "hot", hot_names, lambda n: mg[n]["operand_position"], min_graphs=1, side="both"
-    )
-    members, overflow = cap_members(cands)
-    sns.append(
-        supernode(
-            "hot (multilingual)",
-            "hot",
-            "donor",
-            ";".join(hot_names),
-            "operand",
-            members,
-            overflow,
-            note="operand-swap donor; injected value = +1.5x the stored act (per donor"
-            " graph — the raw page is the paper's exact prompt format)",
+        members, overflow = cap_members(cands, key=early_first)
+        small_keys = {(m["layer"], m["feature"]) for m in members + overflow}
+        sns.append(
+            supernode(
+                "small (multilingual)",
+                "small",
+                "source",
+                ";".join(ant_names),
+                "operand",
+                members,
+                overflow,
+                note="operand-swap source; steered -0.5x (m=-1.5). Input-side matches"
+                " (peak example token = small/petit/...) are the paper's operand-feature"
+                " analogue; output-side matches at the operand token are say-small-ish",
+            )
         )
-    )
-    cands = shared_concept("cold", hot_names, final, min_graphs=1, side="output")
-    members, overflow = cap_members(cands)
-    sns.append(
-        supernode(
-            "say cold (multilingual)",
-            "say cold",
-            "readout",
-            ";".join(hot_names),
-            "final",
-            members,
-            overflow,
+        cands = single_graph_concept(
+            hot_graph,
+            position=mg[hot_graph]["operand_position"],
+            matcher=lambda n: concept_match(n.get("label"), "hot", "both"),
         )
-    )
+        members, overflow = cap_members(cands, key=early_first)
+        sns.append(
+            supernode(
+                "hot (multilingual)",
+                "hot",
+                "donor",
+                hot_graph,
+                "operand",
+                members,
+                overflow,
+                note="operand-swap donor; injected value = +1.5x the stored act",
+            )
+        )
+        cands = single_graph_concept(
+            hot_graph,
+            position=final(hot_graph),
+            matcher=lambda n: concept_match(n.get("label"), "cold", "output"),
+        )
+        members, overflow = cap_members(cands, key=early_first)
+        sns.append(
+            supernode(
+                "say cold (multilingual)",
+                "say cold",
+                "readout",
+                hot_graph,
+                "final",
+                members,
+                overflow,
+            )
+        )
 
-    # --- say large: multilingual (>=2 graphs) vs language-specific (exactly 1) --------
-    sl_iters = []
-    for names in (ant_names, raw_ant_names):
-        shared = shared_concept("large", names, final, min_graphs=2)
-        sl_iters.append((names, *cap_members(shared)))
-    # Exclusions span BOTH scans (chat + raw): a feature that is multilingual on one
-    # side and single-graph on the other must not land in two supernodes. Likewise a
-    # feature qualifying for two languages is language-AMBIGUOUS and seeds neither.
-    shared_keys = {(m["layer"], m["feature"]) for _, mem, ovf in sl_iters for m in mem + ovf}
-    lang_of: dict[tuple[int, int], set[str]] = defaultdict(set)
-    for names, _, _ in sl_iters:
+        # --- say large: multilingual (>=2 graphs) vs language-specific (exactly 1) ----
+        shared = shared_concept("large", ant_names, final, min_graphs=2)
+        members, overflow = cap_members(shared, key=early_first)
+        shared_keys = {(m["layer"], m["feature"]) for m in members + overflow}
+        lang_of: dict[tuple[int, int], set[str]] = defaultdict(set)
         for lg in LANGS:
-            gname = names[LANGS.index(lg)]
+            gname = ant_names[LANGS.index(lg)]
             for n in feature_nodes(graphs[gname], final(gname)):
                 key = (n["layer"], n["feature_idx"])
                 if matches_concept(n.get("label"), "large") and key not in shared_keys:
                     lang_of[key].add(lg)
-    for names, members, overflow in sl_iters:
         sns.append(
             supernode(
                 "say large (multilingual)",
                 "say large",
                 "readout",
-                ";".join(names),
+                ";".join(ant_names),
                 "final",
                 members,
                 overflow,
             )
         )
         for lg in LANGS:
-            name = names[LANGS.index(lg)]
-            only = []
-            for n in feature_nodes(graphs[name], final(name)):
+            gname = ant_names[LANGS.index(lg)]
+
+            def _say_large_lang(n, _lg=lg, _shared=shared_keys, _lang_of=lang_of):
                 key = (n["layer"], n["feature_idx"])
                 m = matches_concept(n.get("label"), "large")
-                if not m or key in shared_keys or lang_of[key] != {lg}:
-                    continue
-                entry = member_entry(n, matched=f"top_logits:{m!r}")
+                if not m or key in _shared or _lang_of[key] != {_lg}:
+                    return None
+                return f"top_logits:{m!r}"
+
+            only = single_graph_concept(gname, position=final(gname), matcher=_say_large_lang)
+            for entry in only:
                 # script sanity: a {lang}-specific say-large whose only match is a
                 # different script (e.g. a CJK token on the FR graph) is suspect
-                tok_lang = text_lang(m)
+                tok = entry["evidence"]["matched"].split("top_logits:", 1)[-1]
+                tok_lang = text_lang(tok)
                 if (lg == "zh") != (tok_lang == "zh"):
                     entry["review_note"] = (
-                        f"matched token {m!r} is {tok_lang}-script on the {lg}-specific"
+                        f"matched token {tok} is {tok_lang}-script on the {lg}-specific"
                         " supernode — likely junk/mixed feature, verify the example"
                     )
-                only.append(entry)
-            members_l, overflow_l = cap_members(only)
+            members_l, overflow_l = cap_members(only, key=early_first)
             sns.append(
                 supernode(
                     f"say large ({lg})",
                     f"say large ({lg})",
                     "readout",
-                    name,
+                    gname,
                     "final",
                     members_l,
                     overflow_l,
                 )
             )
 
-    # --- language detectors (graph-first; Fig B5 source/donor) ------------------------
-    # The paper's detectors sit at the final open-quote token, early layers. Qwen3's
-    # 0.95 graphs have NO layer<12 nodes at that position, so the seed keeps only the
-    # semantic filter (language-pure examples) and prefers the earliest layers instead
-    # of hard-cutting — the human review decides what actually counts as a detector.
-    detect_cands: dict[str, list[dict]] = {}
-    for lg in LANGS:
-        name = f"raw_antonym_{lg}"
-        cands = []
-        for n in feature_nodes(graphs[name], final(name)):
-            langs = example_langs(n.get("label"))
-            if not langs:
-                continue
-            frac = langs.count(lg) / len(langs)
-            if frac >= 0.7:
-                cands.append(
-                    member_entry(
-                        n,
-                        matched=f"examples:{langs.count(lg)}/{len(langs)} {lg}",
-                        note="graph-first detector (language-pure examples;"
-                        " earliest layers preferred)",
+        # --- language detectors (raw pages only; Fig B5 source/donor) -----------------
+        # The paper's detectors sit at the final open-quote token, early layers.
+        # Qwen3's 0.95 graphs have NO layer<12 nodes at that position, so the seed
+        # keeps only the semantic filter (language-pure examples), earliest first.
+        quote_keys: set[tuple[int, int]] = set()
+        if fmt == "raw":
+            detect_cands: dict[str, list[dict]] = {}
+            for lg in LANGS:
+                gname = f"raw_antonym_{lg}"
+
+                def _detector(n, _lg=lg):
+                    langs = example_langs(n.get("label"))
+                    if langs and langs.count(_lg) / len(langs) >= 0.7:
+                        return f"examples:{langs.count(_lg)}/{len(langs)} {_lg}"
+                    return None
+
+                detect_cands[lg] = single_graph_concept(
+                    gname, position=final(gname), matcher=_detector
+                )
+            counts: dict[tuple[int, int], int] = defaultdict(int)
+            for lg in LANGS:
+                for m in detect_cands[lg]:
+                    counts[(m["layer"], m["feature"])] += 1
+            for lg in LANGS:
+                uniq = [m for m in detect_cands[lg] if counts[(m["layer"], m["feature"])] == 1]
+                members, overflow = cap_members(uniq, key=early_first)
+                quote_keys |= {(m["layer"], m["feature"]) for m in members + overflow}
+                sns.append(
+                    supernode(
+                        f"quote ({lg})",
+                        f"open-quote-in-{lg}",
+                        "source+donor",
+                        f"raw_antonym_{lg}",
+                        "final",
+                        members,
+                        overflow,
+                        note="language-swap source/donor (paper: 'quote"
+                        " (lang-specific)'; language-pure examples, earliest layers"
+                        " first — Qwen3's quote-position nodes all sit above L12,"
+                        " unlike the paper's early detectors).",
                     )
                 )
-        detect_cands[lg] = cands
-    # language-unique: drop (L,f) appearing as a candidate for >=2 languages
-    counts: dict[tuple[int, int], int] = defaultdict(int)
-    for lg in LANGS:
-        for m in detect_cands[lg]:
-            counts[(m["layer"], m["feature"])] += 1
-    quote_keys: set[tuple[int, int]] = set()
-    for lg in LANGS:
-        uniq = [m for m in detect_cands[lg] if counts[(m["layer"], m["feature"])] == 1]
-        members, overflow = cap_members(uniq, key=lambda m: (-m["layer"], m["act"]))
-        quote_keys |= {(m["layer"], m["feature"]) for m in members + overflow}
-        sns.append(
-            supernode(
-                f"quote ({lg})",
-                f"open-quote-in-{lg}",
-                "source+donor",
-                f"raw_antonym_{lg}",
-                "final",
-                members,
-                overflow,
-                note="language-swap source/donor seed (paper: 'quote (lang-specific)';"
-                " graph-first on the raw open-quote graphs; language-pure examples,"
-                " earliest layers first — Qwen3's quote-position nodes all sit above"
-                " L12, unlike the paper's early detectors). The review decides.",
-            )
-        )
 
-    # --- opposite (lang-specific): the operation WORD's own features (paper Fig B1:
-    # 'opposite (lang-specific)' feeds 'antonym (multilingual)') --------------------
-    op_word = {"en": "opposite", "fr": "contraire", "zh": "反义词"}
-    op_cands: dict[str, dict[tuple[int, int], dict]] = {}
-    for lg in LANGS:
-        best: dict[tuple[int, int], dict] = {}
-        for name in (f"antonym_{lg}", f"raw_antonym_{lg}"):
-            positions = op_word_positions(graphs[name], op_word[lg])
-            for n in feature_nodes(graphs[name]):
+        # --- opposite (lang-specific): the operation WORD's own features --------------
+        op_cands: dict[str, dict[tuple[int, int], dict]] = {}
+        for lg in LANGS:
+            gname = ant_names[LANGS.index(lg)]
+            positions = op_word_positions(graphs[gname], OP_WORD[lg])
+
+            def _op_word(n, _pos=positions, _keys=ant_keys | quote_keys | small_keys, _lg=lg):
+                # disjointness: features already seeded into antonym/quote/small stay
+                # there (the paper's quote-features track language via other words too)
                 key = (n["layer"], n["feature_idx"])
-                # ant_keys/quote_keys: supernodes are disjoint feature sets — features
-                # already claimed by antonym (multilingual) or quote (lg) stay there
-                # (the paper's quote-features track language via other words too).
-                if n["position"] not in positions or key in ant_keys or key in quote_keys:
-                    continue
-                e = member_entry(n, matched=f"at operation-word token {op_word[lg]!r}")
-                if key not in best or e["act"] > best[key]["act"]:
-                    best[key] = e
-        op_cands[lg] = best
-    for lg in LANGS:
-        # language-unique only: a feature on the operation word of >=2 languages is not
-        # lang-specific (and not auto-promoted to antonym either — admit ambiguity)
-        uniq = [e for key, e in op_cands[lg].items() if sum(key in op_cands[o] for o in LANGS) == 1]
-        members, overflow = cap_members(uniq)
-        sns.append(
-            supernode(
-                f"opposite ({lg})",
-                f"opposite ({lg})",
-                "input",
-                f"antonym_{lg};raw_antonym_{lg}",
-                "member-positions",
-                members,
-                overflow,
-                note="language-specific operation-word features (upstream evidence;"
-                " not steered in the paper's three swaps). Features already seeded"
-                " into antonym (multilingual) are excluded — supernodes are disjoint.",
+                if n["position"] not in _pos or key in _keys:
+                    return None
+                return f"at operation-word token {OP_WORD[_lg]!r}"
+
+            op_cands[lg] = {
+                (m["layer"], m["feature"]): m for m in single_graph_concept(gname, matcher=_op_word)
+            }
+        for lg in LANGS:
+            # language-unique only: a feature on the operation word of >=2 languages is
+            # not lang-specific (and not auto-promoted to antonym — admit ambiguity)
+            uniq = [
+                e for key, e in op_cands[lg].items() if sum(key in op_cands[o] for o in LANGS) == 1
+            ]
+            members, overflow = cap_members(uniq, key=early_first)
+            sns.append(
+                supernode(
+                    f"opposite ({lg})",
+                    f"opposite ({lg})",
+                    "input",
+                    ant_names[LANGS.index(lg)],
+                    "member-positions",
+                    members,
+                    overflow,
+                    note="language-specific operation-word features (upstream evidence;"
+                    " not steered in the paper's three swaps).",
+                )
             )
-        )
 
     return {
         "task": "multilingual",
@@ -1104,17 +1118,22 @@ ROLE_BY_NAME = {
 }
 
 
-def ingest_exports(size, files, root, manifest, graphs) -> None:
-    """Write the multilingual supernode file FROM the explorer 'Export groups' JSONs.
+def ingest_exports(size, files, root, manifest, graphs, review_log: str | None = None) -> None:
+    """Write the multilingual supernode files FROM the 'Export groups' JSONs.
 
-    The exports are the review: every listed node was hand-picked in the UI, so members
-    arrive ``review: "approved"`` and the file ships ``approved: true``. Same-named
-    groups across several graph pages merge into one multi-graph supernode (per-graph
-    ``acts``/``positions`` recorded — donors take value = mult x their own graph's act;
-    sources steer at each member's node position per recipient). Evidence is
-    auto-filled from the graph dumps. Disjointness within the final set is enforced.
+    v3: **chat and raw are separate selections** — each export's page format (the
+    manifest's ``raw`` flag for its ``example`` graph) routes its groups into
+    ``multilingual_chat_<size>.json`` or ``multilingual_raw_<size>.json``. Within a
+    format, same-named groups across pages merge into one multi-graph supernode
+    (per-graph ``acts``/``positions`` recorded — donors take value = mult x their own
+    graph's act; sources steer at each member's node position per recipient) and
+    disjointness by (layer, feature) is enforced; the same feature MAY appear in both
+    formats' files (they are independent selections). Evidence is auto-filled from the
+    graph dumps. ``review_log`` records the selection provenance (default: hand review
+    in the explorer).
     """
-    merged: dict[str, dict] = {}
+    merged: dict[str, dict[str, dict]] = {"chat": {}, "raw": {}}
+    files_by_fmt: dict[str, list[str]] = {"chat": [], "raw": []}
     for f in files:
         exp = json.loads(Path(f).read_text())
         gname = str(exp.get("example", "")).strip()
@@ -1123,6 +1142,8 @@ def ingest_exports(size, files, root, manifest, graphs) -> None:
                 f"{f}: example label {gname!r} is not a dumped graph — re-export from"
                 f" the CURRENT review pages (known: {sorted(graphs)})"
             )
+        fmt = "raw" if manifest["graphs"][gname].get("raw") else "chat"
+        files_by_fmt[fmt].append(str(Path(f).name))
         nodes_at = {
             (n["layer"], n["feature_idx"], n["position"]): n for n in feature_nodes(graphs[gname])
         }
@@ -1138,7 +1159,7 @@ def ingest_exports(size, files, root, manifest, graphs) -> None:
                         " re-export"
                     )
                 claimed[k] = name
-            sn = merged.setdefault(
+            sn = merged[fmt].setdefault(
                 name,
                 {
                     "name": name,
@@ -1179,63 +1200,106 @@ def ingest_exports(size, files, root, manifest, graphs) -> None:
                     m["acts"][gname] = round(float(node["activation"]), 4)
                 m["positions"][gname] = nd.get("position")
 
-    # Paper supernodes are disjoint FEATURE sets: the same (layer, feature) may not
-    # appear in two groups anywhere across the pages (per-page overlap is caught above;
-    # this catches e.g. 'antonym' on the EN page vs 'opposite (fr)' on the FR page).
-    owner: dict[tuple[int, int], str] = {}
-    for sn in merged.values():
-        for key in sn["members"]:
-            if key in owner and owner[key] != sn["name"]:
-                raise SystemExit(
-                    f"feature L{key[0]}f{key[1]} is in both {owner[key]!r} and"
-                    f" {sn['name']!r} (possibly on different pages) — supernodes are"
-                    " disjoint feature sets; fix in the UI and re-export"
-                )
-            owner[key] = sn["name"]
+    for fmt, fmt_merged in merged.items():
+        if not fmt_merged:
+            continue
+        # Paper supernodes are disjoint FEATURE sets within a selection: the same
+        # (layer, feature) may not appear in two groups anywhere across this format's
+        # pages (per-page overlap is caught above; this catches e.g. 'antonym' on the
+        # EN page vs 'opposite (fr)' on the FR page).
+        owner: dict[tuple[int, int], str] = {}
+        for sn in fmt_merged.values():
+            for key in sn["members"]:
+                if key in owner and owner[key] != sn["name"]:
+                    raise SystemExit(
+                        f"[{fmt}] feature L{key[0]}f{key[1]} is in both {owner[key]!r}"
+                        f" and {sn['name']!r} (possibly on different pages) —"
+                        " supernodes are disjoint feature sets; fix and re-export"
+                    )
+                owner[key] = sn["name"]
 
-    supernodes = []
-    for sn in merged.values():
-        members = sorted(sn["members"].values(), key=lambda m: -max(m["acts"].values() or [0]))
-        note = "hand-selected in the explorer review pages (Export groups)"
-        if sn["role"] == "custom":
-            note += " — UNKNOWN group name: wire its role in the notebook before use"
-        supernodes.append(
-            supernode(
-                sn["name"],
-                sn["paper_name"],
-                sn["role"],
-                ";".join(sorted(sn["graphs"])),
-                "member-positions",
-                members,
-                [],
-                note=note,
+        supernodes = []
+        for sn in fmt_merged.values():
+            members = sorted(sn["members"].values(), key=lambda m: -max(m["acts"].values() or [0]))
+            note = "selection ingested verbatim from the committed export JSONs"
+            if sn["role"] == "custom":
+                note += " — UNKNOWN group name: wire its role in the notebook before use"
+            supernodes.append(
+                supernode(
+                    sn["name"],
+                    sn["paper_name"],
+                    sn["role"],
+                    ";".join(sorted(sn["graphs"])),
+                    "member-positions",
+                    members,
+                    [],
+                    note=note,
+                )
             )
-        )
-    doc = {
-        "task": "multilingual",
-        "size": size,
-        "built_from": f"{root}@{manifest.get('git', '?')}",
-        "selection": "explorer-export",
-        "source_files": [str(Path(f).name) for f in files],
-        # per-PAGE groups are capped at MAX_MEMBERS by the seeds; the reviewed union
-        # across chat+raw pages may exceed it — the human selection is authoritative
-        "max_members": max((len(s["members"]) for s in supernodes), default=MAX_MEMBERS),
-        "supernodes": supernodes,
-        "approved": True,
-        "review_log": "selected and reviewed by hand in the explorer (Export groups);"
-        " ingested by build_supernodes.py --from-exports",
-    }
-    errs = validate(doc, require_approved=True)
-    if errs:
-        raise SystemExit(
-            "ingest: validation failed (fix the groups in the UI and re-export):\n  "
-            + "\n  ".join(errs)
-        )
-    out = SUPERNODE_DIR / f"multilingual_{size}.json"
-    out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
-    print(f"{out} written from {len(files)} exports:")
-    for sn in supernodes:
-        print(f"   {sn['name']:34s} {len(sn['members'])} members  [{sn['role']}]  {sn['graph']}")
+        doc = {
+            "task": "multilingual",
+            "size": size,
+            "format": fmt,
+            "built_from": f"{root}@{manifest.get('git', '?')}",
+            "selection": "explorer-export",
+            "source_files": files_by_fmt[fmt],
+            # per-PAGE groups are capped at MAX_MEMBERS by the seeds; the union across
+            # a format's pages may exceed it — the export record is authoritative
+            "max_members": max((len(s["members"]) for s in supernodes), default=MAX_MEMBERS),
+            "supernodes": supernodes,
+            "approved": True,
+            "review_log": review_log
+            or "selected and reviewed by hand in the explorer (Export groups);"
+            " ingested by build_supernodes.py --from-exports",
+        }
+        errs = validate(doc, require_approved=True)
+        if errs:
+            raise SystemExit(
+                f"ingest [{fmt}]: validation failed (fix the groups and re-export):\n  "
+                + "\n  ".join(errs)
+            )
+        out = SUPERNODE_DIR / f"multilingual_{fmt}_{size}.json"
+        out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
+        print(f"{out} written from {len(files_by_fmt[fmt])} exports:")
+        for sn in supernodes:
+            print(
+                f"   {sn['name']:34s} {len(sn['members'])} members  [{sn['role']}]  {sn['graph']}"
+            )
+
+
+def materialize_seed_exports(seed: dict, graphs: dict) -> list[Path]:
+    """Write ``exports/groups_<graph>.json`` for every multilingual page FROM the seed
+    proposal — the "accept the seeds as-is" flow, made explicit and reproducible.
+
+    Each seed member carries per-graph ``positions``; a page's export lists every seed
+    group with the members present on that page, at their recorded node positions
+    (the same schema the explorer's "Export groups" button produces). Returns the
+    written paths (ingest them with :func:`ingest_exports`).
+    """
+    export_dir = SUPERNODE_DIR / "exports"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    pages: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    for sn in seed["supernodes"]:
+        for m in sn["members"]:
+            for gname, pos in (m.get("positions") or {}).items():
+                if gname not in graphs:
+                    continue
+                pages[gname][sn["name"]].append(
+                    {"layer": m["layer"], "feature_idx": m["feature"], "position": pos}
+                )
+    written = []
+    for gname in sorted(pages):
+        doc = {
+            "example": gname,
+            "groups": [
+                {"name": name, "nodes": nodes} for name, nodes in pages[gname].items() if nodes
+            ],
+        }
+        out = export_dir / f"groups_{gname}.json"
+        out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
+        written.append(out)
+        print(f"  {out.name}: {len(doc['groups'])} seeded groups materialized")
+    return written
 
 
 def main() -> None:
@@ -1246,9 +1310,15 @@ def main() -> None:
         "--from-exports",
         nargs="+",
         metavar="EXPORT_JSON",
-        help="ingest explorer 'Export groups' JSONs (one per graph) and write the"
-        " multilingual supernode file from them — the ONLY multilingual selection"
-        " source; membership evidence is auto-filled from the graph dumps",
+        help="ingest 'Export groups' JSONs (one per graph) and write the multilingual"
+        " supernode files from them (chat/raw split by page format) — the ONLY"
+        " multilingual selection source; evidence is auto-filled from the graph dumps",
+    )
+    ap.add_argument(
+        "--materialize-seeds",
+        action="store_true",
+        help="write exports/groups_<graph>.json FROM the seed proposal and ingest them"
+        " (the accept-seeds-as-is flow, recorded as such in the review_log)",
     )
     args = ap.parse_args()
 
@@ -1271,6 +1341,21 @@ def main() -> None:
 
     if args.from_exports:
         ingest_exports(args.size, args.from_exports, root, manifest, graphs)
+        return
+
+    if args.materialize_seeds:
+        seed = build_multilingual(args.size, root, manifest, graphs)
+        files = materialize_seed_exports(seed, graphs)
+        ingest_exports(
+            args.size,
+            files,
+            root,
+            manifest,
+            graphs,
+            review_log="seeds materialized and approved by user instruction"
+            " (2026-07-12): earliest-first ranking, chat/raw selections separated;"
+            " ingested by build_supernodes.py --materialize-seeds",
+        )
         return
 
     docs = []

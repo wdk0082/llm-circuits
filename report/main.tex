@@ -398,8 +398,8 @@ examples against per-concept lexicons, ranks candidates earliest-layer-first, an
 caps each group at six members; the chat and raw formats get fully separate
 selections, frozen in reviewed artifacts with per-graph activations and node
 positions per member, and enforced disjoint by (layer, feature).
-Figure~\ref{fig:feature-example} shows the evidence this selection matches against,
-for one reviewed member of the \emph{small (multilingual)} group.
+Figure~\ref{fig:feature-example} shows one reviewed member of the
+\emph{small (multilingual)} group in the re-implemented feature viewer.
 Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs
 for the three raw antonym prompts: the paper's skeleton --- language-specific
 \emph{opposite} and \emph{quote} input groups, a shared multilingual \emph{small}
@@ -414,10 +414,7 @@ English page in each format are in Appendix~\ref{app:snapshots}.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/explorer_feature_example.png}
-\caption{The evidence a supernode selection matches against, for one reviewed member
-of the \emph{small (multilingual)} group: top/bottom output logits, the feature's
-activation distribution on the prompt token, and top-activating dataset examples
-(activating token highlighted).}
+\caption{An example of the feature, using the re-implemented feature viewer.}
 \label{fig:feature-example}
 \end{figure}
 

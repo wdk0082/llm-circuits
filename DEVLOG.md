@@ -1873,3 +1873,10 @@ en→zh and zh→fr byte-identical. Notebook Summary row updated. NB: the first 
 attempt executed an unpatched notebook because a stale-text assert aborted the patch
 mid-chain without gating nbconvert — redone with &&-linked gates and a pre-execution
 source check.
+
+**Report propagation (same fix).** `report/make_figures.py` now labels the language-swap
+expected curves with the paper's outcome tokens (`PAPER_OUT`, matching the notebook)
+instead of `RBEH` raw answers — only fr→en's legend changes ('large' → 'big'); the curve
+data had already picked up the corrected artifact JSON. `main.tex` §3.2: dropped the
+"under-reports this flip" parenthetical, added crossover 4.5x; Figure 4 caption states
+the expected-token convention. Layout unchanged (Fig 6 still p. 9, 17 pp).

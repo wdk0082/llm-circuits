@@ -463,9 +463,8 @@ paper endpoint.}
 \paragraph{Language swap.}
 Two of three directions reproduce at the paper's own scale
 (Figure~\ref{fig:swap-language}): en$\to$zh flips to \zh{大} ($0.636$, crossover
-$5.25\times$), and fr$\to$en turns the output English --- \emph{big} at $0.753$, the
-paper's exact token (the curve tracks the model's own answer ``large'' and so
-under-reports this flip) --- while zh$\to$fr never lands. Past ${\sim}9\times$ both
+$5.25\times$), and fr$\to$en turns the output English --- \emph{big} at $0.753$,
+the paper's exact token, crossover $4.5\times$ --- while zh$\to$fr never lands. Past ${\sim}9\times$ both
 working directions degrade into junk or wrong-language intrusions: this handle
 saturates. The quote features sit at L23--L34 (no early quote-position nodes survive
 pruning), so the causal handle is late rather than the paper's early detectors.
@@ -474,8 +473,10 @@ pruning), so the causal handle is late rather than the paper's early detectors.
 \centering
 \includegraphics[width=\textwidth]{figures/fig_ml_swap_language.pdf}
 \caption{The language swap (raw prompts only; chat pages have no quote nodes).
-Conventions as in Figure~\ref{fig:swap-operand}; the raw selection has no
-\emph{say large (zh)} group, so that readout box is absent in the en$\to$zh panel.}
+Conventions as in Figure~\ref{fig:swap-operand}; expected curves track the paper's
+outcome tokens (for en, \emph{big} rather than the model's own answer \emph{large});
+the raw selection has no \emph{say large (zh)} group, so that readout box is absent
+in the en$\to$zh panel.}
 \label{fig:swap-language}
 \end{figure}
 

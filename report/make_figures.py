@@ -272,6 +272,9 @@ def diagram(ax, spec):
 BEH = json.loads((ART / "behavior.json").read_text())
 RBEH = json.loads((ART / "raw_behavior.json").read_text())
 LANG_NAME = {"en": "English", "fr": "French", "zh": "Chinese"}
+# Language-swap expected tokens are the paper's Fig. B5 outcomes, not the model's
+# own raw answers (for en: "big", not "large") — must match the notebook's PAPER_OUT.
+PAPER_OUT = {"zh": "大", "en": "big", "fr": "grand"}
 
 
 def curve_panel(ax, r, base_tok, exp_tok, paper_s):
@@ -517,7 +520,7 @@ def fig_swap_language():
             axes[1][ci],
             r,
             RBEH["antonym"][a]["token"].strip(),
-            RBEH["antonym"][b]["token"].strip(),
+            PAPER_OUT[b],
             6.0,
         )
         axes[1][ci].set_xlabel("intervention strength (× donor act)", fontsize=7)

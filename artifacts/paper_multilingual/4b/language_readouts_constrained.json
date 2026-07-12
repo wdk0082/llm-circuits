@@ -4,14 +4,13 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p8": "pinned",
     "L30f27666@p8": "pinned",
-    "L31f11436@p8": "pinned",
+    "L31f56787@p8": "pinned",
     "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
     "L30f57180@p8": "pinned",
-    "L31f126548@p8": "pinned",
     "L30f156227@p8": "pinned"
    }
   },
@@ -19,21 +18,9 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 3,
+   "n_pinned": 1,
    "per_feature": {
-    "L33f114919@p8": "pinned",
-    "L23f7336@p8": "pinned",
-    "L31f134681@p8": "pinned"
-   }
-  },
-  "say_large_tgt_pct_stored": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 2,
-   "per_feature": {
-    "L27f4226@p8": "pinned",
-    "L25f110060@p8": "pinned"
+    "L32f48600@p8": "pinned"
    }
   },
   "quote_src_response_pct_baseline": {
@@ -70,40 +57,37 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p10": "pinned",
     "L30f27666@p10": "pinned",
-    "L31f11436@p10": "pinned",
+    "L31f56787@p10": "pinned",
     "L31f45673@p10": "pinned",
+    "L31f11436@p10": "pinned",
     "L30f57180@p10": "pinned",
-    "L31f126548@p10": "pinned",
     "L30f156227@p10": "pinned"
    }
   },
   "say_large_src_pct_baseline": {
    "mean_pct": 0.0,
-   "n_used": 3,
+   "n_used": 1,
    "n_skipped": 0,
-   "n_pinned": 3,
+   "n_pinned": 5,
    "per_feature": {
     "L33f62570@p10": 0.0,
     "L30f76139@p10": "pinned",
-    "L33f48380@p10": 0.0,
     "L31f17182@p10": "pinned",
     "L32f138876@p10": "pinned",
-    "L33f29273@p10": 0.0
+    "L31f27213@p10": "pinned",
+    "L28f10143@p10": "pinned"
    }
   },
   "say_large_tgt_pct_stored": {
-   "mean_pct": 121.6,
-   "n_used": 1,
+   "mean_pct": null,
+   "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 2,
+   "n_pinned": 1,
    "per_feature": {
-    "L33f114919@p10": 121.6,
-    "L23f7336@p10": "pinned",
-    "L31f134681@p10": "pinned"
+    "L32f48600@p10": "pinned"
    }
   },
   "quote_src_response_pct_baseline": {
@@ -140,25 +124,14 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p9": "pinned",
     "L30f27666@p9": "pinned",
-    "L31f11436@p9": "pinned",
+    "L31f56787@p9": "pinned",
     "L31f45673@p9": "pinned",
+    "L31f11436@p9": "pinned",
     "L30f57180@p9": "pinned",
-    "L31f126548@p9": "pinned",
     "L30f156227@p9": "pinned"
-   }
-  },
-  "say_large_src_pct_baseline": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 2,
-   "per_feature": {
-    "L27f4226@p9": "pinned",
-    "L25f110060@p9": "pinned"
    }
   },
   "say_large_tgt_pct_stored": {
@@ -169,10 +142,10 @@
    "per_feature": {
     "L33f62570@p9": "pinned",
     "L30f76139@p9": "pinned",
-    "L33f48380@p9": "pinned",
     "L31f17182@p9": "pinned",
     "L32f138876@p9": "pinned",
-    "L33f29273@p9": "pinned"
+    "L31f27213@p9": "pinned",
+    "L28f10143@p9": "pinned"
    }
   },
   "quote_src_response_pct_baseline": {

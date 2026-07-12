@@ -19,9 +19,11 @@ under `notebooks/supernodes/` (evidence per member, `approved:false`); a human r
 gate approves them; the notebooks load ONLY the approved file (`load_supernodes`
 refuses anything else) and load the persisted graphs. Both notebooks run this pipeline
 (constrained patching only). Addition's file is the grid-evidenced scan (delegated
-review); multilingual's is **export-driven** — groups hand-adjusted on the explorer
-review pages, "Export groups" JSONs ingested verbatim via `--from-exports`
-(user-reviewed 2026-07-11; the exports are committed under `supernodes/exports/`).
+review); multilingual has **two files** — `multilingual_{chat,raw}_4b.json`, separate
+per-format selections, earliest-layer-first, seeds materialized into the committed
+exports and approved as-is under user instruction (2026-07-12;
+`build_supernodes.py --materialize-seeds`; hand-edited exports via `--from-exports`
+remain the override channel).
 
 **Artifact naming.** Constrained patching is the only protocol; the `*_constrained`
 suffix is kept for continuity, and each JSON stores the chosen patch end layer ℓ plus

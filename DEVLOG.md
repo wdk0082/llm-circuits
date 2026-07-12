@@ -1573,3 +1573,76 @@ this entry + the repo are the record.
 1. Revisit ADDITION supernodes via the same export-review workflow.
 2. Consider raw-primary vs chat-primary framing (paper is raw-only; raw synonym
    caveat: FR echoes pet(it), ZH 小/微 near-tie).
+
+## Eighth session (2026-07-12, same day): v3 — chat/raw separated, earliest-first, executed
+
+Two user decisions after reviewing the v2 run: (1) rank every multilingual seed group
+**earliest layer first** ("for ease of constrained patching" — l_max = max steered
+layer is the sweep floor); (2) **separate the chat and raw selections completely**.
+The `small (multilingual)` late-layer membership question that started the discussion
+was answered first: the act-ranked v2 members were late mainly because the multilingual
+sharing gate (>=2 graphs) kills the early language-specific detokenization features,
+plus the act cap (two early shared candidates, L0f133356/L19f77492, had lost the cut).
+The seeds are the de facto selection under the accept-as-is flow, so re-seeding under
+the new policy changes the files — made explicit and reproducible via the new
+`--materialize-seeds` flag (writes the exports FROM the seeds, ingests them, and
+records the provenance in review_log).
+
+### What shipped
+
+- **build_supernodes v3**: per-format multilingual scans (each pools one format's
+  graphs; say-large exclusion sets and opposite/quote disjointness guards are
+  per-format), `early_first` cap ranking everywhere, ingest splits exports by page
+  format into `multilingual_{chat,raw}_<size>.json` (global (L,f) disjointness per
+  file; the same feature MAY sit in both formats' files), `--materialize-seeds`.
+  Old merged `multilingual_4b.json` removed; exports regenerated as the new record.
+- **Selection geometry** (drives everything): chat floors dropped — operation l_max
+  34->13 (antonym L7-13, synonym donors L4-9; the raw-only L34 member no longer joins
+  chat jobs), operand 32->22 (small L0-22 incl. the two early shared features, hot
+  donors L3-5). Raw stays late — antonym is a SINGLE L34 member, small L26-28, hot
+  L24-27, quote L23-34 (identical members to v2) — the 0.95-pruned raw pages keep no
+  early candidates at all. Raw has no `say large (zh)` (zero candidates) and a
+  single-member `say large (en)` (L32).
+- **multilingual.ipynb v3 executed** (13/13 cells, zero errors): loads both files,
+  each format's jobs steer only its own selection, absent-group guards print what a
+  selection lacks instead of failing.
+
+### Executed verdicts (full table in the notebook Summary)
+
+- **Operation swap: not reproduced in either regime — complementary failure modes,
+  both measured.** Raw: ell in {34,35}, direct-effect-only, p_exp <= 0.002, all
+  readouts pinned. Chat: full sweep room ([13,35], ell chosen 14-16) and the Fig B3
+  annotations READABLE for the first time — say small recruits to only 13-35% of its
+  donor level, say large falls to 91/77/34%, p(expected synonym) <= 0.001, baseline
+  stays top-1 (大 @ .998). Room without strength: the early members' small acts
+  (3-10) give deltas that move the say-stage a third of the way at best.
+- **Operand swap: same structure** — no flip in any of six jobs; chat readouts show
+  say cold recruited to 1.7-13% of donor level, say large down to 43-80%.
+- **Language swap: unchanged 2/3 success** (quote groups member-identical to v2):
+  en→zh 大 @ 0.636 (ell=35, crossover 5.5x), fr→en big @ 0.753 (the paper's exact
+  token), zh→fr null. Separation cost the v2 fr→en 121.6% recruitment reading (the
+  raw say-large-(en) single member sits AT ell=32 -> pinned; say large (zh) absent);
+  the surviving readable row, say large (fr) = 0.0%, still matches the paper's
+  old-language suppression.
+- **Shared core per format**: chat 107-in-all-three (of 437-621), raw 67 (of
+  239-439); the earliest-first chat `small` has 0/6 members on all three pages (its
+  early features are two-page) — the early operand features are the least
+  cross-lingual. Overlap / default language / scale: unchanged (0.107/0.089/0.077;
+  zh 0.766 > en 0.664 >> fr 0.309; 8b > 4b on every pair).
+- **The v2->v3 net insight**: Haiku's mid-network supernodes supplied protocol room
+  AND effect strength at once; Qwen3-4B's defensible selections offer one or the
+  other, never both — chat (early) has room but not strength, raw (late) has strength
+  (the acts are large) but no room. The language swap escapes because its late quote
+  features act via the direct path (ell=35 works).
+
+Prompt-format note: the swaps' forward passes run each format's own tokenized
+recipient (chat = full templated input, raw = paper completion + sink token);
+interventions are in-place per member (recorded node positions; donors at the
+operation-word span / operand token / final quote), only the measurement is fixed at
+the final position.
+
+### NEXT (user-stated intent, unchanged)
+
+1. Revisit ADDITION supernodes via the same export-review workflow.
+2. Raw-primary vs chat-primary framing: partially superseded by the v3 separation —
+   what remains open is which arm the paper-comparison headline should quote.

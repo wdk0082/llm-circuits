@@ -4,14 +4,13 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p8": "pinned",
     "L30f27666@p8": "pinned",
-    "L31f11436@p8": "pinned",
+    "L31f56787@p8": "pinned",
     "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
     "L30f57180@p8": "pinned",
-    "L31f126548@p8": "pinned",
     "L30f156227@p8": "pinned"
    }
   },
@@ -19,21 +18,9 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 3,
+   "n_pinned": 1,
    "per_feature": {
-    "L33f114919@p8": "pinned",
-    "L23f7336@p8": "pinned",
-    "L31f134681@p8": "pinned"
-   }
-  },
-  "say_large_zh": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 2,
-   "per_feature": {
-    "L27f4226@p8": "pinned",
-    "L25f110060@p8": "pinned"
+    "L32f48600@p8": "pinned"
    }
   }
  },
@@ -42,14 +29,13 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p8": "pinned",
     "L30f27666@p8": "pinned",
-    "L31f11436@p8": "pinned",
+    "L31f56787@p8": "pinned",
     "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
     "L30f57180@p8": "pinned",
-    "L31f126548@p8": "pinned",
     "L30f156227@p8": "pinned"
    }
   },
@@ -57,21 +43,9 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 3,
+   "n_pinned": 1,
    "per_feature": {
-    "L33f114919@p8": "pinned",
-    "L23f7336@p8": "pinned",
-    "L31f134681@p8": "pinned"
-   }
-  },
-  "say_large_zh": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 2,
-   "per_feature": {
-    "L27f4226@p8": "pinned",
-    "L25f110060@p8": "pinned"
+    "L32f48600@p8": "pinned"
    }
   }
  },
@@ -80,14 +54,13 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 7,
+   "n_pinned": 6,
    "per_feature": {
-    "L32f100307@p8": "pinned",
     "L30f27666@p8": "pinned",
-    "L31f11436@p8": "pinned",
+    "L31f56787@p8": "pinned",
     "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
     "L30f57180@p8": "pinned",
-    "L31f126548@p8": "pinned",
     "L30f156227@p8": "pinned"
    }
   },
@@ -95,21 +68,9 @@
    "mean_pct": null,
    "n_used": 0,
    "n_skipped": 0,
-   "n_pinned": 3,
+   "n_pinned": 1,
    "per_feature": {
-    "L33f114919@p8": "pinned",
-    "L23f7336@p8": "pinned",
-    "L31f134681@p8": "pinned"
-   }
-  },
-  "say_large_zh": {
-   "mean_pct": null,
-   "n_used": 0,
-   "n_skipped": 0,
-   "n_pinned": 2,
-   "per_feature": {
-    "L27f4226@p8": "pinned",
-    "L25f110060@p8": "pinned"
+    "L32f48600@p8": "pinned"
    }
   }
  }

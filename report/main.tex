@@ -506,28 +506,35 @@ attention probe is in Appendix~\ref{app:qk}.}
 
 \subsection{Cross-lingual overlap, scale, and the default language}\label{sec:exp:overlap}
 
+\paragraph{Cross-lingual overlap and scale.}
 Following the paper, we compute the per-layer intersection-over-union of the feature
 sets active anywhere in the context for translated paragraph pairs, against an
 unrelated-pair baseline, on 18 register-diverse parallel paragraphs (authored in
-English and translated to French and Chinese --- the paper's own corpus recipe).
-The paper's shape reproduces cleanly (Figure~\ref{fig:ml-overlap}): baseline-subtracted
-overlap is low at both ends and peaks mid-network, with mid-third means
+English and translated to French and Chinese --- the paper's own corpus recipe). The
+paper's shape reproduces cleanly (Figure~\ref{fig:ml-overlap}): overlap for translated
+pairs sits well above the unrelated-pair baseline, and the baseline-subtracted curves
+are low at both ends and peak mid-network, with mid-third means
 en-fr $0.198 >$ en-zh $0.175 >$ fr-zh $0.142$ --- the paper's pair ordering. The
 paper's \emph{scale} claim does not reproduce on a same-recipe transcoder pair
 (4B vs.\ 8B, both 36 layers and 163{,}840 features/layer): mid-third changes are
 $+6\%$\,/\,$-3\%$\,/\,$0\%$, with no emphasis on the non-alphabet-sharing pairs the
-paper highlights. Finally, the paper's Claude-specific claim that English is the
-mechanistic default: the mean direct decoder effect of the shared say-large features
-on the three answer tokens is zh $0.766 >$ en $0.664 \gg$ fr $0.309$ --- \emph{some}
-language is privileged, but for EN/ZH-trained Qwen3 the role is shared between English
-and Chinese.
+paper highlights.
+
+\paragraph{The default language.}
+The paper's Claude-specific claim is that English is the mechanistic default. Here
+the mean direct decoder effect of the shared say-large features on the three answer
+tokens is zh $0.766 >$ en $0.664 \gg$ fr $0.309$: \emph{some} language is privileged,
+but for EN/ZH-trained Qwen3 the role is shared between English and Chinese.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.62\textwidth]{figures/fig_ml_overlap.pdf}
-\caption{Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B;
-dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering
-reproduce; its cross-scale growth does not.}
+\includegraphics[width=\textwidth]{figures/fig_ml_overlap.pdf}
+\caption{Cross-lingual feature overlap by layer. \emph{Left:} 4B overlap for
+translated pairs (solid) against the unrelated-pair baseline (dashed); the residual
+baseline reflects the shared chat scaffold and the dictionary's granularity.
+\emph{Right:} baseline-subtracted curves, 4B (solid) vs.\ 8B (dashed, same-recipe
+transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale
+growth does not.}
 \label{fig:ml-overlap}
 \end{figure}
 

@@ -559,8 +559,19 @@ def fig_qk_probe():
 def fig_overlap():
     c4 = json.loads((ART / "overlap_curves.json").read_text())
     c8 = json.loads((REPO / "artifacts/paper_multilingual/8b/overlap_curves.json").read_text())
-    fig, ax = plt.subplots(figsize=(5.4, 3.0))
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 3.1))
     colors = {"en-fr": "#1f77b4", "en-zh": "#2ca02c", "fr-zh": "#9467bd"}
+    ax = axes[0]
+    for pair, col in colors.items():
+        ax.plot(c4[pair], color=col, lw=1.5, label=pair)
+        ax.plot(
+            c4[f"{pair}-baseline"], color=col, lw=1.1, ls="--", alpha=0.55, label=f"{pair} baseline"
+        )
+    ax.set_xlabel("layer")
+    ax.set_ylabel("IOU of active-feature sets")
+    ax.set_title("4B: translated pairs vs. unrelated-pair baseline", fontsize=8.5)
+    ax.legend(fontsize=6, ncol=2, frameon=False)
+    ax = axes[1]
     for pair, col in colors.items():
         ax.plot(
             np.array(c4[pair]) - np.array(c4[f"{pair}-baseline"]),
@@ -577,10 +588,13 @@ def fig_overlap():
             label=f"8B {pair}",
         )
     ax.set_xlabel("layer")
-    ax.set_ylabel("IOU − unrelated-pair baseline")
-    ax.legend(fontsize=6.5, ncol=2, frameon=False)
-    ax.grid(alpha=0.25, lw=0.4)
-    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_ylabel("IOU − baseline")
+    ax.set_title("baseline-subtracted (the paper's quantity), 4B vs. 8B", fontsize=8.5)
+    ax.legend(fontsize=6, ncol=2, frameon=False)
+    for ax in axes:
+        ax.grid(alpha=0.25, lw=0.4)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(labelsize=7)
     fig.tight_layout()
     fig.savefig(OUT / "fig_ml_overlap.pdf", bbox_inches="tight")
     plt.close(fig)

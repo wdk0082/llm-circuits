@@ -67,19 +67,23 @@
 \newlabel{fig:swap-language}{{4}{8}{The language swap (raw prompts only; chat pages have no quote nodes). Conventions as in Figure~\ref {fig:swap-operand}; the raw selection has no \emph {say large (zh)} group, so that readout box is absent in the en$\to $zh panel}{figure.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Cross-lingual overlap, scale, and the default language}{8}{subsection.3.3}\protected@file@percent }
 \newlabel{sec:exp:overlap}{{3.3}{8}{Cross-lingual overlap, scale, and the default language}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Cross-lingual overlap and scale.}{8}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The default language.}{8}{section*.12}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Verdicts}{8}{subsection.3.4}\protected@file@percent }
 \newlabel{sec:exp:verdicts}{{3.4}{8}{Verdicts}{subsection.3.4}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces The operation swap under the constrained protocol: no crossover in any configuration. Conventions as in Figure~\ref {fig:swap-operand}; the frozen-vs-live attention probe is in Appendix~\ref {app:qk}.}}{9}{figure.5}\protected@file@percent }
 \newlabel{fig:swap-operation}{{5}{9}{The operation swap under the constrained protocol: no crossover in any configuration. Conventions as in Figure~\ref {fig:swap-operand}; the frozen-vs-live attention probe is in Appendix~\ref {app:qk}}{figure.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not.}}{9}{figure.6}\protected@file@percent }
-\newlabel{fig:ml-overlap}{{6}{9}{Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not}{figure.6}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Verdicts vs.\ \citet  {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps}).}}{10}{table.1}\protected@file@percent }
-\newlabel{tab:verdicts}{{1}{10}{Verdicts vs.\ \citet {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps})}{table.1}{}}
 \bibstyle{unsrtnat}
 \bibdata{refs}
 \bibcite{ameisen2025circuit}{{1}{2025}{{Ameisen et~al.}}{{Ameisen, Lindsey, Pearce, Gurnee, Turner, Chen, Citro, Abrahams, Carter, Hosmer, et~al.}}}
 \bibcite{hanna2025circuittracer}{{2}{2025}{{Hanna et~al.}}{{Hanna, Piotrowski, Lindsey, and Ameisen}}}
 \bibcite{lindsey2025biology}{{3}{2025}{{Lindsey et~al.}}{{Lindsey, Gurnee, Ameisen, Chen, Pearce, Turner, Citro, Abrahams, Carter, Hosmer, et~al.}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Cross-lingual feature overlap by layer. \emph  {Left:} 4B overlap for translated pairs (solid) against the unrelated-pair baseline (dashed); the residual baseline reflects the shared chat scaffold and the dictionary's granularity. \emph  {Right:} baseline-subtracted curves, 4B (solid) vs.\ 8B (dashed, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not.}}{10}{figure.6}\protected@file@percent }
+\newlabel{fig:ml-overlap}{{6}{10}{Cross-lingual feature overlap by layer. \emph {Left:} 4B overlap for translated pairs (solid) against the unrelated-pair baseline (dashed); the residual baseline reflects the shared chat scaffold and the dictionary's granularity. \emph {Right:} baseline-subtracted curves, 4B (solid) vs.\ 8B (dashed, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not}{figure.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Verdicts vs.\ \citet  {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps}).}}{10}{table.1}\protected@file@percent }
+\newlabel{tab:verdicts}{{1}{10}{Verdicts vs.\ \citet {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps})}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Discussion}{10}{section.4}\protected@file@percent }
+\newlabel{sec:discussion}{{4}{10}{Discussion}{section.4}{}}
 \bibcite{olah2020zoom}{{4}{2020}{{Olah et~al.}}{{Olah, Cammarata, Schubert, Goh, Petrov, and Carter}}}
 \bibcite{elhage2021mathematical}{{5}{2021}{{Elhage et~al.}}{{Elhage, Nanda, Olsson, Henighan, Joseph, Mann, Askell, Bai, Chen, Conerly, et~al.}}}
 \bibcite{elhage2022superposition}{{6}{2022}{{Elhage et~al.}}{{Elhage, Hume, Olsson, Schiefer, Henighan, Kravec, Hatfield-Dodds, Lasenby, Drain, Chen, et~al.}}}
@@ -89,8 +93,6 @@
 \bibcite{rajamanoharan2024jumprelu}{{10}{2024}{{Rajamanoharan et~al.}}{{Rajamanoharan, Lieberum, Sonnerat, Conmy, Varma, Kram{\'a}r, and Nanda}}}
 \bibcite{dunefsky2024transcoders}{{11}{2024}{{Dunefsky et~al.}}{{Dunefsky, Chlenski, and Nanda}}}
 \bibcite{wang2023ioi}{{12}{2023}{{Wang et~al.}}{{Wang, Variengien, Conmy, Shlegeris, and Steinhardt}}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Discussion}{11}{section.4}\protected@file@percent }
-\newlabel{sec:discussion}{{4}{11}{Discussion}{section.4}{}}
 \bibcite{conmy2023acdc}{{13}{2023}{{Conmy et~al.}}{{Conmy, Mavor-Parker, Lynch, Heimersheim, and Garriga-Alonso}}}
 \bibcite{syed2024attribution}{{14}{2024}{{Syed et~al.}}{{Syed, Rager, and Conmy}}}
 \bibcite{marks2025sparse}{{15}{2025}{{Marks et~al.}}{{Marks, Rager, Michaud, Belinkov, Bau, and Mueller}}}
@@ -102,18 +104,18 @@
 \newlabel{tab:verification}{{2}{12}{Numerical verification of the reimplementation against circuit-tracer}{table.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {B}The ten prompts and their answers}{12}{appendix.B}\protected@file@percent }
 \newlabel{app:behaviour}{{B}{12}{The ten prompts and their answers}{appendix.B}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {C}Attribution graphs: chat format and explorer snapshots}{12}{appendix.C}\protected@file@percent }
-\newlabel{app:snapshots}{{C}{12}{Attribution graphs: chat format and explorer snapshots}{appendix.C}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces The ten graph prompts and the model's answer (first generated token). Not shown: the French and Chinese synonym behaviour used as operation-swap targets in Section~\ref {sec:exp:swaps} is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \begin  {CJK}{UTF8}{gbsn}小\end  {CJK}\,$\to $\,\begin  {CJK}{UTF8}{gbsn}小\end  {CJK}) in both formats --- and the hot-antonym targets are cold\,/\,F\,\textperiodcentered \,f(roid)\,/\,\begin  {CJK}{UTF8}{gbsn}冷\end  {CJK}.}}{13}{table.3}\protected@file@percent }
-\newlabel{tab:behaviour}{{3}{13}{The ten graph prompts and the model's answer (first generated token). Not shown: the French and Chinese synonym behaviour used as operation-swap targets in Section~\ref {sec:exp:swaps} is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \zh {小}\,$\to $\,\zh {小}) in both formats --- and the hot-antonym targets are cold\,/\,F\,\textperiodcentered \,f(roid)\,/\,\zh {冷}}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces The ten graph prompts and the model's answer (first generated token). Not shown: the French and Chinese synonym behaviour used as operation-swap targets in Section~\ref {sec:exp:swaps} is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \begin  {CJK}{UTF8}{gbsn}小\end  {CJK}\,$\to $\,\begin  {CJK}{UTF8}{gbsn}小\end  {CJK}) in both formats --- and the hot-antonym targets are cold\,/\,F\,\textperiodcentered \,f(roid)\,/\,\begin  {CJK}{UTF8}{gbsn}冷\end  {CJK}.}}{12}{table.3}\protected@file@percent }
+\newlabel{tab:behaviour}{{3}{12}{The ten graph prompts and the model's answer (first generated token). Not shown: the French and Chinese synonym behaviour used as operation-swap targets in Section~\ref {sec:exp:swaps} is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \zh {小}\,$\to $\,\zh {小}) in both formats --- and the hot-antonym targets are cold\,/\,F\,\textperiodcentered \,f(roid)\,/\,\zh {冷}}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Attribution graphs: chat format and explorer snapshots}{13}{appendix.C}\protected@file@percent }
+\newlabel{app:snapshots}{{C}{13}{Attribution graphs: chat format and explorer snapshots}{appendix.C}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Simplified attribution graphs for the three chat-format antonym prompts (conventions as in Figure~\ref {fig:ml-graphs}).}}{13}{figure.7}\protected@file@percent }
 \newlabel{fig:ml-graphs-chat}{{7}{13}{Simplified attribution graphs for the three chat-format antonym prompts (conventions as in Figure~\ref {fig:ml-graphs})}{figure.7}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups.}}{13}{figure.8}\protected@file@percent }
 \newlabel{fig:app-chat}{{8}{13}{Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups}{figure.8}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Explorer views of the raw open-quote antonym graphs (the paper's format).}}{14}{figure.9}\protected@file@percent }
 \newlabel{fig:app-raw}{{9}{14}{Explorer views of the raw open-quote antonym graphs (the paper's format)}{figure.9}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {D}The operation swap with live attention patterns}{15}{appendix.D}\protected@file@percent }
-\newlabel{app:qk}{{D}{15}{The operation swap with live attention patterns}{appendix.D}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces The frozen-vs-live attention probe for the operation swap (Section~\ref {sec:exp:swaps}): the paper-faithful chat configuration in fully-propagating mode with attention patterns frozen (top) vs.\ free to re-form (bottom). With live patterns the paper's exact outcome tokens appear (\emph  {little}, \emph  {pet}); frozen, nothing moves --- the swap's channel is QK-mediated. The en curves track the model's own chat answer ``tiny''; the top token past the crossover is \emph  {little} ($0.735$ at $15\times $).}}{15}{figure.10}\protected@file@percent }
-\newlabel{fig:qk-probe}{{10}{15}{The frozen-vs-live attention probe for the operation swap (Section~\ref {sec:exp:swaps}): the paper-faithful chat configuration in fully-propagating mode with attention patterns frozen (top) vs.\ free to re-form (bottom). With live patterns the paper's exact outcome tokens appear (\emph {little}, \emph {pet}); frozen, nothing moves --- the swap's channel is QK-mediated. The en curves track the model's own chat answer ``tiny''; the top token past the crossover is \emph {little} ($0.735$ at $15\times $)}{figure.10}{}}
-\gdef \@abspage@last{15}
+\@writefile{toc}{\contentsline {section}{\numberline {D}The operation swap with live attention patterns}{14}{appendix.D}\protected@file@percent }
+\newlabel{app:qk}{{D}{14}{The operation swap with live attention patterns}{appendix.D}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces The frozen-vs-live attention probe for the operation swap (Section~\ref {sec:exp:swaps}): the paper-faithful chat configuration in fully-propagating mode with attention patterns frozen (top) vs.\ free to re-form (bottom). With live patterns the paper's exact outcome tokens appear (\emph  {little}, \emph  {pet}); frozen, nothing moves --- the swap's channel is QK-mediated. The en curves track the model's own chat answer ``tiny''; the top token past the crossover is \emph  {little} ($0.735$ at $15\times $).}}{14}{figure.10}\protected@file@percent }
+\newlabel{fig:qk-probe}{{10}{14}{The frozen-vs-live attention probe for the operation swap (Section~\ref {sec:exp:swaps}): the paper-faithful chat configuration in fully-propagating mode with attention patterns frozen (top) vs.\ free to re-form (bottom). With live patterns the paper's exact outcome tokens appear (\emph {little}, \emph {pet}); frozen, nothing moves --- the swap's channel is QK-mediated. The en curves track the model's own chat answer ``tiny''; the top token past the crossover is \emph {little} ($0.735$ at $15\times $)}{figure.10}{}}
+\gdef \@abspage@last{14}

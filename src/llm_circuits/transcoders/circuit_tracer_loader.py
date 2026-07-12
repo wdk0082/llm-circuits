@@ -52,7 +52,10 @@ def load_transcoder(
         spec_or_repo: Either a size key (e.g. ``"0.6b"``), a :class:`ModelSpec`,
             or a raw HF repo id string like ``"mwhanna/qwen3-0.6b-transcoders-lowl0"``.
         device: Torch device. ``None`` uses the default from settings.
-        dtype: Torch dtype override.
+        dtype: Torch dtype override. Also the dtype of the on-disk cache written on a
+            first load (``None`` keeps circuit-tracer's fp32 default — for the bf16
+            mwhanna repos pass ``torch.bfloat16`` to halve the cache losslessly, per
+            the CLAUDE.md perf notes).
         lazy_decoder: If ``True``, decoder weights are loaded lazily.
         lazy_encoder: If ``True``, encoder weights are loaded lazily.
         cache_dir: Local directory for cached transcoders. Defaults to
@@ -100,12 +103,17 @@ def load_transcoder(
         return LoadedTranscoder(transcoder=transcoder_obj, config=config, repo_id=repo_id)
 
     # --- Not cached: download, cache, then load from cache -----------------------
+    # The disk cache is written at the REQUESTED dtype: circuit-tracer's fp32 default
+    # doubles the mwhanna bf16 repos on disk for nothing (a pure upcast), and at the
+    # 4b+8b pair that overflows a 369 GB studio disk (measured 2026-07-12: fp32 cached
+    # 121 GB for the 4b alone where bf16 is ~60 GB).
     log.info(
-        "Downloading transcoders [bold]%s[/bold] and caching to %s",
+        "Downloading transcoders [bold]%s[/bold] and caching to %s (dtype=%s)",
         repo_id,
         resolved_cache_dir,
+        torch_dtype,
     )
-    cache_transcoder(repo_id, cache_dir=resolved_cache_dir)
+    cache_transcoder(repo_id, cache_dir=resolved_cache_dir, dtype=dtype)
 
     transcoder_obj, config = load_transcoders_from_cache(
         repo_id,

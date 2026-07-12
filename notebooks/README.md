@@ -17,24 +17,28 @@ verdicts vs the paper are in each notebook's Summary and in `../DEVLOG.md`. Arti
 grids; `build_supernodes.py` (CPU) scans them and emits reviewable supernode files
 under `notebooks/supernodes/` (evidence per member, `approved:false`); a human review
 gate approves them; the notebooks load ONLY the approved file (`load_supernodes`
-refuses anything else) and load the persisted graphs. Addition runs this pipeline
-(constrained patching only); multilingual is mid-review.
+refuses anything else) and load the persisted graphs. Both notebooks run this pipeline
+(constrained patching only). Addition's file is the grid-evidenced scan (delegated
+review); multilingual's is **export-driven** — groups hand-adjusted on the explorer
+review pages, "Export groups" JSONs ingested verbatim via `--from-exports`
+(user-reviewed 2026-07-11; the exports are committed under `supernodes/exports/`).
 
-**Artifact naming.** Files with no prefix are the chat-format main sections; a `raw_*`
-prefix (multilingual only) is section G's rerun of the *same* experiment in the paper's
-raw open-quote completion format; a `*_constrained` suffix is the same experiment under
-the paper's **constrained-patching** protocol (the chosen patch end layer ℓ is stored in
-the JSON and printed in the cell) — the un-suffixed twin is the fully-propagating
-robustness variant. Each notebook's "What actually runs" cell (right under the title)
-tables the exact model inputs, formats, supernode-selection rules, and file inventory.
+**Artifact naming.** Constrained patching is the only protocol; the `*_constrained`
+suffix is kept for continuity, and each JSON stores the chosen patch end layer ℓ plus
+its decision curve per job. Multilingual swap files key each job by
+`{chat,raw}_{en,fr,zh}` — the paper's raw open-quote format and our chat adaptation run
+side by side in the same cell (the language swap is raw-only: its quote supernodes
+exist only on the raw pages). Each notebook's "What actually runs" cell (right under
+the title) tables the exact model inputs, formats, supernode files, and file inventory.
 
 Helpers are deliberately kept out of `src/llm_circuits/` — they are task-specific (prompt
 formats, operand-grid probes, swap-sweep protocols) and don't generalise.
 
-Execute on a GPU (A100-80GB ≈ 14–18 min per notebook with the eager-decoder load and warm
-caches — the constrained-patching ℓ-sweeps add ~1–2 min; a cold node first pays the
-~45 GB feature-label download inside the first graph build, ~20 min extra. Install deps
-with `uv sync --group notebook`):
+Execute on a GPU (A100-80GB ≈ 15–30 min per notebook with the eager-decoder load and warm
+caches. With the `supernode_inputs` dumps present the notebooks never build graphs, so the
+~45 GB feature-label cache is NOT needed; a cold node pays only the model+transcoder
+download (~19 GB for the 4b, more for the multilingual §H 8b pair). Install deps with
+`uv sync --group notebook`):
 
 ```bash
 cd notebooks

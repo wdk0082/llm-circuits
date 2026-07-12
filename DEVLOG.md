@@ -1788,3 +1788,26 @@ difference); 4b->8b overlap growth not reproduced.
 Remaining queue (unchanged): revisit ADDITION supernodes via the export-review
 workflow. The orphan branch `repro-dumps-4b` stays — it is the dump-restore path for
 fresh studios (disks do not persist).
+
+## Thirteenth session (2026-07-12, same day): package cleanup + rigorous seeding (chore/package-cleanup)
+
+Branch `chore/package-cleanup`. **src/ pass** (the package was already in good shape;
+targeted fixes only): `llm_circuits.utils` now actually re-exports `seed_everything`
+(the documented import path was broken); `seed_everything` upgraded — PYTHONHASHSEED +
+NumPy + torch CPU/CUDA, and a `deterministic=True` flag pinning cuDNN
+(deterministic kernels, no benchmark autotune; deliberately NOT
+torch.use_deterministic_algorithms — see the docstring); `py.typed` shipped (the
+package is fully annotated); `numpy` declared as a direct dependency (used by
+circuits/graph_pruning + attribution_graph, previously transitive); CLI
+`transcoder-cache` gained `--dtype bf16|fp16|fp32` so the documented bf16 cache
+discipline is reachable from the CLI; `direct_logit_effect` runs under `no_grad`
+(kills the requires_grad UserWarning that sat in the committed §G output). New
+`tests/test_utils.py`.
+
+**Rigorous seeding**: all three multilingual notebooks now call
+`seed_everything(SEED=0, deterministic=True)` at the top of their setup cells, before
+any forward. The multilingual paths are greedy generation on fixed prompts with a
+fixed corpus (no sampled code paths), so this is belt-and-braces — and the certifying
+rerun confirms it: **all three notebooks re-executed clean and every spot-checked
+verdict number is identical to the committed runs** (swaps, overlap, default
+language, scale, both extras).

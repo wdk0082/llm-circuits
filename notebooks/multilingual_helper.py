@@ -656,6 +656,7 @@ def top_token_probs(logit_row, tokenizer, k: int = 6):
 # ---------------------------------------------------------------------------
 
 
+@torch.no_grad()
 def direct_logit_effect(model, tc, layer: int, feature_idx: int, token_ids: dict[str, int]):
     """Direct effect of a feature's decoder output on each language's answer-token logit.
 

@@ -1,0 +1,12 @@
+/* Let very wide notebook outputs, tables, and code scroll horizontally inside
+   their own box rather than overflowing the page body. */
+.cell_output,
+.cell_output .output,
+div.highlight pre {
+    overflow-x: auto;
+}
+
+/* Give rendered-notebook code cells a touch more breathing room. */
+div.cell {
+    margin-bottom: 0.8rem;
+}

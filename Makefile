@@ -1,4 +1,4 @@
-.PHONY: install lint format test check all clean
+.PHONY: install lint format test check all clean docs docs-clean
 
 install:
 	uv sync --all-groups
@@ -16,6 +16,12 @@ test:
 check: lint test
 
 all: format check
+
+docs:
+	uv run --group docs sphinx-build -b html docs docs/_build/html
+
+docs-clean:
+	rm -rf docs/_build docs/notebooks
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

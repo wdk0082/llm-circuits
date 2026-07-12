@@ -44,6 +44,12 @@ serve = [
     "httpx>=0.28.1",
     "uvicorn>=0.49.0",
 ]
+docs = [
+    "sphinx>=7,<9",
+    "furo>=2024.1",
+    "myst-nb>=1.1",  # brings myst-parser; renders .md pages and .ipynb (execution off)
+    "sphinx-copybutton>=0.5",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true

@@ -35,6 +35,20 @@ uv run llm-circuits generate --key qwen3-0.6b --prompt "The capital of France is
 > **Backward compatibility:** Bare size keys like `--size 0.6b` still work and
 > resolve to the corresponding Qwen3 entry.
 
+## Documentation
+
+Full API docs and guides are built with [Sphinx](https://www.sphinx-doc.org/)
+(sources in [`docs/`](docs/)):
+
+```bash
+make docs      # -> docs/_build/html/index.html
+```
+
+The docs are organised around the two worked examples — a walkthrough of
+`examples/demo.py` and the rendered `notebooks/multilingual.ipynb` — plus a
+concepts guide, a CLI reference, and the autodoc API reference. See
+[`docs/index.md`](docs/index.md) for the entry point.
+
 ## Project structure
 
 ```

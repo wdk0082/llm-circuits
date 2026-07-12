@@ -234,3 +234,7 @@ scratch/
 hub/
 # Claude Code session state / persistent memory (agent-local, not project content)
 .claude/
+
+# Sphinx documentation build output + the notebook copy conf.py makes at build time
+docs/_build/
+docs/notebooks/

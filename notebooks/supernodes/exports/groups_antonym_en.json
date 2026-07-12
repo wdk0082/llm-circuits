@@ -1,0 +1,165 @@
+{
+ "example": "antonym_en",
+ "groups": [
+  {
+   "name": "antonym (multilingual)",
+   "nodes": [
+    {
+     "layer": 7,
+     "feature_idx": 79606,
+     "position": 7
+    },
+    {
+     "layer": 8,
+     "feature_idx": 663,
+     "position": 6
+    },
+    {
+     "layer": 9,
+     "feature_idx": 92049,
+     "position": 6
+    },
+    {
+     "layer": 11,
+     "feature_idx": 22932,
+     "position": 6
+    },
+    {
+     "layer": 13,
+     "feature_idx": 136136,
+     "position": 6
+    },
+    {
+     "layer": 13,
+     "feature_idx": 159589,
+     "position": 6
+    }
+   ]
+  },
+  {
+   "name": "small (multilingual)",
+   "nodes": [
+    {
+     "layer": 0,
+     "feature_idx": 133356,
+     "position": 9
+    },
+    {
+     "layer": 19,
+     "feature_idx": 77492,
+     "position": 9
+    },
+    {
+     "layer": 21,
+     "feature_idx": 120516,
+     "position": 9
+    },
+    {
+     "layer": 22,
+     "feature_idx": 113890,
+     "position": 9
+    },
+    {
+     "layer": 22,
+     "feature_idx": 42644,
+     "position": 9
+    },
+    {
+     "layer": 22,
+     "feature_idx": 38866,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "nodes": [
+    {
+     "layer": 23,
+     "feature_idx": 125341,
+     "position": 28
+    },
+    {
+     "layer": 27,
+     "feature_idx": 87470,
+     "position": 28
+    },
+    {
+     "layer": 29,
+     "feature_idx": 54298,
+     "position": 28
+    },
+    {
+     "layer": 30,
+     "feature_idx": 57180,
+     "position": 28
+    },
+    {
+     "layer": 30,
+     "feature_idx": 27666,
+     "position": 28
+    },
+    {
+     "layer": 30,
+     "feature_idx": 156227,
+     "position": 28
+    }
+   ]
+  },
+  {
+   "name": "say large (en)",
+   "nodes": [
+    {
+     "layer": 23,
+     "feature_idx": 7336,
+     "position": 28
+    },
+    {
+     "layer": 31,
+     "feature_idx": 134681,
+     "position": 28
+    },
+    {
+     "layer": 33,
+     "feature_idx": 114919,
+     "position": 28
+    }
+   ]
+  },
+  {
+   "name": "opposite (en)",
+   "nodes": [
+    {
+     "layer": 3,
+     "feature_idx": 147148,
+     "position": 6
+    },
+    {
+     "layer": 3,
+     "feature_idx": 144035,
+     "position": 6
+    },
+    {
+     "layer": 3,
+     "feature_idx": 116558,
+     "position": 6
+    },
+    {
+     "layer": 4,
+     "feature_idx": 50538,
+     "position": 6
+    },
+    {
+     "layer": 4,
+     "feature_idx": 74467,
+     "position": 6
+    },
+    {
+     "layer": 4,
+     "feature_idx": 115641,
+     "position": 6
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,155 @@
+{
+ "example": "antonym_zh",
+ "groups": [
+  {
+   "name": "antonym (multilingual)",
+   "nodes": [
+    {
+     "layer": 7,
+     "feature_idx": 79606,
+     "position": 8
+    },
+    {
+     "layer": 8,
+     "feature_idx": 663,
+     "position": 8
+    },
+    {
+     "layer": 9,
+     "feature_idx": 92049,
+     "position": 8
+    },
+    {
+     "layer": 11,
+     "feature_idx": 22932,
+     "position": 8
+    },
+    {
+     "layer": 13,
+     "feature_idx": 136136,
+     "position": 8
+    },
+    {
+     "layer": 13,
+     "feature_idx": 159589,
+     "position": 8
+    }
+   ]
+  },
+  {
+   "name": "small (multilingual)",
+   "nodes": [
+    {
+     "layer": 0,
+     "feature_idx": 133356,
+     "position": 4
+    },
+    {
+     "layer": 19,
+     "feature_idx": 77492,
+     "position": 4
+    },
+    {
+     "layer": 21,
+     "feature_idx": 120516,
+     "position": 4
+    },
+    {
+     "layer": 22,
+     "feature_idx": 42644,
+     "position": 4
+    },
+    {
+     "layer": 22,
+     "feature_idx": 38866,
+     "position": 4
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "nodes": [
+    {
+     "layer": 23,
+     "feature_idx": 125341,
+     "position": 29
+    },
+    {
+     "layer": 27,
+     "feature_idx": 87470,
+     "position": 29
+    },
+    {
+     "layer": 29,
+     "feature_idx": 54298,
+     "position": 29
+    },
+    {
+     "layer": 30,
+     "feature_idx": 57180,
+     "position": 29
+    },
+    {
+     "layer": 30,
+     "feature_idx": 27666,
+     "position": 29
+    },
+    {
+     "layer": 30,
+     "feature_idx": 156227,
+     "position": 29
+    }
+   ]
+  },
+  {
+   "name": "say large (zh)",
+   "nodes": [
+    {
+     "layer": 25,
+     "feature_idx": 110060,
+     "position": 29
+    },
+    {
+     "layer": 27,
+     "feature_idx": 4226,
+     "position": 29
+    }
+   ]
+  },
+  {
+   "name": "opposite (zh)",
+   "nodes": [
+    {
+     "layer": 0,
+     "feature_idx": 62257,
+     "position": 9
+    },
+    {
+     "layer": 3,
+     "feature_idx": 4356,
+     "position": 8
+    },
+    {
+     "layer": 3,
+     "feature_idx": 76730,
+     "position": 8
+    },
+    {
+     "layer": 4,
+     "feature_idx": 57811,
+     "position": 8
+    },
+    {
+     "layer": 4,
+     "feature_idx": 64950,
+     "position": 8
+    },
+    {
+     "layer": 4,
+     "feature_idx": 139793,
+     "position": 7
+    }
+   ]
+  }
+ ]
+}

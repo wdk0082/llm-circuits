@@ -122,3 +122,39 @@ class TestListRegistry:
     def test_all_keys_start_with_family(self):
         for key, spec in list_registry():
             assert key.startswith(spec.family)
+
+
+class TestLoadTranscoderCacheDtype:
+    def test_first_load_caches_at_requested_dtype(self, monkeypatch):
+        """A first (uncached) load must write the disk cache at the REQUESTED dtype —
+        circuit-tracer's fp32 default doubles the bf16 mwhanna repos on disk and
+        overflowed a 369 GB studio disk at the 4b+8b pair (2026-07-12)."""
+        import sys
+        from types import ModuleType, SimpleNamespace
+
+        import torch
+
+        import llm_circuits.transcoders.circuit_tracer_loader as loader
+
+        calls = {}
+        caching = ModuleType("circuit_tracer.utils.caching")
+        caching.is_cached = lambda repo, cache_dir: False
+        caching.load_transcoders_from_cache = lambda repo, **kw: (
+            SimpleNamespace(),
+            {"scan": repo},
+        )
+        caching.save_transcoders_to_cache = lambda repo, cache, **kw: calls.update(kw)
+        utils = ModuleType("circuit_tracer.utils")
+        utils.caching = caching
+        ct = ModuleType("circuit_tracer")
+        ct.utils = utils
+        monkeypatch.setitem(sys.modules, "circuit_tracer", ct)
+        monkeypatch.setitem(sys.modules, "circuit_tracer.utils", utils)
+        monkeypatch.setitem(sys.modules, "circuit_tracer.utils.caching", caching)
+
+        loader.load_transcoder("qwen3-4b", device="cpu", dtype=torch.bfloat16)
+        assert calls.get("dtype") is torch.bfloat16
+
+        calls.clear()
+        loader.load_transcoder("qwen3-4b", device="cpu")  # no dtype -> fp32 default
+        assert "dtype" not in calls

@@ -1,0 +1,60 @@
+{
+ "example": "raw_synonym_en",
+ "groups": [
+  {
+   "name": "synonym (multilingual)",
+   "nodes": [
+    {
+     "layer": 19,
+     "feature_idx": 47233,
+     "position": 4
+    },
+    {
+     "layer": 24,
+     "feature_idx": 94161,
+     "position": 2
+    },
+    {
+     "layer": 34,
+     "feature_idx": 47115,
+     "position": 1
+    }
+   ]
+  },
+  {
+   "name": "say small (multilingual)",
+   "nodes": [
+    {
+     "layer": 28,
+     "feature_idx": 76279,
+     "position": 8
+    },
+    {
+     "layer": 29,
+     "feature_idx": 78512,
+     "position": 8
+    },
+    {
+     "layer": 30,
+     "feature_idx": 82993,
+     "position": 8
+    },
+    {
+     "layer": 30,
+     "feature_idx": 62557,
+     "position": 8
+    },
+    {
+     "layer": 31,
+     "feature_idx": 117368,
+     "position": 8
+    },
+    {
+     "layer": 32,
+     "feature_idx": 162657,
+     "position": 8
+    }
+   ]
+  }
+ ]
+}

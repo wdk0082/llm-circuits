@@ -1,0 +1,190 @@
+{
+ "example": "raw_antonym_fr",
+ "groups": [
+  {
+   "name": "antonym (multilingual)",
+   "nodes": [
+    {
+     "layer": 34,
+     "feature_idx": 67478,
+     "position": 1
+    }
+   ]
+  },
+  {
+   "name": "small (multilingual)",
+   "nodes": [
+    {
+     "layer": 26,
+     "feature_idx": 163015,
+     "position": 7
+    },
+    {
+     "layer": 26,
+     "feature_idx": 30805,
+     "position": 7
+    },
+    {
+     "layer": 26,
+     "feature_idx": 58650,
+     "position": 7
+    },
+    {
+     "layer": 27,
+     "feature_idx": 29715,
+     "position": 7
+    },
+    {
+     "layer": 28,
+     "feature_idx": 36616,
+     "position": 7
+    },
+    {
+     "layer": 28,
+     "feature_idx": 97177,
+     "position": 7
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "nodes": [
+    {
+     "layer": 30,
+     "feature_idx": 27666,
+     "position": 10
+    },
+    {
+     "layer": 30,
+     "feature_idx": 57180,
+     "position": 10
+    },
+    {
+     "layer": 30,
+     "feature_idx": 156227,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 11436,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 45673,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 56787,
+     "position": 10
+    }
+   ]
+  },
+  {
+   "name": "say large (fr)",
+   "nodes": [
+    {
+     "layer": 28,
+     "feature_idx": 10143,
+     "position": 10
+    },
+    {
+     "layer": 30,
+     "feature_idx": 76139,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 17182,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 27213,
+     "position": 10
+    },
+    {
+     "layer": 32,
+     "feature_idx": 138876,
+     "position": 10
+    },
+    {
+     "layer": 33,
+     "feature_idx": 62570,
+     "position": 10
+    }
+   ]
+  },
+  {
+   "name": "quote (fr)",
+   "nodes": [
+    {
+     "layer": 29,
+     "feature_idx": 119392,
+     "position": 10
+    },
+    {
+     "layer": 30,
+     "feature_idx": 67339,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 111489,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 52945,
+     "position": 10
+    },
+    {
+     "layer": 31,
+     "feature_idx": 149982,
+     "position": 10
+    },
+    {
+     "layer": 32,
+     "feature_idx": 145845,
+     "position": 10
+    }
+   ]
+  },
+  {
+   "name": "opposite (fr)",
+   "nodes": [
+    {
+     "layer": 22,
+     "feature_idx": 105763,
+     "position": 2
+    },
+    {
+     "layer": 23,
+     "feature_idx": 64429,
+     "position": 3
+    },
+    {
+     "layer": 24,
+     "feature_idx": 99852,
+     "position": 2
+    },
+    {
+     "layer": 24,
+     "feature_idx": 38930,
+     "position": 2
+    },
+    {
+     "layer": 26,
+     "feature_idx": 23735,
+     "position": 2
+    },
+    {
+     "layer": 26,
+     "feature_idx": 18606,
+     "position": 2
+    }
+   ]
+  }
+ ]
+}

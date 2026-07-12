@@ -1,0 +1,2052 @@
+{
+ "task": "multilingual",
+ "size": "4b",
+ "format": "chat",
+ "built_from": "/teamspace/studios/this_studio/llm-circuits/artifacts/supernode_inputs/4b@82b3e72",
+ "selection": "explorer-export",
+ "source_files": [
+  "groups_antonym_en.json",
+  "groups_antonym_fr.json",
+  "groups_antonym_zh.json",
+  "groups_hot_en.json",
+  "groups_synonym_en.json"
+ ],
+ "max_members": 6,
+ "supernodes": [
+  {
+   "name": "antonym (multilingual)",
+   "paper_name": "antonym",
+   "role": "source",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 7,
+     "feature": 79606,
+     "position": 7,
+     "act": 9.0625,
+     "influence": 0.005476,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "反转",
+       " bets",
+       "东路",
+       "tti",
+       "istar"
+      ],
+      "example": " اقدامات⏎Antonyms For Retrace Steps , Opposite⟦ to⟧ Retrace Steps⏎Retrace Steps Urdu Meani",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 9.0625,
+      "antonym_fr": 10.25,
+      "antonym_zh": 10.5
+     },
+     "positions": {
+      "antonym_en": 7,
+      "antonym_fr": 9,
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 8,
+     "feature": 663,
+     "position": 6,
+     "act": 9.5625,
+     "influence": 0.003074,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Advanced",
+       "看好",
+       "iments",
+       "coe",
+       "粉"
+      ],
+      "example": " with ball (thrower). The fourth player (defender) stands⟦ opposite⟧ thrower, between and ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 9.5625,
+      "antonym_fr": 6.9688,
+      "antonym_zh": 6.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 13,
+     "feature": 159589,
+     "position": 6,
+     "act": 5.0938,
+     "influence": 0.000789,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " inversion",
+       " invert",
+       " opposite",
+       "invert",
+       " reversal"
+      ],
+      "example": " some mysterious reason, it weakens and does a complete 18⟦0⟧.⏎Now, a team from the Univer",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 5.0938,
+      "antonym_zh": 7.0312
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 11,
+     "feature": 22932,
+     "position": 6,
+     "act": 6.1562,
+     "influence": 0.000987,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " syncing",
+       "anske",
+       " Bosch",
+       "要紧",
+       "形状"
+      ],
+      "example": " still trying to find backers for the new enterprise.⏎v. having the⟦ opposite⟧ effect to t",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 6.1562,
+      "antonym_fr": 6.0,
+      "antonym_zh": 6.6875
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_fr": 8,
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 13,
+     "feature": 136136,
+     "position": 6,
+     "act": 6.3438,
+     "influence": 0.000704,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "issement",
+       "ARRIER",
+       "垫",
+       "dealloc",
+       "辙"
+      ],
+      "example": " water⏎term used to describe material through which water cannot move quickly;⟦ opposite⟧ ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 6.3438,
+      "antonym_zh": 6.4375
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 9,
+     "feature": 92049,
+     "position": 6,
+     "act": 5.2188,
+     "influence": 0.001094,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "RefPtr",
+       "refer",
+       "后再",
+       "準",
+       "Fed"
+      ],
+      "example": " work: the McGill University Union, which stands on Sherbrooke Street⟦ opposite⟧ the McGil",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 5.2188,
+      "antonym_zh": 4.3438
+     },
+     "positions": {
+      "antonym_en": 6,
+      "antonym_zh": 8
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "small (multilingual)",
+   "paper_name": "small",
+   "role": "source",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 22,
+     "feature": 113890,
+     "position": 9,
+     "act": 9.6875,
+     "influence": 0.020359,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " mistake",
+       " Sized",
+       "gest",
+       " intestine",
+       "不小"
+      ],
+      "example": " can put the characters literally.)⏎- a, abbr, b,⟦ big⟧, blockquote, br, caption, center, ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 9.6875,
+      "antonym_fr": 7.1875
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_fr": 12
+     }
+    },
+    {
+     "layer": 22,
+     "feature": 42644,
+     "position": 9,
+     "act": 6.0,
+     "influence": 0.008491,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "ings",
+       " enough",
+       " intestine",
+       "ness",
+       "疵"
+      ],
+      "example": " Queensland Government⏎© Queensland Government⏎Native to sub-Saharan Africa, the⟦ small⟧ h",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 6.0,
+      "antonym_zh": 4.75
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     }
+    },
+    {
+     "layer": 0,
+     "feature": 133356,
+     "position": 9,
+     "act": 5.9688,
+     "influence": 0.039863,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "wares",
+       " sized",
+       " intestine",
+       "ness",
+       "atur"
+      ],
+      "example": "<|im_start|>user⏎The⟦ small⟧ moving spots which are sometimes seen in the focus area of vi",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 5.9688,
+      "antonym_zh": 4.25
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     }
+    },
+    {
+     "layer": 22,
+     "feature": 38866,
+     "position": 9,
+     "act": 5.625,
+     "influence": 0.007125,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "ingly",
+       "踊",
+       "omite",
+       " enough",
+       "izing"
+      ],
+      "example": "Traditions Garden Lecture Series.”⏎Suitable for backyards as well as⟦ small⟧ scale farms, ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 5.625,
+      "antonym_zh": 4.2188
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     }
+    },
+    {
+     "layer": 21,
+     "feature": 120516,
+     "position": 9,
+     "act": 5.4688,
+     "influence": 0.00635,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "至上",
+       " bur",
+       " conduct",
+       "eren",
+       " enough"
+      ],
+      "example": " language learners, to help you on your quest…⏎1. Set yourself⟦ small⟧ goals. Learning Eng",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 5.4688,
+      "antonym_zh": 4.125
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     }
+    },
+    {
+     "layer": 19,
+     "feature": 77492,
+     "position": 9,
+     "act": 4.1562,
+     "influence": 0.007837,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " taskId",
+       "stadt",
+       "und",
+       "-hearted",
+       "serrat"
+      ],
+      "example": " table above shows some characteristics of the antenna. It is based upon a⟦ small⟧ 5 degre",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 4.1562,
+      "antonym_zh": 3.4844
+     },
+     "positions": {
+      "antonym_en": 9,
+      "antonym_zh": 4
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say large (multilingual)",
+   "paper_name": "say large",
+   "role": "readout",
+   "graph": "antonym_en;antonym_fr;antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 30,
+     "feature": 27666,
+     "position": 28,
+     "act": 17.625,
+     "influence": 0.024252,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "巨型",
+       "巨大的",
+       "巨大",
+       " giant",
+       "巨"
+      ],
+      "example": "olithic communities used stone. They made dolmens and megalithic⟦ (⟧large stone) monuments",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 17.625,
+      "antonym_fr": 34.75,
+      "antonym_zh": 20.0
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 30,
+     "feature": 57180,
+     "position": 28,
+     "act": 23.0,
+     "influence": 0.019167,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "small",
+       " low",
+       " large",
+       " short",
+       " small"
+      ],
+      "example": " Most of these pregnancies are unplanned and unintentional.⏎Getting pregnant at⟦ such⟧ a y",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 23.0,
+      "antonym_fr": 19.0,
+      "antonym_zh": 23.375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 30,
+     "feature": 156227,
+     "position": 28,
+     "act": 14.125,
+     "influence": 0.021655,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " largest",
+       "较大",
+       "更大的",
+       "较大的",
+       " larger"
+      ],
+      "example": " your brain to stay positive⏎1. Express gratitude.⏎Negative events lo⟦om⟧ large unless you",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 14.125,
+      "antonym_fr": 15.0,
+      "antonym_zh": 12.625
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 27,
+     "feature": 87470,
+     "position": 28,
+     "act": 4.7812,
+     "influence": 0.003057,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "大的",
+       " strongly",
+       " high",
+       "强",
+       " strong"
+      ],
+      "example": " by the cooling rate. Extrusive rocks cooled quicly and therefore⟦ form⟧ a more homogenous",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 4.7812,
+      "antonym_fr": 6.8125,
+      "antonym_zh": 5.6562
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 29,
+     "feature": 54298,
+     "position": 28,
+     "act": 3.0625,
+     "influence": 0.001547,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " bigger",
+       "大型",
+       " large",
+       " Larger",
+       " larger"
+      ],
+      "example": ". Having a source of alternative energy to power your devices, both small⟦ and⟧ medium, ca",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.0625,
+      "antonym_zh": 6.0
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 23,
+     "feature": 125341,
+     "position": 28,
+     "act": 3.875,
+     "influence": 0.000999,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " hunts",
+       "-Origin",
+       " fer",
+       "addin",
+       "人大代表"
+      ],
+      "example": " for most people, it’s better to not lose $20 than⟦ to⟧ find $20. What this means for reta",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.875,
+      "antonym_fr": 5.9375,
+      "antonym_zh": 5.375
+     },
+     "positions": {
+      "antonym_en": 28,
+      "antonym_fr": 36,
+      "antonym_zh": 29
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say large (en)",
+   "paper_name": "say large (en)",
+   "role": "readout",
+   "graph": "antonym_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 33,
+     "feature": 114919,
+     "position": 28,
+     "act": 9.25,
+     "influence": 0.001125,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Big",
+       " True",
+       " Simple",
+       " Very",
+       " Easy"
+      ],
+      "example": "-64 by Professional Coin Grading Service.⏎What Makes This Penny⟦ so⟧ Special?⏎In the 1990s",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 9.25
+     },
+     "positions": {
+      "antonym_en": 28
+     }
+    },
+    {
+     "layer": 23,
+     "feature": 7336,
+     "position": 28,
+     "act": 3.625,
+     "influence": 0.002093,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "主演",
+       " large",
+       " millennium",
+       "OfYear",
+       "大型"
+      ],
+      "example": " of stars in a stellar region, to a galaxy, and finally to⟦ a⟧ cluster of galaxies.⏎The lo",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.625
+     },
+     "positions": {
+      "antonym_en": 28
+     }
+    },
+    {
+     "layer": 31,
+     "feature": 134681,
+     "position": 28,
+     "act": 2.0312,
+     "influence": 0.001202,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "全",
+       " full",
+       "large",
+       " big",
+       " large"
+      ],
+      "example": " tens of inputs and outputs, in a housing integral with the processor,⟦ to⟧ large rack-mou",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 2.0312
+     },
+     "positions": {
+      "antonym_en": 28
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "opposite (en)",
+   "paper_name": "opposite (en)",
+   "role": "input",
+   "graph": "antonym_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 4,
+     "feature": 50538,
+     "position": 6,
+     "act": 3.9531,
+     "influence": 0.000866,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [],
+      "example": "",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.9531
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 147148,
+     "position": 6,
+     "act": 3.9062,
+     "influence": 0.009757,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "agenta",
+       "semb",
+       "分局",
+       "tributes",
+       ".term"
+      ],
+      "example": "evsky Island forms the northwestern corner of the central city. Opp⟦osite⟧ the Admiralty a",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.9062
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 74467,
+     "position": 6,
+     "act": 3.4219,
+     "influence": 0.003309,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "amen",
+       "电磁",
+       "nik",
+       "cold",
+       " cold"
+      ],
+      "example": " in favor of rocks and pebbles. In fact, just the⟦ opposite⟧ is true. So, whether you’re a",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.4219
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 144035,
+     "position": 6,
+     "act": 3.1094,
+     "influence": 0.007552,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       ".term",
+       "泌",
+       "_CLASSES",
+       "ialect",
+       "semb"
+      ],
+      "example": " Often with small, recurved prickles⏎LEAVES: Opp⟦osite⟧, elliptic, toothed at margins, hai",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 3.1094
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 116558,
+     "position": 6,
+     "act": 2.7969,
+     "influence": 0.006305,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "(mat",
+       "ibold",
+       " chim",
+       " fig",
+       "ialect"
+      ],
+      "example": " (　　)⏎A: The absolute values of two numbers that are⟦ opposite⟧ to each other are equal.⏎B",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 2.7969
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 115641,
+     "position": 6,
+     "act": 2.5312,
+     "influence": 0.001693,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "倒",
+       "刹",
+       "ingo",
+       "��",
+       "blade"
+      ],
+      "example": "رنا اقدامات⏎Antonyms For Retrace Steps ,⟦ Opp⟧osite to Retrace Steps⏎Retrace Steps Urdu Me",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_en": 2.5312
+     },
+     "positions": {
+      "antonym_en": 6
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say large (fr)",
+   "paper_name": "say large (fr)",
+   "role": "readout",
+   "graph": "antonym_fr",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 33,
+     "feature": 62570,
+     "position": 36,
+     "act": 24.625,
+     "influence": 0.001251,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "idders",
+       "椅",
+       "ovolta",
+       "过",
+       "过大"
+      ],
+      "example": "-1715), the \"The Sun King\" (R⟦oi⟧ soleil), was the king of France from childhood to old ag",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 24.625
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    },
+    {
+     "layer": 30,
+     "feature": 76139,
+     "position": 36,
+     "act": 22.375,
+     "influence": 0.014477,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "拿出来",
+       "偏差",
+       "很明显",
+       "的一大",
+       "正品"
+      ],
+      "example": "os could arrive from the east with his war elephants and deliver the coup⟦ de⟧ grace. Beca",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 22.375
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    },
+    {
+     "layer": 31,
+     "feature": 17182,
+     "position": 36,
+     "act": 22.0,
+     "influence": 0.00571,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Reporter",
+       "长大了",
+       " pos",
+       " est",
+       "_guard"
+      ],
+      "example": " (aged between 9 and 16 months; Stagion⟦ato⟧ 16 mesi (over 16 months), and Ris",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 22.0
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    },
+    {
+     "layer": 32,
+     "feature": 138876,
+     "position": 36,
+     "act": 20.375,
+     "influence": 0.014866,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " huge",
+       "大的",
+       "大",
+       " big",
+       " large"
+      ],
+      "example": " displayed parity.⏎- MIN/MAX- The correct answer is the smallest⟦/l⟧argest of the four pos",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 20.375
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    },
+    {
+     "layer": 31,
+     "feature": 45673,
+     "position": 36,
+     "act": 17.5,
+     "influence": 0.01198,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "雄",
+       "辽",
+       " grand",
+       "宏",
+       " vast"
+      ],
+      "example": " earth OR Mother Land , Its said “ Let the Mother Earth be broad⟦ and⟧ stable upon which a",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 17.5
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    },
+    {
+     "layer": 28,
+     "feature": 10143,
+     "position": 36,
+     "act": 7.8125,
+     "influence": 0.003509,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " largo",
+       "large",
+       "larg",
+       " larg",
+       " large"
+      ],
+      "example": " 3 to 6 months. It is primarily a disease of large⟦ or⟧ giant breeds of dogs, although the",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 7.8125
+     },
+     "positions": {
+      "antonym_fr": 36
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "opposite (fr)",
+   "paper_name": "opposite (fr)",
+   "role": "input",
+   "graph": "antonym_fr",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 16,
+     "feature": 45664,
+     "position": 8,
+     "act": 9.0625,
+     "influence": 0.000827,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [],
+      "example": "",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 9.0625
+     },
+     "positions": {
+      "antonym_fr": 8
+     }
+    },
+    {
+     "layer": 23,
+     "feature": 64429,
+     "position": 8,
+     "act": 8.8125,
+     "influence": 0.001339,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "湘西",
+       "湖南省",
+       "巴黎",
+       "法国",
+       " France"
+      ],
+      "example": ", Swedes, Icelanders, Germans, Enghsh, and⟦ French⟧ all came originally from the same stoc",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 8.8125
+     },
+     "positions": {
+      "antonym_fr": 8
+     }
+    },
+    {
+     "layer": 8,
+     "feature": 34489,
+     "position": 8,
+     "act": 6.0625,
+     "influence": 0.002019,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " inversion",
+       "描",
+       "aea",
+       " adultes",
+       "新闻网"
+      ],
+      "example": " Problem Generator, that turns the “computational knowledge engine” on its⟦ head⟧.⏎\"The Pr",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 6.0625
+     },
+     "positions": {
+      "antonym_fr": 8
+     }
+    },
+    {
+     "layer": 10,
+     "feature": 4021,
+     "position": 8,
+     "act": 5.375,
+     "influence": 0.001003,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "毒素",
+       "@stop",
+       " jerseys",
+       "aires",
+       "olas"
+      ],
+      "example": " (q.v.). He also wrote polemics against Semi-Pel⟦ag⟧ianism (q.v.), the doctrine condemned ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_fr": 5.375
+     },
+     "positions": {
+      "antonym_fr": 8
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say large (zh)",
+   "paper_name": "say large (zh)",
+   "role": "readout",
+   "graph": "antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 27,
+     "feature": 4226,
+     "position": 29,
+     "act": 5.2188,
+     "influence": 0.001592,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " tipped",
+       "urally",
+       "塘",
+       "istor",
+       "大规模"
+      ],
+      "example": " cholesterol levels. Of course they are still fats and so should not be⟦ consumed⟧ in exce",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 5.2188
+     },
+     "positions": {
+      "antonym_zh": 29
+     }
+    },
+    {
+     "layer": 25,
+     "feature": 110060,
+     "position": 29,
+     "act": 2.6875,
+     "influence": 0.000684,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "大大提高",
+       " HISTORY",
+       "Pk",
+       "此种",
+       " Coun"
+      ],
+      "example": " to be talking about something specific in order to be saying it's the⟦ same⟧",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 2.6875
+     },
+     "positions": {
+      "antonym_zh": 29
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "opposite (zh)",
+   "paper_name": "opposite (zh)",
+   "role": "input",
+   "graph": "antonym_zh",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 4,
+     "feature": 57811,
+     "position": 8,
+     "act": 4.4688,
+     "influence": 0.002289,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "dff",
+       "DROP",
+       "Purpose",
+       "DF",
+       "楼上"
+      ],
+      "example": " at contingent⏎First Known Use: 15th century⏎Syn⟦onym⟧ Discussion of contaminate⏎Rhymes wi",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 4.4688
+     },
+     "positions": {
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 64950,
+     "position": 8,
+     "act": 3.8281,
+     "influence": 0.001031,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "良",
+       "def",
+       "网讯",
+       "iba",
+       "oga"
+      ],
+      "example": " Act⏎Section 8 and Section 9 of the General Nuis⟦ance⟧ and General Sanitation Regulation (",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 3.8281
+     },
+     "positions": {
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 4356,
+     "position": 8,
+     "act": 3.0938,
+     "influence": 0.000958,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "ilio",
+       "狄",
+       " Jacobs",
+       " Short",
+       " brief"
+      ],
+      "example": "<|im_start|>user⏎In simple terms, Aquatic N⟦uis⟧ance Species (ANS) are aquatic and terrest",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 3.0938
+     },
+     "positions": {
+      "antonym_zh": 8
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 139793,
+     "position": 7,
+     "act": 2.9688,
+     "influence": 0.001117,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "的问题",
+       "_meter",
+       "ITU",
+       "如果是",
+       "imu"
+      ],
+      "example": " F and was used first by the Royal Artillery as a 'Light⟦ Anti⟧-Aircraft Practice Camp'. F",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 2.9688
+     },
+     "positions": {
+      "antonym_zh": 7
+     }
+    },
+    {
+     "layer": 0,
+     "feature": 62257,
+     "position": 9,
+     "act": 2.75,
+     "influence": 0.000761,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "avras",
+       "_here",
+       "Phrase",
+       " phrase",
+       "inals"
+      ],
+      "example": " that is a need or a want⏎Money Management Key Words⏎Key⟦ words⟧ in Money Management Chapt",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 2.75
+     },
+     "positions": {
+      "antonym_zh": 9
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 76730,
+     "position": 8,
+     "act": 2.4531,
+     "influence": 0.000723,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "itize",
+       "矗",
+       "alt",
+       "acular",
+       "佛法"
+      ],
+      "example": " they operate by logical processes, will unquestioningly process unintended, even nons⟦ens",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "antonym_zh": 2.4531
+     },
+     "positions": {
+      "antonym_zh": 8
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "hot (multilingual)",
+   "paper_name": "hot",
+   "role": "donor",
+   "graph": "hot_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 5,
+     "feature": 134029,
+     "position": 9,
+     "act": 4.7188,
+     "influence": 0.014146,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "暖",
+       " thermal",
+       "暧",
+       "散热",
+       "热"
+      ],
+      "example": " purification and carbon sequestration are very important. The benefits of the⟦ warmth⟧ do",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 4.7188
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 32249,
+     "position": 9,
+     "act": 3.2344,
+     "influence": 0.008071,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " m",
+       "defs",
+       " Eh",
+       "准入",
+       "再现"
+      ],
+      "example": "<|im_start|>user⏎⟦Hot⟧spots > Hamakua > Museum >⏎Around the turn-of-the-century",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 3.2344
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 75392,
+     "position": 9,
+     "act": 3.0625,
+     "influence": 0.015788,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "沿着",
+       " aunt",
+       " Erdogan",
+       "вит",
+       "itore"
+      ],
+      "example": " only cause significant deforestation in one of the world’s reaming biodiversity⟦ hot⟧spot",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 3.0625
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    },
+    {
+     "layer": 5,
+     "feature": 18203,
+     "position": 9,
+     "act": 2.9844,
+     "influence": 0.003051,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Dead",
+       "剥离",
+       "adera",
+       "illa",
+       "illas"
+      ],
+      "example": " what is lcm, show how to find the least common multiple and show⟦ hot⟧ to",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 2.9844
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    },
+    {
+     "layer": 3,
+     "feature": 131394,
+     "position": 9,
+     "act": 2.8125,
+     "influence": 0.016228,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "沿着",
+       " kut",
+       "有用",
+       "围",
+       "_HOT"
+      ],
+      "example": ".org or see our contact page⏎Study Links California Hospitalizations to Hot⟦ter⟧ Weather⏎T",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 2.8125
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    },
+    {
+     "layer": 5,
+     "feature": 51825,
+     "position": 9,
+     "act": 2.1562,
+     "influence": 0.002667,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "币",
+       " tan",
+       " endian",
+       "发达",
+       "与否"
+      ],
+      "example": " right climate is essential to grow premium wine grapes. Ideally it will be⟦ hot⟧ during t",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 2.1562
+     },
+     "positions": {
+      "hot_en": 9
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say cold (multilingual)",
+   "paper_name": "say cold",
+   "role": "readout",
+   "graph": "hot_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 31,
+     "feature": 160128,
+     "position": 28,
+     "act": 34.0,
+     "influence": 0.054495,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "warm",
+       "冷",
+       " hot",
+       " cold",
+       " warm"
+      ],
+      "example": " our hair and nails looking perfect at all times. Especially when the weather⟦ turns⟧ warm",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 34.0
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    },
+    {
+     "layer": 31,
+     "feature": 102550,
+     "position": 28,
+     "act": 13.125,
+     "influence": 0.007494,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "Cold",
+       "寒",
+       "cold",
+       "冷",
+       " cold"
+      ],
+      "example": " store the excessive heat when it is warm and let it out when it⟦ is⟧ cold. But, to do tha",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 13.125
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    },
+    {
+     "layer": 27,
+     "feature": 73788,
+     "position": 28,
+     "act": 9.625,
+     "influence": 0.003378,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " sweaty",
+       " cold",
+       "вед",
+       " chilly",
+       "ilia"
+      ],
+      "example": ":⏎- Pain when chewing⏎- Sensitivity of the teeth to hot⟦ or⟧ cold⏎- Bitter taste in the mo",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 9.625
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    },
+    {
+     "layer": 29,
+     "feature": 53713,
+     "position": 28,
+     "act": 8.8125,
+     "influence": 0.008258,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " soft",
+       " heavy",
+       "冷",
+       "粗",
+       " thick"
+      ],
+      "example": " Could Sink Ships⏎In the first century, Roman naturalist Pliny⟦ the⟧ Elder wrote a book ca",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 8.8125
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    },
+    {
+     "layer": 27,
+     "feature": 137832,
+     "position": 28,
+     "act": 7.4688,
+     "influence": 0.013746,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "寒冷",
+       " colder",
+       "冻",
+       " freezing",
+       " cold"
+      ],
+      "example": " get a nicotine fix. Inconveniences like shivering outside in⟦ the⟧ cold to enjoy a smoke ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 7.4688
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    },
+    {
+     "layer": 31,
+     "feature": 127625,
+     "position": 28,
+     "act": 5.8125,
+     "influence": 0.00655,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Cold",
+       "Cold",
+       "cold",
+       " cold",
+       "冷"
+      ],
+      "example": ", the first month of winter in Reykjavik, is a⟦ very⟧ cold month with highs of 1.3°C (34.",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "hot_en": 5.8125
+     },
+     "positions": {
+      "hot_en": 28
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "synonym (multilingual)",
+   "paper_name": "synonym",
+   "role": "donor",
+   "graph": "synonym_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 8,
+     "feature": 146027,
+     "position": 5,
+     "act": 4.6875,
+     "influence": 0.001723,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "atz",
+       " edge",
+       "一眼",
+       " CPL",
+       "突出问题"
+      ],
+      "example": " each of the amounts.⏎The widely used phrase exponent can be a synonym⟦ of⟧ electricity. T",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 4.6875
+     },
+     "positions": {
+      "synonym_en": 5
+     }
+    },
+    {
+     "layer": 9,
+     "feature": 142433,
+     "position": 5,
+     "act": 4.6562,
+     "influence": 0.001216,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "hum",
+       "配置",
+       "接触",
+       " FIG",
+       "规划设计"
+      ],
+      "example": "aria Pigmentosa is not the name you expected. Please check the⟦ synonyms⟧ listing to find ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 4.6562
+     },
+     "positions": {
+      "synonym_en": 5
+     }
+    },
+    {
+     "layer": 7,
+     "feature": 12044,
+     "position": 9,
+     "act": 4.1562,
+     "influence": 0.000933,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "单词",
+       "二字",
+       " synonymous",
+       " phrase",
+       "这个词"
+      ],
+      "example": " author writes tulips; instead of walked, the author writes scampered⟦,⟧ or sauntered). St",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 4.1562
+     },
+     "positions": {
+      "synonym_en": 9
+     }
+    },
+    {
+     "layer": 7,
+     "feature": 61853,
+     "position": 5,
+     "act": 3.8906,
+     "influence": 0.001566,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " purs",
+       "essential",
+       "国内外",
+       "黑白",
+       " regelmäßig"
+      ],
+      "example": " a term used for any important military day, though now it has become⟦ synonymous⟧ with Ov",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 3.8906
+     },
+     "positions": {
+      "synonym_en": 5
+     }
+    },
+    {
+     "layer": 5,
+     "feature": 15858,
+     "position": 5,
+     "act": 3.1406,
+     "influence": 0.002844,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " htonl",
+       "-growing",
+       "鞠",
+       " speakers",
+       "这份"
+      ],
+      "example": " selected. Change⏎Spellweb is your one-stop resource for definitions,⟦ synonyms⟧ and corre",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 3.1406
+     },
+     "positions": {
+      "synonym_en": 5
+     }
+    },
+    {
+     "layer": 4,
+     "feature": 3375,
+     "position": 5,
+     "act": 2.4531,
+     "influence": 0.002614,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "/IP",
+       "ilde",
+       "umas",
+       " Commissioners",
+       "NAS"
+      ],
+      "example": "Taxonomic Notes:||P. gruveli is considered a⟦ synonym⟧ of P. pectoralis, following Krefft ",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 2.4531
+     },
+     "positions": {
+      "synonym_en": 5
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  },
+  {
+   "name": "say small (multilingual)",
+   "paper_name": "say small",
+   "role": "readout",
+   "graph": "synonym_en",
+   "position": "member-positions",
+   "members": [
+    {
+     "layer": 28,
+     "feature": 76279,
+     "position": 27,
+     "act": 28.5,
+     "influence": 0.046413,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "small",
+       "小型",
+       "小",
+       " tiny",
+       " small"
+      ],
+      "example": " pig breeds.⏎The smallest breed of domesticated pig in the world is⟦ the⟧ Kunekune. Howeve",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 28.5
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    },
+    {
+     "layer": 27,
+     "feature": 139629,
+     "position": 27,
+     "act": 12.0625,
+     "influence": 0.006068,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "芥",
+       "child",
+       " child",
+       "小儿",
+       "蚊"
+      ],
+      "example": " together, will collect signals from space.⏎The price tag is a relative⟦ p⟧ittance as scie",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 12.0625
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    },
+    {
+     "layer": 27,
+     "feature": 83988,
+     "position": 27,
+     "act": 4.625,
+     "influence": 0.001737,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "隐",
+       "细微",
+       " subtly",
+       " subt",
+       " subtle"
+      ],
+      "example": "osing Parkinsons at an early stage is very difficult since the physical symptoms⟦ are⟧ als",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 4.625
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    },
+    {
+     "layer": 18,
+     "feature": 74852,
+     "position": 27,
+     "act": 3.6875,
+     "influence": 0.001268,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Scenes",
+       "thur",
+       "quel",
+       "chemy",
+       " Microsystems"
+      ],
+      "example": " yoo-kee-aw] /ˈyu kiˌoʊ⟦;;⟧ Japanese ˈyu kiˌɔ/ (Show IPA), (K",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 3.6875
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    },
+    {
+     "layer": 22,
+     "feature": 56429,
+     "position": 27,
+     "act": 2.5625,
+     "influence": 0.00067,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "限期",
+       "小时内",
+       "urpose",
+       "OfWeek",
+       "cae"
+      ],
+      "example": "ifolia var. tennesseensis⏎USDA Symbol: E⟦CT⟧E3⏎One of the nations rarest wildflowers, it w",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 2.5625
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    },
+    {
+     "layer": 28,
+     "feature": 92878,
+     "position": 27,
+     "act": 2.2344,
+     "influence": 0.003448,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " negligible",
+       "tiny",
+       " small",
+       "很小",
+       " tiny"
+      ],
+      "example": " language development is that in language horizontal transmission processes are known to p",
+      "grid_class": null
+     },
+     "review": "approved",
+     "source": "explorer-export",
+     "acts": {
+      "synonym_en": 2.2344
+     },
+     "positions": {
+      "synonym_en": 27
+     }
+    }
+   ],
+   "note": "selection ingested verbatim from the committed export JSONs"
+  }
+ ],
+ "approved": true,
+ "review_log": "seeds materialized and approved by user instruction (2026-07-12): earliest-first ranking, chat/raw selections separated; ingested by build_supernodes.py --materialize-seeds"
+}

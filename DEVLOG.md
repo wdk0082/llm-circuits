@@ -1,7 +1,25 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-11, after the FOURTH A100 session, branch
-> `fix/constrained-patching-pass`): **the pre-report scan queue is closed.** Every
+> **⏩ CURRENT STATE** (2026-07-11, after the FIFTH session, branch
+> `repro/constrained-supernodes`): **reproduction v2 is live for ADDITION** —
+> constrained patching only, supernodes loaded from a reviewed artifact
+> (`notebooks/supernodes/addition_4b.json`; grid-evidenced full-graph scan, membership
+> never by influence), graphs loaded from persisted dumps. v2 verdicts: input
+> suppressions substitute crisply at the paper's strengths ([ℓ=16] `3`@0.96, [ℓ=9]
+> `2`@0.94; ablation alone does nothing), the magnitude/ones dissociation holds at
+> every strength with the two-band supernode ([ℓ=7], ones 0.999, low-prec → 42–81% at
+> −2×), the **sum-side smear matches the paper** (width 5.26 at ℓ=35), polymer
+> lookups-only is protocol-exact (`1`@0.83, all six sums 0%), and the **donor swap
+> does not land at any ℓ** (p(`8`) ≤ 0.067) — with selection style/donor purity/
+> protocol all controlled, that is now a clean model difference vs Haiku (v1's
+> propagate route `8`@0.715 documents the mechanism). The supernode pipeline
+> (build_supernode_inputs.py → build_supernodes.py → human review gate → notebooks
+> load) is the durable workflow; MULTILINGUAL is parked mid-review (proposals emitted,
+> approved:false; open items: detector off-graph fallback policy, the 0.95-prune
+> regraph idea, per-language say-large flags). See "Fifth session" below.
+>
+> Previous state (2026-07-11, after the FOURTH A100 session, branch
+> `fix/constrained-patching-pass`): the pre-report scan queue is closed. Every
 > ✅-marked scan fix was independently re-verified against the code, the tests, the CI
 > config and the committed notebook outputs (all hold), and the §3.1 decision is
 > executed: **constrained patching is now the headline protocol** for every
@@ -1308,3 +1326,465 @@ influence-top supernode *selections* (which reach L27–35) leaves no recompute 
 the fair paper-style test, queued for when the reproduction work resumes, is
 re-selecting the swap supernodes the paper's way (early/mid hand-curated concept
 groups) and re-running the constrained ℓ-sweep.
+
+
+---
+
+## Fifth session: reproduction v2 — reviewable semantic supernodes + constrained-only (addition live, multilingual parked) (2026-07-11)
+
+Branch `repro/constrained-supernodes` (same A100-80GB node). Motivation: the fourth
+session showed constrained patching is method-exact but starved by influence-top
+supernode selection; the paper's own supernodes are small hand-curated concept
+clusters, and its membership is **activity-based** (20/27 members active vs 10/27 in
+its pruned graphs — biology digest).
+
+### The supernode pipeline (durable workflow)
+
+1. **`notebooks/build_supernode_inputs.py`** (GPU, once per config): persists the 13
+   pruned graphs as JSON (nodes with influence + labels + activation examples — the
+   explorer HTML had dropped influence), all-feature operand grids (3 single-pass
+   probes, `grids.npz`), polymer ones-moment activations, and a manifest
+   (prompts/positions/answers/git sha). Artifacts numbers-layer is now committed
+   (gitignore carve-out: JSONs/PNGs/npy in, heavy HTMLs/graph dumps/npz out).
+2. **`notebooks/build_supernodes.py`** (CPU): scans ALL pruned-graph feature nodes and
+   proposes paper-named supernodes by semantics — **both label sides** after a user
+   review catch (output side = top logits, what a feature promotes; **input side =
+   the peak-activation tokens of its examples**, what it fires ON; sides recorded per
+   member as provenance). Addition membership is by operand-grid receptive-field
+   class (+ on-pair fraction evidence); ≤6 members ranked by activation with
+   runners-up in `overflow`; disjointness enforced; influence recorded as evidence
+   only. Auto-flags: script-mismatch say-large matches, <30% on-pair lookups.
+   Reviewer explorer HTMLs per graph with proposed groups pre-loaded.
+3. **Review gate**: files ship `approved:false`; `load_supernodes` refuses unapproved/
+   rejected/overlapping files. Addition was reviewed by delegation (user waived the
+   manual pass for the grid-principled selection): one action — lookup L33f109892
+   rejected (20% on-pair) → L24f99664 promoted (63%); `review_log` in the file.
+4. **Notebooks load the reviewed file** and the persisted graph dumps (interventions
+   run against literally the graphs the review saw; `addition_input_ids` extracted so
+   the load path reconstructs identical tensors).
+
+Input-side lesson (user catches, both fixed in-session): top-logit-only matching had
+(a) starved the paper's INPUT supernodes — antonym went 3→6 members (the paper's own
+size) and small 2→6 once example-peak matching landed — and (b) produced a false
+"Qwen3 has no synonym-operation features" claim: a both-side any-position scan finds a
+clean cluster firing on ⟦synonym⟧/⟦synonymous⟧ at the operation-word token, now the
+paper-faithful `synonym (operation)` donor (say-answer demoted to alternative).
+
+### Addition v2 (constrained-only, reviewed supernodes; zero cell errors, ~13 min)
+
+| Experiment | ℓ (swept) | v2 result | vs paper |
+|---|---|---|---|
+| suppress `_6` | 16 | m=−1 nothing (`5`@0.996); −1× **`3`@0.961**; −2× `3`@0.736; sums→0% from −1× | crisp substitution at paper strength; no 9+9 numerology (paper warns on numerology) |
+| suppress `_9` | 9 | m=−1 nothing; −1× **`2`@0.940**; −2× `2`@0.899 | same shape |
+| inhibit magnitude (band pair) | 7 | ones `5`@0.999 ALL strengths (readouts 96–106%); first digit 0.526/0.478/0.422, low-prec supernode 87–97/68–91/**42–81%** | dissociation at full paper strength |
+| neg-steer lookup / sum (m=−3) | 25 / 35 | lookup flips `1`@0.84 (width 1.38); sum **smears width 5.26** (`1` .31/`3` .21/`2` .16/`4` .11) | sum-side smear matches; lookup-side still flips |
+| polymer lookups-only (m=−3) | 25 | `1`@0.83, **all six sums → 0%** | Fig A5 panel 2 protocol-exact |
+| lookup swap (6 reviewed (9,9) donors) | swept 27–35 | **p(`8`) ≤ 0.067 at every ℓ** (best ℓ=31 → `1`@0.267) | does NOT land — clean model difference (selection/donor/protocol all controlled; v1 propagate `8`@0.715 documents the needed route) |
+
+Notable protocol shape: under constrained patching with these supernodes, **ablation
+(m=−1) does nothing** for the input suppressions — the effects begin exactly at the
+paper's stated strengths. Runtime: graphs load from dumps (~6 min saved), ~13 min
+end-to-end.
+
+### Parked (multilingual) — state for resumption
+
+Proposals emitted and pushed (`multilingual_4b.json`, approved:false): antonym 6 (both
+sides), synonym (operation) 6 + say-answer alternative, small 6, hot 6 (+51 overflow),
+say-large trio+3, per-language say-large with script-mismatch flags, detectors =
+off-graph v1 fallback (RECORDED FINDING: pruned raw graphs keep NO early nodes at the
+quote position), raw antonym = chat-derived fallback (raw graphs keep almost nothing).
+Open decisions: fallback approval, the flagged members, and optionally re-dumping raw
+graphs at node_threshold 0.95 (`--node-threshold` knob added; user deferred — the
+paper's activity-based membership precedent argues for it or for activation-universe
+selection). One working-tree staleness incident (editor autosave reverted the
+supernode JSON; committed version was correct; restored) — reload editor tabs of
+files under `notebooks/supernodes/` before editing.
+
+### State of the world
+
+- Branch `repro/constrained-supernodes`, pushed. 121 tests green (loader suite added),
+  ruff clean, both --check validators OK. addition_4b.json approved; multilingual
+  parked unapproved. Node caches warm (weights + labels + supernode inputs).
+
+### Same-day addendum — kind coverage, evidence figure, notebook cleanup
+
+User review vs the paper's own graph inventory drove three upgrades. (1) Two node
+KINDS existed on Qwen3 but had no classifier class: `exact-cross(V)` (row+column union
+at one value — the paper's `36`/`59` inputs; 3+6 members found, and several former
+input-lattice members correctly migrated there) and `region(~a,~b)` (2-D localized
+blobs — the wide/narrow magnitude-lookup class; 6 members on the first-digit circuit,
+1–2 visually clean + several diffuse washes worth a review pass). (2) The add-function
+negative became a LIVE scan result: an `add function (hunt)` supernode with a
+pair-consistent rule — the unconstrained scan's 13 hits were off-pair junk textures,
+the pair-consistent 2 are junk-labeled mod10-b(r9) shapes (flagged) — effectively
+negative, now reviewable in the file and visible in the evidence figure.
+(3) Readability: the seven v1 influence-pool panels and their taxonomy builder are
+retired (markdown 20.7k → ~11k chars; runtime ~13 → ~8 min; stale artifacts git-rm'd:
+7 panel PNGs, taxonomy.json, propagate-era interventions.json); the new
+`grids_supernodes.png` shows every reviewed member's operand grid, one supernode per
+row — the membership evidence in one figure. Delegated review decisions moved INTO the
+selector (`REJECTED_MEMBERS`/`APPROVED_TASKS`, re-applied on every emit) so re-runs
+reproduce reviewed state. Re-executed clean (~8 min): suppress-6 [ℓ=16] `3`@0.929 at
+−1×, suppress-9 [ℓ=9] `2`@0.963, magnitude/smears/polymer unchanged, swap still lands
+nowhere (p(`8`) ≤ 0.067) — the purified sets sharpened, none of the verdicts moved.
+
+## Sixth session (2026-07-11, same day): multilingual selection is EXPORT-DRIVEN and reviewed
+
+The user set the selection principle: review pages in the explorer UI are the ONLY
+supernode-selection channel for multilingual — seeds proposed by the semantic scan,
+the human adjusts groups on the pages, "Export groups" JSONs are ingested verbatim
+(`build_supernodes.py --from-exports`) into the authoritative file. Manual-override
+channels, off-graph fallbacks, and the scan-written multilingual file were removed.
+
+### What shipped
+
+- **Paper-vocabulary supernodes** (user decision: fully faithful; admit absences):
+  lang-specific `opposite (lg)` / `quote (lg)` / `say large (lg)`; multilingual
+  `antonym / synonym / small / hot / say large / say small / say cold (multilingual)`.
+  The group NAME is the merge key across pages: identically-named groups union into
+  one supernode (chat + raw prompts alike) with per-graph acts/positions per member —
+  interventions steer the whole union. `large/cold (multilingual)`, `say hot`: no
+  defensible members found → admitted absent (ROLE_BY_NAME entries exist if later found).
+- **Dumps by design**: chat graphs at 0.8 (circuit-tracer default; 461–746 feature
+  nodes), raw graphs at 0.95 (at 0.8 they starve — zero quote-position nodes for the
+  detectors). `raw_hot_en` added: the paper's EXACT donor prompt (all paper prompts
+  are raw completions; chat forms are our Qwen3-instruct adaptation — an earlier
+  docstring claimed the opposite rationale and is fixed). Pages named
+  `review_chat_*` / `review_raw_*`; 10 multilingual + 3 addition.
+- **Review completed (2026-07-11)**: the user reviewed all 10 pages and accepted the
+  seeds as-is; exports were materialized verbatim from the approved pages' embedded
+  groups and ingested → `notebooks/supernodes/multilingual_4b.json` (16 supernodes,
+  approved: true, selection: explorer-export; source exports committed under
+  `notebooks/supernodes/exports/`).
+- **Strict disjointness** (global by (layer, feature), the paper's semantics) caught
+  three real seed overlaps; deterministic resolutions now in the seed rules:
+  quote beats opposite (the paper's quote-features "track language via other words");
+  say-large multilingual/lang-specific exclusion spans chat+raw scans; op-word
+  features firing for ≥2 languages are language-ambiguous and seed neither. Per-PAGE
+  groups stay ≤6; the reviewed cross-page union may exceed (recorded `max_members`;
+  antonym 7, synonym 8 — paper: 6/6).
+- **Fixed en route**: seeded groups with a `member-positions` marker were silently
+  dropped by the page renderer — the antonym + synonym groups (operation swap's
+  source and donor!) were missing from every page before this session's re-emit.
+
+### NEXT (phase B, next session)
+
+1. Rewire `multilingual.ipynb` constrained-only from the loaded file: jobs built from
+   roles (antonym −5×/m=−6 + synonym value=+6× donor at the recipient's operation-word
+   token; small −0.5×/m=−1.5 + hot value=+1.5×; quote swaps −5×/+6×), per-experiment
+   `sweep_patch_end_layer`, %-readouts from say-* supernodes at layers > ℓ.
+2. Addition-style prose cleanup + re-execution (~15 min GPU), stale propagate-era
+   multilingual artifacts git-rm'd, Summary rewritten as v2 verdicts, DEVLOG.
+3. Later: revisit addition supernodes via the same export workflow (user intent).
+
+Resume commands: `python3 -m http.server 8000 --bind 0.0.0.0 --directory artifacts`
+(review pages); heavy dumps live on the studio disk and regenerate deterministically
+via `notebooks/build_supernode_inputs.py` at the manifest's recorded sha/thresholds
+(~35 min GPU) if ever lost.
+
+## Seventh session (2026-07-12, fresh studio): multilingual v2 executed — constrained-only from the reviewed file
+
+Studio disk from the sixth session did not persist; bootstrapped per HANDOFF.md (env,
+`uv sync --all-groups`, dumps restored from the orphan-branch `repro-dumps-4b` tarball).
+Sanity gates passed before any edit: `build_supernodes.py --size 4b` re-emitted the 13
+review pages, and `--from-exports` on the committed exports reproduced
+`multilingual_4b.json` **byte-for-byte** (clean tree). HANDOFF.md deleted (consumed);
+this entry + the repo are the record.
+
+### What shipped
+
+- **`multilingual.ipynb` is v2**: 25 cells (was 34), constrained patching ONLY, every
+  intervention/readout set from `supernodes/multilingual_4b.json`; graphs load from the
+  `supernode_inputs` dumps (tokenization re-derived and length-asserted against the
+  manifest); zero in-notebook selection. Chat + raw run side by side inside each
+  experiment cell (operation/operand: 2 formats x 3 languages per cell); the language
+  swap is raw-only by construction (quote supernodes exist only on the raw pages).
+  Executed end-to-end on an A100-80GB, 13/13 code cells, zero errors.
+- **`multilingual_helper` v2 API**: `load_supernodes` (approved gate + GLOBAL
+  (layer, feature) disjointness — stricter than the addition loader's per-graph key),
+  `supernode_suppress_ivs` (per-member recipient positions; documented fallback),
+  `supernode_inject_ivs` (value = mult x stored donor-graph act; members without a
+  stored act on that graph sit out), `swap_ivs_fn` (paper ramp; endpoint pair hit
+  exactly at s = don_max), `choose_swap_end_layer`, `supernode_swap_sweep` (every step
+  constrained at the fixed swept ell), `supernode_readout` (per-member positions;
+  ref = recipient baseline or stored act with max-act fallback; rows <= ell pinned),
+  `readout_layers_above`, `print_readout_row`. Deleted: position_supernode, run_graft,
+  the early/late detection scans, swap_interventions, paper_swap(+sweep),
+  run_swap_sweeps, the pre-paper top-k overlap variant, feature_label,
+  graph_features_at_position. Tests updated in kind (incl. the global-disjointness
+  refusal and the constrained-sweep plumbing).
+- **`load_transcoder` disk-cache bug found and fixed** (`d35f6e9`): the first-load path
+  never forwarded `dtype` to `cache_transcoder`, so the notebooks' bf16 loads wrote
+  circuit-tracer's fp32 default — 121 GB for the 4b alone (bf16: 57 GB); the 4b+8b pair
+  filled the 369 GB studio disk mid-§H and killed the first execution. Fixed (dtype
+  forwarded; regression test), caches rebuilt bf16 (4b 57 GB + 8b 91 GB), hub blobs
+  dropped after conversion. The rerun reproduced the aborted run's numbers exactly.
+
+### Executed verdicts (full table in the notebook Summary)
+
+- **Behavior**: raw large/grand/大, chat large/Grand/大; synonym tiny / pet(echo) /
+  小(echo); hot-antonym cold/f/冷. `behavior.json` byte-identical to v1's.
+- **Shared core**: 107 features in all three chat pruned graphs (of 437–621), 67 raw
+  (of 239–439); 11/20 members of the cross-language supernodes sit on all three chat
+  antonym pages (6/20 raw) vs the paper's 10/27-in-all-pruned-graphs comparator.
+- **Operation swap: not reproduced under the paper's protocol at this selection** —
+  p(expected) <= 0.003 in all six jobs, no crossover, baseline top-1 at the ±5x/6x
+  endpoint (chat zh 大 @ 1.0), no over-drive degeneration. Cause measured: the reviewed
+  antonym supernode's L34 member forces ell in {34, 35}, and the paper-faithful donors
+  inject at the mid-sequence operation-word span — unreachable to the final logit
+  through <= 1 recomputed layer with frozen attention patterns. All Fig B3 readout rows
+  <= L33 => pinned.
+- **Operand swap: same protocol-null** — p(expected) = 0.000 everywhere, ell in
+  [32, 35]; all say-cold/say-large rows pinned; the single readable row (raw zh
+  `opposite (zh)` L34) reads exactly 100% (upstream preserved).
+- **Language swap: works in 2/3 directions — reversing v1's null.** en→zh 大 top-1 @
+  0.636 (ell=35, crossover 5.5x); fr→en turns English — big @ 0.753 + great @ 0.19,
+  the paper's exact FR→EN token (the expected-token metric tracked the model's own
+  raw-EN answer `large`, so p_expected under-reports the flip); zh→fr no flip (p_exp
+  ~ 0 at every ell). Readouts: all pinned except fr→en's L33 rows — say large (fr)
+  **0.0%**, say large (en) **121.6%** of stored: the paper's old-suppressed /
+  new-recruited signature on the only readable rows. The reviewed quote features live
+  at L23–L34 (Qwen3's raw graphs keep NO early quote-position nodes), so the causal
+  handle is LATE — v1's null had steered early-layer (L4–11) activation-scan features
+  that carry nothing.
+- **Overlap**: en-fr 0.107 > en-zh 0.089 > fr-zh 0.077 mid-third (byte-identical to
+  v1). **Default language**: zh 0.766 > en 0.664 >> fr 0.309 (4 shared say-big
+  features). **Scale**: 8b > 4b on every pair — 0.132/0.098/0.082 vs 0.107/0.089/0.077
+  (en-fr gains most, +23%).
+- **The protocol x selection interaction is now measured on a hand-reviewed
+  selection**: ell floors 34 / 32 / 32–34 for operation / operand / language, so
+  Fig B3/B4 node annotations are unmeasurable here (every row <= ell) while B5's
+  measurable rows match the paper. It is a property of where Qwen3's defensible
+  supernodes live, not of automated selection.
+
+### Housekeeping
+
+- 23 stale propagate-era artifacts git-rm'd (propagate twins, the raw_* split files now
+  keyed inside the constrained JSONs, graph_answers.json, both detection-supernode
+  JSONs). New: language_readouts_constrained.json,
+  language_ladder_readouts_constrained.json.
+- notebooks/README.md: v2 pipeline paragraph covers both notebooks; artifact-naming
+  rewritten (constrained-only; `{chat,raw}_{lg}` job keys); the label-cache download
+  note dropped (dumps make it unnecessary).
+- addition_helper: ruff 0.15 SIM300 autofixes (grid-mask comparisons reordered).
+
+### NEXT (user-stated intent, unchanged)
+
+1. Revisit ADDITION supernodes via the same export-review workflow.
+2. Consider raw-primary vs chat-primary framing (paper is raw-only; raw synonym
+   caveat: FR echoes pet(it), ZH 小/微 near-tie).
+
+## Eighth session (2026-07-12, same day): v3 — chat/raw separated, earliest-first, executed
+
+Two user decisions after reviewing the v2 run: (1) rank every multilingual seed group
+**earliest layer first** ("for ease of constrained patching" — l_max = max steered
+layer is the sweep floor); (2) **separate the chat and raw selections completely**.
+The `small (multilingual)` late-layer membership question that started the discussion
+was answered first: the act-ranked v2 members were late mainly because the multilingual
+sharing gate (>=2 graphs) kills the early language-specific detokenization features,
+plus the act cap (two early shared candidates, L0f133356/L19f77492, had lost the cut).
+The seeds are the de facto selection under the accept-as-is flow, so re-seeding under
+the new policy changes the files — made explicit and reproducible via the new
+`--materialize-seeds` flag (writes the exports FROM the seeds, ingests them, and
+records the provenance in review_log).
+
+### What shipped
+
+- **build_supernodes v3**: per-format multilingual scans (each pools one format's
+  graphs; say-large exclusion sets and opposite/quote disjointness guards are
+  per-format), `early_first` cap ranking everywhere, ingest splits exports by page
+  format into `multilingual_{chat,raw}_<size>.json` (global (L,f) disjointness per
+  file; the same feature MAY sit in both formats' files), `--materialize-seeds`.
+  Old merged `multilingual_4b.json` removed; exports regenerated as the new record.
+- **Selection geometry** (drives everything): chat floors dropped — operation l_max
+  34->13 (antonym L7-13, synonym donors L4-9; the raw-only L34 member no longer joins
+  chat jobs), operand 32->22 (small L0-22 incl. the two early shared features, hot
+  donors L3-5). Raw stays late — antonym is a SINGLE L34 member, small L26-28, hot
+  L24-27, quote L23-34 (identical members to v2) — the 0.95-pruned raw pages keep no
+  early candidates at all. Raw has no `say large (zh)` (zero candidates) and a
+  single-member `say large (en)` (L32).
+- **multilingual.ipynb v3 executed** (13/13 cells, zero errors): loads both files,
+  each format's jobs steer only its own selection, absent-group guards print what a
+  selection lacks instead of failing.
+
+### Executed verdicts (full table in the notebook Summary)
+
+- **Operation swap: not reproduced in either regime — complementary failure modes,
+  both measured.** Raw: ell in {34,35}, direct-effect-only, p_exp <= 0.002, all
+  readouts pinned. Chat: full sweep room ([13,35], ell chosen 14-16) and the Fig B3
+  annotations READABLE for the first time — say small recruits to only 13-35% of its
+  donor level, say large falls to 91/77/34%, p(expected synonym) <= 0.001, baseline
+  stays top-1 (大 @ .998). Room without strength: the early members' small acts
+  (3-10) give deltas that move the say-stage a third of the way at best.
+- **Operand swap: same structure** — no flip in any of six jobs; chat readouts show
+  say cold recruited to 1.7-13% of donor level, say large down to 43-80%.
+- **Language swap: unchanged 2/3 success** (quote groups member-identical to v2):
+  en→zh 大 @ 0.636 (ell=35, crossover 5.5x), fr→en big @ 0.753 (the paper's exact
+  token), zh→fr null. Separation cost the v2 fr→en 121.6% recruitment reading (the
+  raw say-large-(en) single member sits AT ell=32 -> pinned; say large (zh) absent);
+  the surviving readable row, say large (fr) = 0.0%, still matches the paper's
+  old-language suppression.
+- **Shared core per format**: chat 107-in-all-three (of 437-621), raw 67 (of
+  239-439); the earliest-first chat `small` has 0/6 members on all three pages (its
+  early features are two-page) — the early operand features are the least
+  cross-lingual. Overlap / default language / scale: unchanged (0.107/0.089/0.077;
+  zh 0.766 > en 0.664 >> fr 0.309; 8b > 4b on every pair).
+- **The v2->v3 net insight**: Haiku's mid-network supernodes supplied protocol room
+  AND effect strength at once; Qwen3-4B's defensible selections offer one or the
+  other, never both — chat (early) has room but not strength, raw (late) has strength
+  (the acts are large) but no room. The language swap escapes because its late quote
+  features act via the direct path (ell=35 works).
+
+Prompt-format note: the swaps' forward passes run each format's own tokenized
+recipient (chat = full templated input, raw = paper completion + sink token);
+interventions are in-place per member (recorded node positions; donors at the
+operation-word span / operand token / final quote), only the measurement is fixed at
+the final position.
+
+### NEXT (user-stated intent, unchanged)
+
+1. Revisit ADDITION supernodes via the same export-review workflow.
+2. Raw-primary vs chat-primary framing: partially superseded by the v3 separation —
+   what remains open is which arm the paper-comparison headline should quote.
+
+## Ninth session (2026-07-12, same day): the operand swap as a strength ablation — it lands
+
+User question ("why cap at 6? what's the paper's order?") surfaced that the paper
+never states a selection algorithm (hand-grouping; the ONE disclosed criterion is
+"highest graph influence" for the operand swap) — and led to a user-directed
+beyond-paper ablation: `multilingual_extra_operand_swap.ipynb`, the operand swap only,
+three selection arms x an extended strength ladder. Machinery: `swap_ivs_fn` /
+`supernode_swap_sweep` gained a `strengths` override; (-14, 15) extends the paper's
+operand ramp tenfold along the same coupling (passes the paper endpoint at s=1.5,
+marked on every panel). ell swept at the extended endpoint; readouts fixed to the
+reviewed v3 say-cold/say-large groups; arm 1 = the reviewed files verbatim, arms 2/3
+re-rank the same lexicon+shared pool in-cell (the ablation IS the selection study;
+the reviewed files stay the reproduction of record).
+
+**Result: the operand swap lands under the paper's constrained protocol at 1.5-7x the
+paper's strength — 14/15 configurations flip** (crossovers 2.25-10.5x vs the paper's
+1.5x endpoint; nothing flips at paper strength in any arm). v3's "room without
+strength" is quantified. Highlights: arm 3 (influence-chosen before-middle — the
+paper's own described recipe; chat-only, its raw pool is empty and its chat small
+pool is the single L0f133356) is the showcase — chat zh flips at 2.25x under ell=8 to
+冷 @ 1.000 with say-cold recruited to 70% and say-large down to 21%, the full Fig B4
+phenomenology. Push-pull readouts at 15x: say-cold 49-167% of donor level where flips
+happen, say-large 0-30%. Failure modes: raw zh never flips in any arm (大 holds at
+±14/15x); arm 2's chat en over-drive echoes the injected operand (`hot` @ .54) — v1's
+propagate-endpoint echo, back at high constrained strength. One dissociation: arm 1
+chat en flips with the reviewed say-cold group nearly silent (0.7%) — extreme-strength
+flips can route around the reviewed readout features.
+
+Also this session (earlier turns): answered the readout `None%` semantics (all-pinned
+rows), the small (multilingual) late-layer question (the >=2-graph sharing gate kills
+early language-specific detokenization features; act-ranking cut the two early shared
+survivors), and the cap-6 rationale (paper sizes 3-6; under earliest-first a bigger
+cap re-latens the sets: cap-15 would move chat floors 13->22 / 22->28).
+
+## Tenth session (2026-07-12, same day): v3.1 — the main notebook on the extended axis
+
+User directive: re-run `multilingual.ipynb` with every swap ladder extended to 15x
+(raw-zh operand: 30x), nothing else changed. Implementation: the ablation's
+`strengths` override wired into all three swap cells — (-14, 15) along the paper's
+coupling ((-29, 30) for raw-zh operand), 21 grid points so the paper endpoints (1.5x /
+6x) stay exact grid points (marked on every panel), ell swept at the extended
+endpoint, %-readouts at BOTH endpoints. Executed 13/13 cells, zero errors; Summary
+rewritten (v3.1).
+
+### The three swaps now have three distinct characters
+
+- **Operand = the paper's result with a bigger constant.** Flips in all six
+  configurations: chat 2.25/4.5/4.5x, raw 5.25/6x, and the raw-zh hold-out (which the
+  15x ablation never flipped) crosses at **18x** — 冷 @ 0.998 by 30x (ell=35, every
+  readout pinned: a flip the protocol can produce but not annotate here). Push-pull
+  where readable: say-cold 18-65% of donor level at 15x, say-large down to 4-26%;
+  chat-en again flips with the reviewed say-cold nearly silent (0.7%).
+- **Language = the paper's result at the paper's scale, with a ceiling.** en→zh
+  crossover 5.25x, 大 @ 0.636 at the 6x grid point (0.685 @ 9x), then over-drive junk
+  by 15x (独 @ 0.82); fr→en big @ 0.753 at 6x holding to 9x, then a wrong-language
+  intrusion (大 @ 0.42 by 15x); zh→fr never lands (grand <= 0.07 everywhere — the
+  nominal 11.25x crossover is two collapsing curves in the noise). Unlike the operand
+  swap, MORE strength hurts: the late quote handle saturates then breaks.
+- **Operation = no steerable handle at any tested strength.** Raw unmoved even at
+  ±14/15x (direct-effect regime). Chat, with full room (ell 13-17) and readable
+  annotations, moves into ADJACENT semantics at 15x — en lands on `medium` @ 0.70,
+  zh puts the echo-synonym 小 second at 0.066 — with say-small recruited only to
+  10-37%; antonym→synonym never executes.
+
+Non-swap sections byte-stable (overlap 0.107/0.089/0.077; default zh > en >> fr;
+8b > 4b). The v3 paper-strength numbers remain quotable as the marked grid points of
+the v3.1 curves.
+
+## Eleventh session (2026-07-12, same day): the diverse corpus + why the operation swap never lands
+
+Two user directives. **(1) §F corpus upgrade (v3.2):** the old 28 short same-register
+items are replaced by `CORPUS_DIVERSE` — 18 register-diverse parallel paragraphs
+(news, science, recipe, sports, legal, weather, tech docs, finance, history, travel,
+review, dialogue, fairy tale, email, philosophy, health, criticism, manual), authored
+in EN and translated to FR/ZH in-repo, the paper's own recipe. Motivated by the
+tenth-session probe of the inflated unrelated-pair baseline (chat scaffold = 58% of
+the unrelated intersection; 163k-dictionary granularity; register uniformity; NB the
+probe also showed raw tokenization would be WORSE — bare text is off-distribution for
+the instruct model and activates 5x more features). Main notebook re-executed:
+
+- **Overlap sharpens**: baseline mid-third halves (0.11–0.12 vs 0.21–0.25), mains hold
+  (~0.25–0.32) -> baseline-subtracted mid-third en-fr 0.198 > en-zh 0.175 > fr-zh
+  0.142 (was 0.107/0.089/0.077). Shape + pair ordering reproduce with double margin.
+- **The 4b->8b scale verdict flips**: on the diverse corpus the same-recipe pair shows
+  NO consistent growth (en-fr +6%, en-zh −3%, fr-zh flat) — the earlier clean
+  "8b > 4b on every pair" was a property of the uniform short-sentence corpus.
+  Summary row rewritten to **not clearly reproduced (corpus-sensitive)**.
+- Swap sections reproduce v3.1 bit-for-bit (selection/strengths untouched).
+
+**(2) `multilingual_extra_operation_swap.ipynb`** (beyond-paper; executed clean):
+four arms on the one swap that never lands, testing the user's two hypotheses
+(selection, strength) plus the paper's own QK caveat. `supernode_swap_sweep` gained
+`freeze_attention` + None-ell passthrough for the propagate arms.
+
+- **Arm 4 (QK probe) is decisive**: the identical paper-faithful configuration in
+  propagate mode does NOTHING with attention patterns frozen and **lands
+  language-appropriate synonyms with patterns live** — en `little` @ 0.735 (the
+  paper's exact Fig B3 token; crossover 6.75x), fr `pet` @ 0.515 (4.5x); zh crosses
+  mid-ladder then reverts. The operation swap's channel on Qwen3 is
+  attention-pattern-mediated — precisely the mechanism the paper flags as QK-mediated
+  and method-invisible on Haiku. Constrained patching always freezes patterns
+  (circuit-tracer coupling), so NO constrained configuration could ever land it: the
+  v3/v3.1 operation nulls are protocol-assumption meets QK-mediated circuit.
+- Arms 1–2 rule out the alternatives: 30x with paper-faithful geometry still lands on
+  adjacent semantics (`medium` @ .72), donors moved to the final position change
+  little. Arm 3: the answer-side route (reviewed `say small` donors at final) DOES
+  land under constrained patching (zh 小 @ 1.000, crossover 3x) — retroactively,
+  v1's influence-top selection landed via this answer-side route.
+- **Three-swap mechanism taxonomy, completed**: operand = MLP-pathway (works frozen,
+  needs strength), language = direct-path (works at ell=35, saturates), operation =
+  QK-mediated (needs live attention) — matching the paper's own Fig B6 sketch.
+
+## Twelfth session (2026-07-12, same day): result-based cleanup
+
+User directive. `multilingual_extra_operation_swap.ipynb` reduced to two arms —
+strength (→30x) and the frozen-vs-live QK probe (the donor-at-final and answer-side
+arms removed; their findings remain recorded in the eleventh-session entry). Re-executed
+clean; numbers unchanged. `multilingual.ipynb` prose pass (markdown-only; code cells
+verified byte-identical, no re-execution): version narration and old-corpus references
+removed throughout, §C/§D/§E protocol notes reduced to floors + one-line pointers to
+the two extra notebooks, §F describes the corpus as-is, Summary rewritten result-based
+(scale row now simply **not reproduced** with the measured numbers). Stale
+extra_operation_sweep_arm{3,4}.png removed.
+
+## Multilingual reproduction: FINALIZED (2026-07-12)
+
+Merged to main. Final state: `multilingual.ipynb` (constrained-only, two per-format
+reviewed selections in `supernodes/multilingual_{chat,raw}_4b.json`, extended ladders
+with the paper endpoints as marked grid points, executed clean) + two beyond-paper
+companions, `multilingual_extra_operand_swap.ipynb` (selection x strength ablation)
+and `multilingual_extra_operation_swap.ipynb` (strength arm + the frozen-vs-live QK
+probe). Headline verdicts (full table in the notebook Summary): behavior + shared
+core + overlap reproduced; operand swap reproduced at 1.5-12x the paper's strengths;
+language swap partially reproduced (2/3 directions at the paper's scale, saturating
+handle); operation swap not reproducible under frozen-attention protocols (QK-mediated
+channel — the paper's own Haiku caveat); default language EN/ZH-shared (model
+difference); 4b->8b overlap growth not reproduced.
+
+Remaining queue (unchanged): revisit ADDITION supernodes via the export-review
+workflow. The orphan branch `repro-dumps-4b` stays — it is the dump-restore path for
+fresh studios (disks do not persist).

@@ -1,0 +1,70 @@
+{
+ "example": "raw_hot_en",
+ "groups": [
+  {
+   "name": "hot (multilingual)",
+   "nodes": [
+    {
+     "layer": 24,
+     "feature_idx": 127078,
+     "position": 5
+    },
+    {
+     "layer": 24,
+     "feature_idx": 8689,
+     "position": 5
+    },
+    {
+     "layer": 25,
+     "feature_idx": 110576,
+     "position": 5
+    },
+    {
+     "layer": 26,
+     "feature_idx": 119024,
+     "position": 5
+    },
+    {
+     "layer": 27,
+     "feature_idx": 143324,
+     "position": 5
+    },
+    {
+     "layer": 27,
+     "feature_idx": 58824,
+     "position": 5
+    }
+   ]
+  },
+  {
+   "name": "say cold (multilingual)",
+   "nodes": [
+    {
+     "layer": 27,
+     "feature_idx": 137832,
+     "position": 8
+    },
+    {
+     "layer": 31,
+     "feature_idx": 160128,
+     "position": 8
+    },
+    {
+     "layer": 31,
+     "feature_idx": 102550,
+     "position": 8
+    },
+    {
+     "layer": 32,
+     "feature_idx": 9227,
+     "position": 8
+    },
+    {
+     "layer": 32,
+     "feature_idx": 93558,
+     "position": 8
+    }
+   ]
+  }
+ ]
+}

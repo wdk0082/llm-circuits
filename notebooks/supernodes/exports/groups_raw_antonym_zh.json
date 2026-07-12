@@ -1,0 +1,135 @@
+{
+ "example": "raw_antonym_zh",
+ "groups": [
+  {
+   "name": "antonym (multilingual)",
+   "nodes": [
+    {
+     "layer": 34,
+     "feature_idx": 67478,
+     "position": 1
+    }
+   ]
+  },
+  {
+   "name": "small (multilingual)",
+   "nodes": [
+    {
+     "layer": 26,
+     "feature_idx": 58650,
+     "position": 2
+    },
+    {
+     "layer": 27,
+     "feature_idx": 29715,
+     "position": 2
+    },
+    {
+     "layer": 28,
+     "feature_idx": 36616,
+     "position": 2
+    },
+    {
+     "layer": 28,
+     "feature_idx": 97177,
+     "position": 2
+    }
+   ]
+  },
+  {
+   "name": "say large (multilingual)",
+   "nodes": [
+    {
+     "layer": 30,
+     "feature_idx": 27666,
+     "position": 9
+    },
+    {
+     "layer": 30,
+     "feature_idx": 57180,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 11436,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 56787,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "quote (zh)",
+   "nodes": [
+    {
+     "layer": 30,
+     "feature_idx": 52035,
+     "position": 9
+    },
+    {
+     "layer": 31,
+     "feature_idx": 71095,
+     "position": 9
+    },
+    {
+     "layer": 32,
+     "feature_idx": 105084,
+     "position": 9
+    },
+    {
+     "layer": 32,
+     "feature_idx": 12584,
+     "position": 9
+    },
+    {
+     "layer": 33,
+     "feature_idx": 105473,
+     "position": 9
+    },
+    {
+     "layer": 34,
+     "feature_idx": 69056,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "opposite (zh)",
+   "nodes": [
+    {
+     "layer": 14,
+     "feature_idx": 96297,
+     "position": 5
+    },
+    {
+     "layer": 14,
+     "feature_idx": 77869,
+     "position": 5
+    },
+    {
+     "layer": 15,
+     "feature_idx": 24829,
+     "position": 5
+    },
+    {
+     "layer": 16,
+     "feature_idx": 45664,
+     "position": 5
+    },
+    {
+     "layer": 16,
+     "feature_idx": 153311,
+     "position": 5
+    },
+    {
+     "layer": 18,
+     "feature_idx": 148614,
+     "position": 5
+    }
+   ]
+  }
+ ]
+}

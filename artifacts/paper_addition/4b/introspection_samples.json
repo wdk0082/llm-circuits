@@ -1,0 +1,93 @@
+[
+ {
+  "question": "Briefly, how did you get that?",
+  "seed": 1000,
+  "explanation": "I added 46 and 49 together: 46 + 49 = 95.",
+  "carry_words": []
+ },
+ {
+  "question": "Briefly, how did you get that?",
+  "seed": 1001,
+  "explanation": "I added 46 and 49 together: 46 + 49 = 95.",
+  "carry_words": []
+ },
+ {
+  "question": "Explain step by step how you computed it.",
+  "seed": 1010,
+  "explanation": "Sure! Let's compute 46 + 49 step by step:\n\n1. **Add the tens place**:  \n   40 + 40 = 80\n\n2. **Add the ones place**:  \n   6 + 9 = 15\n\n3. **Combine the results**:  \n   80 + 15 = 95\n\nSo",
+  "carry_words": [
+   "ones place",
+   "tens place",
+   "add the tens",
+   "add the ones"
+  ]
+ },
+ {
+  "question": "Explain step by step how you computed it.",
+  "seed": 1011,
+  "explanation": "Sure! Let's compute 46 + 49 step by step:\n\n1. Start with the first number: **46**.\n2. Add the second number: **49**.\n3. Break it down:\n   - Add the tens: **40 + 40 = 80**\n   - Add the ones: **6 + 9 = 15",
+  "carry_words": [
+   "add the tens",
+   "add the ones"
+  ]
+ },
+ {
+  "question": "How did you add those two numbers? Be brief.",
+  "seed": 1020,
+  "explanation": "Added the numbers: 46 + 49 = 95.",
+  "carry_words": []
+ },
+ {
+  "question": "How did you add those two numbers? Be brief.",
+  "seed": 1021,
+  "explanation": "Added 46 and 49 together.",
+  "carry_words": []
+ },
+ {
+  "question": "Describe the method you used to get the answer.",
+  "seed": 1030,
+  "explanation": "I added 46 and 49 together. First, I added the tens: 40 + 40 = 80. Then I added the ones: 6 + 9 = 15. Finally, I combined the results: 80 + 15 = 95.",
+  "carry_words": [
+   "added the tens",
+   "added the ones"
+  ]
+ },
+ {
+  "question": "Describe the method you used to get the answer.",
+  "seed": 1031,
+  "explanation": "I added 46 and 49 together. First, I added the tens: 40 + 40 = 80. Then I added the ones: 6 + 9 = 15. Finally, I combined the results: 80 + 15 = 95.",
+  "carry_words": [
+   "added the tens",
+   "added the ones"
+  ]
+ },
+ {
+  "question": "Walk me through your mental arithmetic.",
+  "seed": 1040,
+  "explanation": "Sure! Let's walk through the addition of 46 and 49 step by step:\n\n1. **Add the tens**: 40 + 40 = 80  \n2. **Add the ones**: 6 + 9 = 15  \n3. **Combine the results**: 80 + 15 = 95  \n\nSo, 46",
+  "carry_words": [
+   "add the tens",
+   "add the ones"
+  ]
+ },
+ {
+  "question": "Walk me through your mental arithmetic.",
+  "seed": 1041,
+  "explanation": "Sure! Let's go through the addition step by step:\n\n**46 + 49**\n\nFirst, break it down into easier parts:\n\n- 46 can be thought of as 40 + 6\n- 49 can be thought of as 40 + 9\n\nNow, add the tens first:\n\n- 40 + 40 = 80",
+  "carry_words": [
+   "add the tens"
+  ]
+ },
+ {
+  "question": "What procedure did you follow to compute the sum?",
+  "seed": 1050,
+  "explanation": "Addition.",
+  "carry_words": []
+ },
+ {
+  "question": "What procedure did you follow to compute the sum?",
+  "seed": 1051,
+  "explanation": "Addition.",
+  "carry_words": []
+ }
+]

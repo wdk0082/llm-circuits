@@ -1,0 +1,53 @@
+{
+ "antonym": {
+  "en": {
+   "token_id": 16767,
+   "token": "large",
+   "continuation": "large\", and the"
+  },
+  "fr": {
+   "token_id": 52666,
+   "token": "grand",
+   "continuation": "grand\", mais dans"
+  },
+  "zh": {
+   "token_id": 26288,
+   "token": "大",
+   "continuation": "大\"，对"
+  }
+ },
+ "synonym": {
+  "en": {
+   "token_id": 46116,
+   "token": "tiny",
+   "continuation": "tiny\". What is"
+  },
+  "fr": {
+   "token_id": 6862,
+   "token": "pet",
+   "continuation": "petit\" lui"
+  },
+  "zh": {
+   "token_id": 30709,
+   "token": "小",
+   "continuation": "小\"，对"
+  }
+ },
+ "antonym_hot": {
+  "en": {
+   "token_id": 87072,
+   "token": "cold",
+   "continuation": "cold\". The opposite"
+  },
+  "fr": {
+   "token_id": 69,
+   "token": "f",
+   "continuation": "froid\". Le"
+  },
+  "zh": {
+   "token_id": 99476,
+   "token": "冷",
+   "continuation": "冷\"，对"
+  }
+ }
+}

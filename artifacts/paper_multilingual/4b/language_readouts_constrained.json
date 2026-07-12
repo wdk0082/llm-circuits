@@ -1,0 +1,358 @@
+{
+ "en->zh@6x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p8": "pinned",
+    "L31f56787@p8": "pinned",
+    "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
+    "L30f57180@p8": "pinned",
+    "L30f156227@p8": "pinned"
+   }
+  },
+  "say_large_src_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 1,
+   "per_feature": {
+    "L32f48600@p8": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L27f100360@p8": "pinned",
+    "L27f65964@p8": "pinned",
+    "L23f43918@p8": "pinned",
+    "L29f147934@p8": "pinned",
+    "L28f39571@p8": "pinned",
+    "L29f81877@p8": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L34f69056@p8": "pinned",
+    "L33f105473@p8": "pinned",
+    "L32f105084@p8": "pinned",
+    "L32f12584@p8": "pinned",
+    "L30f52035@p8": "pinned",
+    "L31f71095@p8": "pinned"
+   }
+  }
+ },
+ "en->zh@15x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p8": "pinned",
+    "L31f56787@p8": "pinned",
+    "L31f45673@p8": "pinned",
+    "L31f11436@p8": "pinned",
+    "L30f57180@p8": "pinned",
+    "L30f156227@p8": "pinned"
+   }
+  },
+  "say_large_src_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 1,
+   "per_feature": {
+    "L32f48600@p8": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L27f100360@p8": "pinned",
+    "L27f65964@p8": "pinned",
+    "L23f43918@p8": "pinned",
+    "L29f147934@p8": "pinned",
+    "L28f39571@p8": "pinned",
+    "L29f81877@p8": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L34f69056@p8": "pinned",
+    "L33f105473@p8": "pinned",
+    "L32f105084@p8": "pinned",
+    "L32f12584@p8": "pinned",
+    "L30f52035@p8": "pinned",
+    "L31f71095@p8": "pinned"
+   }
+  }
+ },
+ "fr->en@6x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p10": "pinned",
+    "L31f56787@p10": "pinned",
+    "L31f45673@p10": "pinned",
+    "L31f11436@p10": "pinned",
+    "L30f57180@p10": "pinned",
+    "L30f156227@p10": "pinned"
+   }
+  },
+  "say_large_src_pct_baseline": {
+   "mean_pct": 0.0,
+   "n_used": 1,
+   "n_skipped": 0,
+   "n_pinned": 5,
+   "per_feature": {
+    "L33f62570@p10": 0.0,
+    "L30f76139@p10": "pinned",
+    "L31f17182@p10": "pinned",
+    "L32f138876@p10": "pinned",
+    "L31f27213@p10": "pinned",
+    "L28f10143@p10": "pinned"
+   }
+  },
+  "say_large_tgt_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 1,
+   "per_feature": {
+    "L32f48600@p10": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f67339@p10": "pinned",
+    "L32f145845@p10": "pinned",
+    "L31f111489@p10": "pinned",
+    "L29f119392@p10": "pinned",
+    "L31f52945@p10": "pinned",
+    "L31f149982@p10": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L27f100360@p10": "pinned",
+    "L27f65964@p10": "pinned",
+    "L23f43918@p10": "pinned",
+    "L29f147934@p10": "pinned",
+    "L28f39571@p10": "pinned",
+    "L29f81877@p10": "pinned"
+   }
+  }
+ },
+ "fr->en@15x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p10": "pinned",
+    "L31f56787@p10": "pinned",
+    "L31f45673@p10": "pinned",
+    "L31f11436@p10": "pinned",
+    "L30f57180@p10": "pinned",
+    "L30f156227@p10": "pinned"
+   }
+  },
+  "say_large_src_pct_baseline": {
+   "mean_pct": 0.0,
+   "n_used": 1,
+   "n_skipped": 0,
+   "n_pinned": 5,
+   "per_feature": {
+    "L33f62570@p10": 0.0,
+    "L30f76139@p10": "pinned",
+    "L31f17182@p10": "pinned",
+    "L32f138876@p10": "pinned",
+    "L31f27213@p10": "pinned",
+    "L28f10143@p10": "pinned"
+   }
+  },
+  "say_large_tgt_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 1,
+   "per_feature": {
+    "L32f48600@p10": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f67339@p10": "pinned",
+    "L32f145845@p10": "pinned",
+    "L31f111489@p10": "pinned",
+    "L29f119392@p10": "pinned",
+    "L31f52945@p10": "pinned",
+    "L31f149982@p10": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L27f100360@p10": "pinned",
+    "L27f65964@p10": "pinned",
+    "L23f43918@p10": "pinned",
+    "L29f147934@p10": "pinned",
+    "L28f39571@p10": "pinned",
+    "L29f81877@p10": "pinned"
+   }
+  }
+ },
+ "zh->fr@6x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p9": "pinned",
+    "L31f56787@p9": "pinned",
+    "L31f45673@p9": "pinned",
+    "L31f11436@p9": "pinned",
+    "L30f57180@p9": "pinned",
+    "L30f156227@p9": "pinned"
+   }
+  },
+  "say_large_tgt_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L33f62570@p9": "pinned",
+    "L30f76139@p9": "pinned",
+    "L31f17182@p9": "pinned",
+    "L32f138876@p9": "pinned",
+    "L31f27213@p9": "pinned",
+    "L28f10143@p9": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L34f69056@p9": "pinned",
+    "L33f105473@p9": "pinned",
+    "L32f105084@p9": "pinned",
+    "L32f12584@p9": "pinned",
+    "L30f52035@p9": "pinned",
+    "L31f71095@p9": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f67339@p9": "pinned",
+    "L32f145845@p9": "pinned",
+    "L31f111489@p9": "pinned",
+    "L29f119392@p9": "pinned",
+    "L31f52945@p9": "pinned",
+    "L31f149982@p9": "pinned"
+   }
+  }
+ },
+ "zh->fr@15x": {
+  "say_large_multi_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f27666@p9": "pinned",
+    "L31f56787@p9": "pinned",
+    "L31f45673@p9": "pinned",
+    "L31f11436@p9": "pinned",
+    "L30f57180@p9": "pinned",
+    "L30f156227@p9": "pinned"
+   }
+  },
+  "say_large_tgt_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L33f62570@p9": "pinned",
+    "L30f76139@p9": "pinned",
+    "L31f17182@p9": "pinned",
+    "L32f138876@p9": "pinned",
+    "L31f27213@p9": "pinned",
+    "L28f10143@p9": "pinned"
+   }
+  },
+  "quote_src_response_pct_baseline": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L34f69056@p9": "pinned",
+    "L33f105473@p9": "pinned",
+    "L32f105084@p9": "pinned",
+    "L32f12584@p9": "pinned",
+    "L30f52035@p9": "pinned",
+    "L31f71095@p9": "pinned"
+   }
+  },
+  "quote_tgt_response_pct_stored": {
+   "mean_pct": null,
+   "n_used": 0,
+   "n_skipped": 0,
+   "n_pinned": 6,
+   "per_feature": {
+    "L30f67339@p9": "pinned",
+    "L32f145845@p9": "pinned",
+    "L31f111489@p9": "pinned",
+    "L29f119392@p9": "pinned",
+    "L31f52945@p9": "pinned",
+    "L31f149982@p9": "pinned"
+   }
+  }
+ }
+}

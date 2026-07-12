@@ -1856,3 +1856,20 @@ to Appendix D. Fixes en route: the zh raw prompt's trailing open-quote was being
 dropped inside the CJK group (moved outside), language diagram labels no longer
 report noise-crossings as flips, FloatBarrier keeps Appendix C's placeholders ahead
 of Appendix D. texcount: 3,007 words.
+
+### Language-swap metric fix (same session, user-caught)
+
+The fr→en curve tracked the wrong expected token: `expected` was the model's own raw
+EN antonym answer (`large`, id 16767) while the swap's actual English output is the
+paper's Fig B5 token `big` (id 16154 — verified by an endpoint logit probe: p(big) =
+0.753 at ell=32, 6x; the display-stripped top_tokens hid the distinction). zh→fr was
+checked and is NOT affected: `grand` is both the paper token and the best French
+candidate at every strength (<= 0.076 — the null is genuine); en→zh already tracked
+the paper's 大. Fix (notebook only; report untouched per instruction): the language
+swap's expected tokens are now the paper's outcomes {大, big, grand} (single-token
+asserted), the sweep legend labels follow, and §E's markdown states the convention.
+Re-executed: fr→en now reads crossover 4.5x, p_exp@6x = 0.753 (ell unchanged at 32);
+en→zh and zh→fr byte-identical. Notebook Summary row updated. NB: the first rerun
+attempt executed an unpatched notebook because a stale-text assert aborted the patch
+mid-chain without gating nbconvert — redone with &&-linked gates and a pre-execution
+source check.

@@ -6,7 +6,8 @@
 %   Abstract                    ~150   (written)
 %   1 Introduction              ~640   (written)
 %   2 Method                    ~1,450 (written; display math excluded by texcount)
-%   3 Experiments and Results   ~1,150 (PLACEHOLDER -- see budget comment in situ)
+%   3 Experiments and Results   ~1,150 (written; multilingual case study only ---
+%                                      addition dropped from the report by decision)
 %   4 Discussion                ~350   (PLACEHOLDER)
 %   Slack                       ~250
 % Keep the placeholders inside their budgets or trim Sections 1-2 to compensate.
@@ -24,6 +25,9 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage[colorlinks=true,linkcolor=BrickRed,citecolor=NavyBlue,urlcolor=NavyBlue]{hyperref}
+\usepackage{placeins}  % \FloatBarrier keeps Section 3's floats inside Section 3
+\usepackage{CJKutf8}   % 大/小/冷 in tables (fonts: latex-cjk-chinese-arphic-gbsn00lp)
+\newcommand{\zh}[1]{\begin{CJK}{UTF8}{gbsn}#1\end{CJK}}
 
 % ----- notation macros -------------------------------------------------------
 \newcommand{\enc}{W_{\mathrm{enc}}}
@@ -54,14 +58,17 @@ attribution, influence-based pruning, and constrained-patching interventions ---
 the open-source \mbox{circuit-tracer} library only to load pretrained per-layer
 transcoders. The reimplementation is verified numerically equivalent to
 circuit-tracer: identical node sets, matching edge weights, identical pruned graphs,
-and matching constrained-steering effects on shared inputs. We then reproduce two case studies
-from \citet{lindsey2025biology} on Qwen3-4B --- two-digit addition and multilingual
-antonyms --- following the paper's intervention protocols, and add a same-recipe
-cross-scale comparison (4B vs.\ 8B).
-% TODO(results): sync this sentence with Section 4 once it is written.
-The core circuit structures reproduce; several interventions reproduce only at reduced
-steering strength; and one causal claim (the language swap) localises differently in
-Qwen3, which we characterise mechanistically.
+and matching constrained-steering effects on shared inputs. We then reproduce the multilingual-antonyms
+case study of \citet{lindsey2025biology} on Qwen3-4B --- shared cross-lingual
+circuitry and the paper's operation, operand, and language swap interventions ---
+following its protocols, and add a same-recipe cross-scale comparison (4B vs.\ 8B).
+The circuit structure reproduces; the operand swap reproduces at $1.5$--$12\times$ the
+paper's steering strengths; the language swap reproduces in two of three directions at
+the paper's own scale; and the operation swap does not reproduce under the protocol's
+frozen attention patterns --- a probe that lets patterns re-form recovers the paper's
+exact outcome tokens, identifying the channel as QK-mediated, the same interaction the
+paper flags as invisible to its method. The cross-scale overlap-growth claim does not
+survive a register-diverse evaluation corpus.
 \end{abstract}
 
 % =============================================================================
@@ -121,19 +128,18 @@ intervention machinery is imported. A dedicated verification suite establishes
 numerical equivalence with circuit-tracer on shared inputs --- identical node sets,
 edge weights matching to floating-point noise, identical influence rankings and pruned
 graphs, and matching constrained-steering deltas (Section~\ref{sec:experiments}). \textbf{Second},
-we reproduce two case studies of \citet{lindsey2025biology} on Qwen3-4B: two-digit
-\emph{addition} (parallel lookup-table and sum pathways, the operand-plot feature
-taxonomy, causal input suppressions, and cross-context reuse of arithmetic features)
-and \emph{multilingual antonyms} (a shared cross-lingual ``say-large'' core with
-language-specific output stages, operation/operand/language swap interventions, and
-cross-lingual feature overlap as a function of scale, compared against Qwen3-8B with
-same-recipe transcoders). Where Qwen3's tokenisation or capacity forces protocol
-adaptations --- digit-by-digit arithmetic, chat templates, steering strengths at which
-a 4B model degrades --- we document the adaptation explicitly and separate model
-differences from method failures.
+we reproduce the \emph{multilingual antonyms} case study of
+\citet{lindsey2025biology} on Qwen3-4B: a shared cross-lingual ``say-large'' core with
+language-specific input and output stages, the paper's operation/operand/language swap
+interventions under its constrained-patching protocol, and cross-lingual feature
+overlap as a function of scale, compared against Qwen3-8B with same-recipe
+transcoders. Where Qwen3 forces protocol adaptations --- chat templates for an
+instruct model, steering strengths at which a 4B model responds only weakly --- we
+document the adaptation explicitly and separate model differences from method
+failures.
 
 Section~\ref{sec:method} presents the method; Section~\ref{sec:experiments} reports
-the verification and the two reproductions; Section~\ref{sec:discussion} discusses
+the verification and the reproduction; Section~\ref{sec:discussion} discusses
 what transfers across models and what does not.
 
 % =============================================================================
@@ -336,71 +342,281 @@ with circuit-tracer is established in Section~\ref{sec:experiments}.
 % =============================================================================
 \section{Experiments and Results}\label{sec:experiments}
 % =============================================================================
-% PLACEHOLDER -- NOT YET WRITTEN. Budget: ~1,150 words + 2--3 figures/tables.
-% Planned narrative (source material: notebooks/addition.ipynb,
-% notebooks/multilingual.ipynb, DEVLOG.md, notes/biology_digest.md):
-%
-%   3.1 Setup (~150 w): Qwen3-4B (36 layers, bf16) + mwhanna per-layer JumpReLU
-%       transcoders (163,840 features/layer); A100-80GB; ~8,000-target graph in
-%       ~1-2 min; two notebooks re-executed end-to-end with bf16 parity across
-%       three A100 variants.
-%
-%   3.2 Faithfulness verification (~150 w): 11/11 checks vs circuit-tracer on
-%       Qwen3-0.6B (forward exactness 1.2e-5; linearity identity 1.7e-5;
-%       200 edge spot-checks vs plain autograd 3.7e-5; salient-logit parity;
-%       node-set Jaccard 1.0; edge cosine/Pearson 1.0 over 2.4M shared pairs;
-%       influence Spearman 1.0; pruned-set Jaccard 1.0) + steering parity
-%       (max |dOurs - dCT| = 6e-5, noise floor). One table.
-%
-%   3.3 Addition (~450 w): digit-split adaptation (Qwen3 tokenises digits
-%       individually -> two per-digit circuits); studied pair 46+49=95 (paper's
-%       36+59 answered wrong by the 4B model; digit-class-preserving switch);
-%       operand-grid taxonomy reproducing the paper's classes (sum
-%       anti-diagonals, lookup-table lattices, mod-10, magnitude bands,
-%       operand crosses); input-suppression strength ladder (ablation /
-%       paper -1x / paper figure -2x) -- phenomenology at reduced strength,
-%       two-band magnitude supernode giving the clean ones/magnitude
-%       dissociation at full paper strength; lookup-vs-sum steering; polymer
-%       citation reuse (8/10 features at the ones moment) + verified-donor
-%       lookup swap (8 @ 0.715, paper 998 @ 66.6%); lookups-only suppression
-%       silencing all sum features (indirect-effect architecture); computed-9
-%       negative-weight screen (measured negative); introspection sampling
-%       (carry narration in ~half of samples = paper's mismatch motif).
-%
-%   3.4 Multilingual (~400 w): shared say-big core across en/fr/zh (107
-%       features in all three pruned graphs; trio L30/L31/L32); operation swap
-%       (top-1 in all three languages at 1-2x in the paper's raw format;
-%       over-drive at full +/-5-6x -- capacity difference); operand swap
-%       (cold/f/cold-zh at crossovers 0.625x/1.0x/0.875x -- cleanest
-%       reproduction); language swap null on raw prompts with populated early
-%       supernodes + Fig-B5-style say-large readouts (say-large-zh never
-%       activates; causal handle sits in late say-X features -- an earned
-%       model difference); overlap-by-layer IoU with unrelated-pair baseline
-%       (paper-shaped, en-fr strongest); same-recipe scale check: 8b > 4b on
-%       every language pair (paper's scale claim reproduced once the
-%       transcoder-recipe confound is removed).
+% ~1,150 words. Multilingual case study only (addition dropped by decision).
+% Source material: notebooks/multilingual*.ipynb, DEVLOG.md, notes/biology_digest.md.
 % =============================================================================
-\placeholder{[Placeholder --- to be written; budgeted at $\approx$1,150 words.
-Verification of the reimplementation against circuit-tracer, then the addition and
-multilingual reproductions from \texttt{notebooks/}, with per-experiment verdicts
-against \citet{lindsey2025biology}.]}
+
+\subsection{Setup}\label{sec:exp:setup}
+
+All experiments use Qwen3-4B (36 layers, bf16) with pretrained per-layer JumpReLU
+transcoders (163{,}840 features per layer)~\citep{hanna2025qwen3tc} on a single
+A100-80GB. Attribution graphs are built once, pruned (node threshold $0.8$ for
+chat-format prompts, $0.95$ for the paper's raw completions, edge threshold $0.98$),
+and persisted; every experiment below --- including supernode selection --- runs
+against exactly these persisted graphs, with prompt tokenisation length-checked
+against a manifest. Notebooks seed all RNGs and pin cuDNN to deterministic kernels at
+startup; re-executions reproduce every reported number exactly, and bf16 graph builds
+are bit-stable across A100 nodes.
+
+\subsection{Verification against circuit-tracer}\label{sec:exp:verif}
+
+Two scripts certify the reimplementation against circuit-tracer on shared inputs
+(Qwen3-0.6B, fp32). The graph suite checks forward exactness of the local replacement
+model, an exact linearity identity for the frozen-linear backward, parity of salient
+logit selection, and a full cross-check against \texttt{circuit\_tracer.attribute()};
+the intervention script compares constrained-steering \emph{deltas} across the two
+implementations for the three primitives the reproduction uses (a single negative
+steer, a two-layer coupled suppression stack, and an absolute-value donor injection).
+All eleven graph checks and all three steering cases pass
+(Table~\ref{tab:verification}); the two implementations agree to floating-point noise.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{ll}
+\toprule
+check & result \\
+\midrule
+forward exactness (local replacement vs.\ model) & $\max|\Delta\text{logits}| = 1.2\times10^{-5}$ \\
+linearity identity of the frozen backward & $\max$ error $1.7\times10^{-5}$ \\
+200 emitted edge weights vs.\ plain \texttt{autograd} & $\max|\Delta| = 3.7\times10^{-5}$ \\
+salient-logit selection & identical tokens and probabilities \\
+feature node sets & Jaccard $1.0$ \\
+edge weights on $2.44$M shared pairs & cosine $=$ Pearson $= 1.0000$ \\
+influence ranking & Spearman $1.0000$ \\
+pruned node sets ($0.8/0.98$) & identical ($337 = 337$) \\
+steering deltas (3 intervention primitives) & $\max|\Delta_\text{ours}-\Delta_\text{CT}| = 6\times10^{-5}$, cosine $>0.99$ \\
+\bottomrule
+\end{tabular}
+\caption{Numerical verification of the reimplementation against circuit-tracer.}
+\label{tab:verification}
+\end{table}
+
+\subsection{Prompts, behaviour, and attribution graphs}\label{sec:exp:graphs}
+
+The paper's prompts are raw completions ending on a content-bearing open quote
+(\emph{The opposite of ``small'' is ``}); we run these exactly (one attention-sink
+token prepended), and, because Qwen3-4B is an instruction-tuned model, a chat-template
+adaptation alongside (\emph{What is the opposite of ``small''? Reply with only the
+word\ldots}). Table~\ref{tab:behaviour} shows the answers: the antonym task is intact
+in both formats and all three languages, while the model's own synonym behaviour is
+degenerate in French and Chinese (it echoes the operand) --- swap targets below are
+therefore the model's \emph{own} answers, not idealised ones.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+ & antonym of \emph{small} & synonym of \emph{small} & antonym of \emph{hot} \\
+\midrule
+en & large\,/\,large & tiny\,/\,tiny & cold\,/\,cold \\
+fr & Grand\,/\,grand & pet\,/\,pet (echo) & F\,/\,f(roid) \\
+zh & \zh{大}\,/\,\zh{大} & \zh{小}\,/\,\zh{小} (echo) & \zh{冷}\,/\,\zh{冷} \\
+\bottomrule
+\end{tabular}
+\caption{First generated token, chat\,/\,raw format. The paper's expected behaviours
+are big\,/\,grand\,/\,\zh{大} (Claude answers ``big''; Qwen3 answers ``large'').}
+\label{tab:behaviour}
+\end{table}
+
+Supernodes --- the unit the paper intervenes on --- are selected \emph{outside} the
+notebooks: a semantic scan over the persisted graphs proposes lexicon-matched
+candidates per concept, ranked earliest-layer-first and capped at six members; the
+chat and raw formats get fully separate selections, frozen in reviewed artifacts with
+per-graph activations and node positions per member, and enforced disjoint by
+(layer, feature). Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs for
+the three raw antonym prompts: the paper's skeleton --- language-specific
+\emph{opposite} and \emph{quote} input groups, a shared multilingual \emph{small}
+group, and a shared \emph{say large} stage feeding the answer --- is present in all
+three languages, with 107 (chat) and 67 (raw) individual features appearing in all
+three languages' pruned graphs. One structural difference is visible immediately: the
+groups sit late (the raw \emph{antonym} group has a single L34 member; \emph{quote}
+members span L23--L34), where the paper describes early detection features. Full
+interactive-explorer views are in Appendix~\ref{app:snapshots}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_graphs.pdf}
+\caption{Simplified attribution graphs for the three raw antonym prompts. Boxes are
+the reviewed supernodes (member count shown); arrow widths are proportional to the
+aggregated signed edge weight between groups in the pruned graph (red dashed:
+net-negative). The paper's shared-core skeleton appears in all three languages.}
+\label{fig:ml-graphs}
+\end{figure}
+
+\subsection{Swap interventions}\label{sec:exp:swaps}
+
+All swaps run the paper's constrained-patching protocol
+(Section~\ref{sec:method:interv}): source members are steered to a negative multiple
+of their clean activation at their own node positions, donors are injected at an
+absolute multiple of their donor-graph activation, the patch end layer $\ell$ is swept
+and the most effective value reported, and supernode readouts are means of
+per-feature ratios with rows at layers $\le\ell$ pinned by the protocol. Strength
+ladders extend tenfold beyond the paper's endpoints along the same source--donor
+coupling (the paper endpoint is an exact, marked grid point), so paper-strength
+readings and what-it-takes readings come from one run. Figure~\ref{fig:ml-interv}
+summarises all three swaps.
+
+\textbf{Operand swap} (small $\to$ hot; paper: $-0.5\times$/$+1.5\times$ gives
+cold\,/\,f[roid]\,/\,\zh{冷}). This reproduces in \emph{all six} format--language
+configurations, but nothing moves at the paper's endpoint: crossovers sit at
+$2.25$--$4.5\times$ (chat), $5.25$--$6\times$ (raw en/fr), and $18\times$ (raw zh),
+with endpoint outputs cold $0.81$--$0.93$, f $0.73$--$0.97$, \zh{冷} $0.998$. Where
+readouts are readable the paper's push--pull appears at amplitude --- \emph{say cold}
+recruited to $18$--$65\%$ of its donor-prompt level, \emph{say large} suppressed to
+$4$--$26\%$. The paper's own caveat that required strengths are ``quite high''
+transfers with a larger constant.
+
+\textbf{Language swap} (quote$_X \to$ quote$_Y$; paper: the output language changes,
+operation and operand preserved). Two of three directions reproduce at the paper's own
+scale: en$\to$zh yields \zh{大} at $0.636$ (crossover $5.25\times$), and fr$\to$en
+turns the output English --- \emph{big} at $0.753$, the paper's exact token (the
+figure's curve tracks the model's own answer ``large'' and so under-reports this
+flip). zh$\to$fr never lands. Beyond ${\sim}9\times$ both working directions
+\emph{degrade} (junk or wrong-language intrusions): unlike the operand swap, this
+handle saturates. The one readable annotation matches the paper's pattern
+(\emph{say large (fr)} $\to 0\%$ under fr$\to$en). Because Qwen3's pruned raw graphs
+keep no early quote-position nodes, the causal handle here is \emph{late}
+(L23--L34) rather than the paper's early detection features.
+
+\textbf{Operation swap} (antonym $\to$ synonym; paper: language-appropriate synonyms
+top-1, crossover ${\approx}4\times$). This never crosses --- at the paper's endpoint,
+at $2.5\times$ it, or at $5\times$ it ($\pm29/30\times$), in either format. The chat
+configuration has full protocol room ($\ell$ swept over $[13,35]$) and readable
+annotations, which show the mechanism moving in the right direction but far too
+weakly: \emph{say small} recruits to at most $37\%$ of donor level and the output
+drifts to adjacent semantics (\emph{medium} at $0.70$) without executing the
+operation. A probe isolates the cause: running the identical configuration in
+fully-propagating mode with attention patterns \emph{frozen} reproduces the flat null,
+while letting patterns \emph{re-form} lands the paper's exact outcome tokens ---
+\emph{little} at $0.735$ (en, crossover $6.75\times$) and \emph{pet} at $0.515$ (fr,
+$4.5\times$) (Figure~\ref{fig:ml-interv}, bottom left). The swap's channel is
+QK-mediated --- the very interaction the paper reports for Haiku as ``mediated by
+changing where attention heads attend'' and invisible to its method --- and
+constrained patching freezes attention patterns by construction, so no constrained
+configuration can land it. In sum, the three swaps have three characters on Qwen3-4B:
+the operand swap is the paper's result with a bigger constant; the language swap is
+the paper's result at the paper's scale, with a ceiling; the operation swap is blocked
+by the protocol's frozen-QK assumption meeting a QK-mediated circuit.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_interventions.pdf}
+\caption{Swap interventions. \emph{Top:} intervention diagrams with measured
+supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer
+$\ell$, clamped by the protocol); badges give the paper's steering multiples.
+\emph{Bottom:} strength ladders, $P(\text{expected answer})$ vs.\ donor multiple
+$s$, with the paper endpoint dotted. Left: the operation swap under the constrained
+protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated
+channel. Middle: the operand swap crosses in all six configurations (dots mark
+crossovers; raw-zh at $18\times$). Right: the language swap peaks near the paper's own
+$6\times$ and saturates; fr$\to$en's curve tracks ``large'' while the actual output is
+the paper's token ``big'' ($0.753$ at $6\times$).}
+\label{fig:ml-interv}
+\end{figure}
+
+\subsection{Cross-lingual overlap, scale, and the default language}\label{sec:exp:overlap}
+
+Following the paper, we compute the per-layer intersection-over-union of the feature
+sets active anywhere in the context for translated paragraph pairs, against an
+unrelated-pair baseline, on 18 register-diverse parallel paragraphs (authored in
+English and translated to French and Chinese --- the paper's own corpus recipe).
+The paper's shape reproduces cleanly (Figure~\ref{fig:ml-overlap}): baseline-subtracted
+overlap is low at both ends and peaks mid-network, with mid-third means
+en-fr $0.198 >$ en-zh $0.175 >$ fr-zh $0.142$ --- the paper's pair ordering. The
+paper's \emph{scale} claim does not reproduce on a same-recipe transcoder pair
+(4B vs.\ 8B, both 36 layers and 163{,}840 features/layer): mid-third changes are
+$+6\%$\,/\,$-3\%$\,/\,$0\%$, with no emphasis on the non-alphabet-sharing pairs the
+paper highlights. Finally, the paper's Claude-specific claim that English is the
+mechanistic default: the mean direct decoder effect of the shared say-large features
+on the three answer tokens is zh $0.766 >$ en $0.664 \gg$ fr $0.309$ --- \emph{some}
+language is privileged, but for EN/ZH-trained Qwen3 the role is shared between English
+and Chinese.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/fig_ml_overlap.pdf}
+\caption{Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B;
+dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering
+reproduce; its cross-scale growth does not.}
+\label{fig:ml-overlap}
+\end{figure}
+
+\subsection{Verdicts}\label{sec:exp:verdicts}
+
+Table~\ref{tab:verdicts} condenses the comparison. The paper's central structural
+claims transfer; its interventions transfer in proportion to how much their causal
+route depends on machinery the protocol holds fixed --- fully for the MLP-pathway
+operand swap (given strength), partially for the direct-path language swap, and not at
+all for the QK-mediated operation swap.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{p{5.3cm}p{6.4cm}l}
+\toprule
+paper claim (Claude 3.5 Haiku) & Qwen3-4B measurement & verdict \\
+\midrule
+behaviour big\,/\,grand\,/\,\zh{大} & large\,/\,grand\,/\,\zh{大}, both formats & reproduced \\
+shared multilingual core & 107 (chat)\,/\,67 (raw) features in all three pruned graphs & reproduced \\
+operand swap at $-0.5\times$/$+1.5\times$ & flips in all six configurations, crossovers $2.25$--$18\times$ & reproduced$^{*}$ \\
+language swap, three directions & 2/3 at the paper's scale; saturates past ${\sim}9\times$ & partial \\
+operation swap at $-5\times$/$+6\times$ & no flip $\le 30\times$ frozen; flips once patterns re-form & not reproduced$^{\dagger}$ \\
+overlap: mid-network peak, en-fr highest & $0.198 > 0.175 > 0.142$, ends $\le 0.03$ & reproduced \\
+English as mechanistic default & zh $0.766 >$ en $0.664 \gg$ fr $0.309$ & model difference \\
+scale: 8B $>$ 4B overlap & $+6\%$\,/\,$-3\%$\,/\,$0\%$ & not reproduced \\
+\bottomrule
+\end{tabular}
+\caption{Verdicts vs.\ \citet{lindsey2025biology}. $^{*}$At $1.5$--$12\times$ the
+paper's strengths. $^{\dagger}$Blocked by frozen attention patterns; the channel is
+QK-mediated (Section~\ref{sec:exp:swaps}).}
+\label{tab:verdicts}
+\end{table}
+
+\FloatBarrier
 
 % =============================================================================
 \section{Discussion}\label{sec:discussion}
 % =============================================================================
 % PLACEHOLDER -- NOT YET WRITTEN. Budget: ~350 words.
-% Planned content: verdict synthesis (what reproduced / at reduced strength /
-% differs); model-vs-method attribution of the differences (4B capacity ->
-% over-drive at paper strengths; EN/ZH-trained Qwen3 -> shared mechanistic
-% default; late say-X features carry output language); limitations (PLT vs
-% CLT, one model family, two case studies, chat-format sensitivity, feature
+% Planned content: verdict synthesis (reproduced / at higher strength / blocked
+% by protocol); the room-vs-strength dissociation across selections and the
+% QK-mediated operation channel (what frozen-pattern protocols can and cannot
+% establish); EN/ZH-shared mechanistic default; corpus sensitivity of the
+% scale claim; limitations (PLT vs CLT, one model family, one case study,
 % dictionaries' unexplained variance); what the faithfulness verification
-% does and does not license; future work (CLT edges, more behaviours,
-% global weights analysis).
+% does and does not license; future work (CLT edges, QK-aware attribution,
+% more behaviours).
 % =============================================================================
 \placeholder{[Placeholder --- to be written; budgeted at $\approx$350 words.]}
 
 \bibliographystyle{unsrtnat}
 \bibliography{refs}
+
+\appendix
+
+\section{Interactive-explorer snapshots}\label{app:snapshots}
+
+Full attribution graphs (all pruned nodes and edges, with the reviewed supernodes
+pre-loaded as groups) are best inspected in the interactive explorer shipped with the
+repository; the snapshots below show the six antonym pages.
+
+% TODO(screenshots): replace the two placeholders with explorer screenshots
+% (chat pages: antonym_en/fr/zh; raw pages: raw_antonym_en/fr/zh), provided
+% separately.
+\begin{figure}[h]
+\centering
+\fbox{\parbox[c][7cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
+explorer screenshots, chat antonym pages (en\,/\,fr\,/\,zh)}}
+\caption{Explorer views of the chat-format antonym graphs with the reviewed
+supernodes as groups.}
+\label{fig:app-chat}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\parbox[c][7cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
+explorer screenshots, raw antonym pages (en\,/\,fr\,/\,zh)}}
+\caption{Explorer views of the raw open-quote antonym graphs (the paper's format).}
+\label{fig:app-raw}
+\end{figure}
 
 \end{document}

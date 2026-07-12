@@ -1811,3 +1811,21 @@ fixed corpus (no sampled code paths), so this is belt-and-braces — and the cer
 rerun confirms it: **all three notebooks re-executed clean and every spot-checked
 verdict number is identical to the committed runs** (swaps, overlap, default
 language, scale, both extras).
+
+## Fourteenth session (2026-07-12, same day): report Section 3 written (multilingual only)
+
+User decisions: addition dropped from the report entirely; the report is
+self-contained (no notebook pointers — the QK probe and extended ladders are
+presented as content); explorer screenshots arrive later (framed placeholders in
+Appendix A). Section 3 (~1,150 w inside the 4,000-w budget; texcount 3,119 total
+with Discussion still pending): 3.1 setup, 3.2 verification vs circuit-tracer
+(11-check graph suite + 3-case steering parity, one table), 3.3 prompts/behaviour/
+graphs (behaviour table; Fig 1 = simplified supernode graphs for the three raw
+antonym prompts, edge widths = aggregated pruned-graph weights), 3.4 swap
+interventions (Fig 2 = paper-style diagrams with measured %-readouts + extended
+strength ladders; operand/language/operation paragraphs incl. the frozen-vs-live QK
+result in full), 3.5 overlap/scale/default language (Fig 3), 3.6 verdicts table.
+Abstract + intro edited for the single case study; Discussion planned-narrative
+comment refreshed; \FloatBarrier keeps Section 3's floats out of the references.
+Figures generated from committed artifacts (fig_ml_{graphs,interventions,overlap}.pdf).
+TeX toolchain + CJK (gbsn) installed on the node; PDF builds clean.

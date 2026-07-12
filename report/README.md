@@ -6,10 +6,13 @@ LaTeX source for the project report (attribution graphs on Qwen3).
   `texlive-fonts-recommended`, `texlive-bibtex-extra`, `latexmk` are installed).
 - **Word count:** `make count` (texcount). **Budget: 4,000 words total** — the
   per-section split lives in the header comment of `main.tex`.
-- **Status:** Abstract, Introduction (related work folded in), and Method
-  (transcoders → attribution-graph generation → pruning → interventions) are
-  written. *Experiments and Results* (~1,150 w) and *Discussion* (~350 w) are
-  placeholders; their planned narratives are outlined in comments in situ
-  (source material: `notebooks/`, `DEVLOG.md`, `notes/biology_digest.md`).
-- The abstract's final sentence summarises results and carries a
-  `TODO(results)` comment — re-check it once Section 3 is written.
+- **Status:** Abstract, Introduction, Method, and *Experiments and Results*
+  (Section 3 — the multilingual case study only; addition was dropped from the
+  report by decision) are written. *Discussion* (~350 w) is a placeholder with
+  its planned narrative in a comment in situ.
+- **TODO(screenshots):** Appendix A has two framed placeholders for
+  interactive-explorer screenshots (chat + raw antonym pages), to be provided.
+- Figures are generated from the committed artifacts (nothing schematic except
+  box layouts); regenerate with the session's figure script if artifacts change.
+- CJK glyphs (大/小/冷) need `latex-cjk-chinese` + the arphic `gbsn` font
+  (Debian: `latex-cjk-chinese-arphic-gbsn00lp`) — installed on this node.

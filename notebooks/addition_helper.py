@@ -666,8 +666,8 @@ def periodicity_report(grid, a_vals, b_vals) -> dict:
         best_cov = 0.0
         n_on = float(on.sum())
         for v in range(min(len(a_vals), len(b_vals))):
-            row, col = on[A == v], on[B == v]
-            cov = float(on[(A == v) | (B == v)].sum()) / n_on
+            row, col = on[v == A], on[v == B]
+            cov = float(on[(v == A) | (v == B)].sum()) / n_on
             if (
                 cov > best_cov
                 and cov >= 0.85

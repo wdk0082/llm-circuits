@@ -10,8 +10,12 @@ the language parts are language-specific (early input + late output).  Editing e
 independently transfers across languages.
 
 Kept out of the core package (task-specific prompt formatting, the parallel-sentence overlap
-metric, the feature-graft interventions).  Heavy functions run the model -> execute the
-notebook on a GPU node via ``hpc/run_multilingual_notebook.sbatch``.
+metric, the supernode-file-driven swap protocol).  Reproduction v2: all selection lives in
+the reviewed ``supernodes/multilingual_<size>.json`` (explorer-export ingest, see
+``build_supernodes.py``); :func:`load_supernodes` refuses anything unapproved, and the
+``supernode_*`` helpers below turn the file's members (per-graph ``acts``/``positions``)
+into constrained-patching interventions and %-readouts.  Heavy functions run the model ->
+execute the notebook on a GPU node via ``hpc/run_multilingual_notebook.sbatch``.
 
 Format note: Qwen3-4b is an instruct model -- a bare completion ("The opposite of 'small' is")
 makes it echo the prompt, but the instruction form below yields the answer as the FIRST
@@ -21,8 +25,10 @@ generated token (EN small->"large", FR petit->"Grand", ZH 小->"大"; all single
 
 from __future__ import annotations
 
+import json
 import os
 from collections import defaultdict
+from pathlib import Path
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -93,6 +99,9 @@ WORD = {
     "small": {"en": "small", "fr": "petit", "zh": "小"},
     "hot": {"en": "hot", "fr": "chaud", "zh": "热"},
 }
+# Operation-word surface forms per language: the token span the operation-swap donors
+# inject at (multi-token in FR/ZH; resolve with build_supernodes.op_word_positions).
+OP_WORD = {"en": "opposite", "fr": "contraire", "zh": "反义词"}
 
 
 def antonym_prompt(concept: str, lang: str) -> str:
@@ -246,32 +255,11 @@ def build_graph(
     return pruned_dict, answer_id, input_ids
 
 
-def feature_label(node) -> str:
-    lab = node.get("label") or {}
-    tops = lab.get("top_logits") or []
-    base = f"L{node['layer']} f{node['feature_idx']}"
-    return f"{base} ({'/'.join(map(str, tops[:3]))})" if tops else base
-
-
 def answer_features(pruned_dict, top_k: int = 12):
     """Top-``top_k`` feature nodes by influence."""
     feats = [n for n in pruned_dict["nodes"] if n["node_type"] == "feature"]
     feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
     return feats[:top_k]
-
-
-def graph_features_at_position(pruned_dict, position: int, top_n: int = 10):
-    """Influence-ranked feature nodes at ``position`` -> ``[(layer, idx, activation)]``.
-
-    The operand/concept supernode for the operand swap: graph **influence** selects the
-    features causally feeding the answer (the paper's criterion), unlike top-activation at a
-    position which surfaces late generic features.  ``activation`` is the donor inject value.
-    """
-    feats = [
-        n for n in pruned_dict["nodes"] if n["node_type"] == "feature" and n["position"] == position
-    ]
-    feats.sort(key=lambda n: n.get("influence", 0.0), reverse=True)
-    return [(n["layer"], n["feature_idx"], float(n.get("activation", 0.0))) for n in feats[:top_n]]
 
 
 def operand_token_pos(tokenizer, input_ids, surface: str) -> int | None:
@@ -322,20 +310,6 @@ def _capture_mlp_inputs(model, tc, input_ids) -> dict[int, torch.Tensor]:
         for h in handles:
             h.remove()
     return captured
-
-
-def topk_features_by_layer(model, tc, prompt, tokenizer, k: int = 64) -> dict[int, set[int]]:
-    """Top-``k`` features per layer by peak activation over the prompt's non-BOS positions."""
-    device = next(model.parameters()).device
-    ids = tokenize(tokenizer, prompt, device)
-    cap = _capture_mlp_inputs(model, tc, ids)
-    out: dict[int, set[int]] = {}
-    with torch.no_grad():
-        for L in range(len(tc)):
-            f = tc.transcoders[L].encode(cap[L])[0]  # (seq, d_t)
-            peak = f[N_BOS:].amax(0)  # (d_t,)
-            out[L] = set(peak.topk(k).indices.tolist())
-    return out
 
 
 def _iou(a: set, b: set) -> float:
@@ -439,174 +413,9 @@ CORPUS = [
 ]
 
 
-def overlap_curves(model, tc, tokenizer, corpus=None, k: int = 64):
-    """Per-layer feature-overlap (IoU) across language pairs, averaged over a parallel corpus.
-
-    For each sentence (in each language) take the top-``k`` features per layer, then for each
-    layer average the pairwise IoU across the corpus.  High IoU in the middle => shared
-    multilingual features; low at the ends => language-specific.  Returns
-    ``{pair: np.ndarray[n_layers]}`` for pairs ``en-fr``, ``en-zh``, ``fr-zh`` and ``mean``.
-    """
-    corpus = corpus or CORPUS
-    n_layers = len(tc)
-    pairs = [("en", "fr"), ("en", "zh"), ("fr", "zh")]
-    acc = {f"{a}-{b}": np.zeros(n_layers) for a, b in pairs}
-    for sent in corpus:
-        per_lang = {lg: topk_features_by_layer(model, tc, sent[lg], tokenizer, k=k) for lg in LANGS}
-        for a, b in pairs:
-            for L in range(n_layers):
-                acc[f"{a}-{b}"][L] += _iou(per_lang[a][L], per_lang[b][L])
-    for key in acc:
-        acc[key] /= len(corpus)
-    acc["mean"] = np.mean([acc[f"{a}-{b}"] for a, b in pairs], axis=0)
-    return acc
-
-
-def plot_overlap_curves(curves, *, ax=None, title="Cross-language feature overlap by layer"):
-    own = ax is None
-    if own:
-        _, ax = plt.subplots(figsize=(7, 4))
-    for key, arr in curves.items():
-        ax.plot(
-            range(len(arr)),
-            arr,
-            label=key,
-            lw=2.5 if key == "mean" else 1.4,
-            color="k" if key == "mean" else None,
-            alpha=1.0 if key == "mean" else 0.8,
-        )
-    ax.set_xlabel("layer")
-    ax.set_ylabel("top-k feature IoU")
-    ax.set_title(title)
-    ax.legend()
-    ax.grid(alpha=0.3)
-    if own:
-        plt.tight_layout()
-    return ax
-
-
 # ---------------------------------------------------------------------------
-# Feature-graft interventions (operand / operation / language swap)
+# Supernode %-readouts (Fig B3-B5 node annotations)
 # ---------------------------------------------------------------------------
-
-
-def position_supernode(
-    model,
-    tc,
-    prompt,
-    tokenizer,
-    position,
-    top_n: int = 10,
-    *,
-    max_layer=None,
-    min_layer=None,
-    raw: bool = False,
-):
-    """Top-``top_n`` features by activation at ``position`` (layers ``< max_layer`` /
-    ``>= min_layer`` if given).
-
-    ``position`` is an int index or ``"final"``.  Returns ``([(layer, idx, act)], input_ids)``.
-
-    ``max_layer``/``min_layer`` restrict the CANDIDATE POOL, not just the result:
-    early-layer activations are much smaller than late-layer ones, so filtering a global
-    top-``top_n`` after the fact (as callers previously did) returns an empty set.
-    """
-    device = next(model.parameters()).device
-    ids = _tokenize(tokenizer, prompt, device, raw)
-    pos = ids.shape[1] - 1 if position == "final" else position
-    cap = _capture_mlp_inputs(model, tc, ids)
-    n_scan = len(tc) if max_layer is None else max(1, min(int(max_layer), len(tc)))
-    l_lo = 0 if min_layer is None else max(0, min(int(min_layer), n_scan - 1))
-    cands: list[tuple[int, int, float]] = []
-    with torch.no_grad():
-        for L in range(l_lo, n_scan):
-            vec = tc.transcoders[L].encode(cap[L])[0][pos]  # (d_t,)
-            v, i = vec.topk(top_n)
-            cands.extend(
-                (L, int(idx), float(act)) for act, idx in zip(v.tolist(), i.tolist(), strict=True)
-            )
-    cands.sort(key=lambda x: x[2], reverse=True)
-    return cands[:top_n], ids
-
-
-def run_graft(
-    model,
-    tc,
-    recipient_ids,
-    source_node,
-    donor_node,
-    position,
-    *,
-    scale: float = 1.0,
-    patch_end_layer: int | None = None,
-):
-    """Ablate ``source_node`` and inject ``donor_node`` (donor acts x ``scale``) at ``position``.
-
-    ``*_node`` are ``[(layer, idx, act)]`` lists; ``position`` is an int or ``"final"``.  The
-    paper drives interventions well above the donor's natural activation (~6x) so the injected
-    concept dominates — ``scale`` exposes that knob.  Donor features that also appear in the
-    source are dropped from the ablation set so the inject isn't cancelled.
-    ``patch_end_layer`` selects the paper's constrained patching (see :func:`paper_swap`).
-    """
-    pos = recipient_ids.shape[1] - 1 if position == "final" else position
-    donor_keys = {(L, idx) for (L, idx, _) in donor_node}
-    ivs = [
-        FeatureIntervention(L, idx, position=pos, m=-1.0)
-        for (L, idx, _) in source_node
-        if (L, idx) not in donor_keys
-    ]
-    ivs += [
-        FeatureIntervention(L, idx, position=pos, value=scale * act) for (L, idx, act) in donor_node
-    ]
-    return run_feature_intervention(
-        model, tc, recipient_ids, ivs, n_bos_tokens=N_BOS, patch_end_layer=patch_end_layer
-    )
-
-
-def lang_specific_final_features(
-    model,
-    tc,
-    tokenizer,
-    concept: str = "small",
-    top_k: int = 40,
-    keep: int = 12,
-    *,
-    raw: bool = False,
-    min_layer_frac: float | None = None,
-):
-    """Language-DETECTION supernode per language: features in that language's antonym-prompt
-    final position that are NOT in the other languages' final-position top-``top_k``.
-
-    ``raw=True`` builds them on the paper's raw open-quote prompts;
-    ``min_layer_frac=0.5`` restricts the candidate pool to layers ``>= n_layers/2`` —
-    the LATE language-unique features (the say-large-in-language-X analogues used as
-    Fig B5-style readouts), as opposed to the early detection supernodes.
-
-    Returns ``{lang: [(layer, idx, act)]}`` (the language-specific output features).
-    """
-    l_lo = None if min_layer_frac is None else max(1, int(len(tc) * min_layer_frac))
-    prompt_fn = raw_antonym_prompt if raw else antonym_prompt
-    finals: dict[str, list[tuple[int, int, float]]] = {}
-    sets: dict[str, set[tuple[int, int]]] = {}
-    for lg in LANGS:
-        node, _ = position_supernode(
-            model,
-            tc,
-            prompt_fn(concept, lg),
-            tokenizer,
-            "final",
-            top_n=top_k,
-            min_layer=l_lo,
-            raw=raw,
-        )
-        finals[lg] = node
-        sets[lg] = {(L, i) for (L, i, _) in node}
-    out: dict[str, list[tuple[int, int, float]]] = {}
-    for lg in LANGS:
-        others = set().union(*(sets[o] for o in LANGS if o != lg))
-        spec = [(L, i, a) for (L, i, a) in finals[lg] if (L, i) not in others]
-        out[lg] = spec[:keep]
-    return out
 
 
 def supernode_readout_pct(
@@ -720,16 +529,19 @@ def direct_logit_effect(model, tc, layer: int, feature_idx: int, token_ids: dict
 
 
 # ---------------------------------------------------------------------------
-# PAPER-EXACT protocols (biology.html, Multilingual Circuits)
+# PAPER-EXACT protocols (biology.html, Multilingual Circuits) — reproduction v2
 # ---------------------------------------------------------------------------
-# The paper's swap protocol differs from ``run_graft`` in two ways:
-#   1. the SOURCE supernode is steered to a NEGATIVE multiple of its clean
-#      activation (operation/language: -5x; operand: -0.5x) -- not just ablated;
-#   2. the intervention is SWEPT along a strength axis (0 -> donor_max) and the
-#      paper reports the crossover strength (~4x for the operation swap).
+# The paper's swap protocol: the SOURCE supernode is steered to a NEGATIVE multiple
+# of its clean activation (operation/language: -5x; operand: -0.5x), the DONOR is
+# injected at a positive multiple of its donor-prompt activation, and the strength
+# is SWEPT 0 -> donor_max with the crossover reported (~4x for the operation swap).
 # Multiplier convention: paper multiples are MULTIPLICATIVE on the clean
 # activation (M_paper), and our FeatureIntervention.m is additive-delta, so
 # m = M_paper - 1 (e.g. -5x  ->  m=-6).
+#
+# v2 sources/donors/readouts come from the REVIEWED supernode file: members carry
+# per-graph ``acts``/``positions``, sources steer at each member's own node position
+# in the recipient graph, donors inject value = mult x their stored donor-graph act.
 
 # Paper endpoint strengths per swap kind: (source_mult, donor_mult).
 PAPER_SWAP_STRENGTHS = {
@@ -739,159 +551,153 @@ PAPER_SWAP_STRENGTHS = {
 }
 
 
-def swap_interventions(
-    recipient_ids, source_node, donor_node, position, *, source_mult: float, donor_mult: float
+def load_supernodes(path):
+    """Load the REVIEWED multilingual supernode file (``build_supernodes.py
+    --from-exports``) for the notebook.
+
+    Refuses files that are not ``approved``, contain ``rejected`` members, or violate
+    the multilingual disjointness invariant — the paper's supernodes are disjoint
+    FEATURE sets, so a ``(layer, feature)`` may belong to at most one supernode
+    anywhere across the pages (the addition loader's per-graph key is too weak here).
+    Returns ``{name: supernode_dict}``; members carry per-graph ``acts``/``positions``.
+    The notebook derives its intervention/readout sets ONLY from this file — selection
+    lives in the reviewed artifact (explorer-export), not in notebook code.
+    """
+    doc = json.loads(Path(path).read_text())
+    if not doc.get("approved"):
+        raise ValueError(f"{path}: approved=false — review the supernode file first")
+    owner: dict[tuple[int, int], str] = {}
+    out: dict[str, dict] = {}
+    for sn in doc["supernodes"]:
+        for m in sn["members"]:
+            if m.get("review") == "rejected":
+                raise ValueError(
+                    f"{path}: rejected member L{m['layer']}f{m['feature']} still in"
+                    f" {sn['name']!r} members"
+                )
+            key = (m["layer"], m["feature"])
+            if key in owner and owner[key] != sn["name"]:
+                raise ValueError(
+                    f"{path}: L{key[0]}f{key[1]} in both {owner[key]!r} and {sn['name']!r}"
+                    " — supernodes are disjoint feature sets"
+                )
+            owner[key] = sn["name"]
+        out[sn["name"]] = sn
+    return out
+
+
+def supernode_suppress_ivs(sn, graph, *, mult, fallback_pos):
+    """Suppression list for a swap source: every member steered to ``mult x clean``
+    (``m = mult - 1``) at its own node position in ``graph``; members with no recorded
+    position there steer at ``fallback_pos`` instead.  The m convention makes the
+    fallback a no-op where the feature is inactive (clean ~ 0 => delta ~ 0), but the
+    member still counts toward ``l_max`` — the constrained sweep's floor.
+    """
+    return [
+        FeatureIntervention(
+            m["layer"],
+            m["feature"],
+            position=int((m.get("positions") or {}).get(graph, fallback_pos)),
+            m=mult - 1.0,
+        )
+        for m in sn["members"]
+    ]
+
+
+def supernode_inject_ivs(sn, donor_graph, positions, *, mult):
+    """Donor-injection list: ``value = mult x acts[donor_graph]`` at every position in
+    ``positions`` (the recipient-side token span).  Members with no stored activation
+    on ``donor_graph`` are skipped — there is no donor-prompt value to scale.  Returns
+    ``(ivs, used)`` with ``used = [(layer, feature, stored_act)]`` for reporting.
+    """
+    ivs, used = [], []
+    for m in sn["members"]:
+        act = (m.get("acts") or {}).get(donor_graph)
+        if act is None:
+            continue
+        used.append((m["layer"], m["feature"], float(act)))
+        ivs.extend(
+            FeatureIntervention(m["layer"], m["feature"], position=int(p), value=mult * float(act))
+            for p in positions
+        )
+    return ivs, used
+
+
+def swap_ivs_fn(
+    source_sn, recipient_graph, source_fallback_pos, donor_sn, donor_graph, donor_positions, *, kind
 ):
-    """The paper-swap :class:`FeatureIntervention` list: source features steered to
-    ``source_mult x clean`` (``m = source_mult - 1``), donor features injected at the
-    absolute ``donor_mult x`` their donor-prompt activation.  Donor features also present
-    in the source are dropped from the suppression set so the inject isn't cancelled.
-    ``position`` is an int or ``"final"`` (resolved against ``recipient_ids``)."""
-    pos = recipient_ids.shape[1] - 1 if position == "final" else position
-    donor_keys = {(L, idx) for (L, idx, _) in donor_node}
-    ivs = [
-        FeatureIntervention(L, idx, position=pos, m=source_mult - 1.0)
-        for (L, idx, _) in source_node
-        if (L, idx) not in donor_keys
-    ]
-    ivs += [
-        FeatureIntervention(L, idx, position=pos, value=donor_mult * act)
-        for (L, idx, act) in donor_node
-    ]
+    """``ivs(s)`` for the paper ramp: at strength ``s`` (0 -> donor endpoint) the donor
+    is injected at ``s x`` its stored donor-graph act and the source steered to
+    ``1 + (src_max - 1) * (s / don_max) x`` clean — hitting the paper's endpoint pair
+    exactly at ``s = don_max`` (operation -5x/+6x, operand -0.5x/+1.5x, language
+    -5x/+6x).  Source and donor supernodes are disjoint by the file invariant, so no
+    dedup is needed.
+    """
+    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
+
+    def ivs(s: float):
+        if s == 0.0:
+            return []
+        src_mult = 1.0 + (src_max - 1.0) * (s / don_max)
+        sup = supernode_suppress_ivs(
+            source_sn, recipient_graph, mult=src_mult, fallback_pos=source_fallback_pos
+        )
+        inj, _ = supernode_inject_ivs(donor_sn, donor_graph, donor_positions, mult=s)
+        return sup + inj
+
     return ivs
 
 
-def choose_patch_end_layer(
-    model,
-    tc,
-    recipient_ids,
-    source_node,
-    donor_node,
-    position,
-    token_id: int,
-    *,
-    kind: str,
-    mode: str = "promote",
-):
+def choose_swap_end_layer(model, tc, recipient_ids, endpoint_ivs, expected_token):
     """The paper's intervention-layer recipe for a swap: sweep the constrained-patching
-    end layer ``ell`` over ``[l_max, n_layers-1]`` at the paper's endpoint strengths for
-    ``kind`` and pick the most effective one on the ``token_id`` metric —
-    ``mode="promote"`` (default) = largest expected-token probability,
-    ``mode="suppress"`` = largest logit suppression.
+    end layer ``ell`` over ``[l_max, n_layers-1]`` at the endpoint strengths and pick
+    the ``ell`` that promotes the expected (swapped-in) answer most.
 
     Returns ``(ell, sweep)``; ``sweep.end_layers[0]`` is ``l_max`` (the last steered
-    layer — when the supernodes reach the final layer the sweep has a single point and
-    constrained patching degenerates to the pure direct effect).
+    layer — when a supernode member reaches the final layers the sweep has little or no
+    room and constrained patching degenerates toward the pure direct effect).
     """
-    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
-    ivs = swap_interventions(
-        recipient_ids, source_node, donor_node, position, source_mult=src_max, donor_mult=don_max
+    sweep = sweep_patch_end_layer(
+        model, tc, recipient_ids, endpoint_ivs, expected_token, n_bos_tokens=N_BOS
     )
-    sweep = sweep_patch_end_layer(model, tc, recipient_ids, ivs, token_id, n_bos_tokens=N_BOS)
-    ell = sweep.most_promoting_end_layer if mode == "promote" else sweep.best_end_layer
-    return ell, sweep
+    return sweep.most_promoting_end_layer, sweep
 
 
-def paper_swap(
+def supernode_swap_sweep(
     model,
     tc,
     recipient_ids,
-    source_node,
-    donor_node,
-    position,
-    *,
-    source_mult: float,
-    donor_mult: float,
-    readout_layers: list[int] | None = None,
-    patch_end_layer: int | None = None,
-):
-    """One paper-protocol swap: source at ``source_mult x clean``, donor at ``donor_mult x donor``.
-
-    ``source_node``/``donor_node`` are ``[(layer, idx, act)]`` lists (``act`` = clean/donor
-    activation); ``position`` is an int or ``"final"``.  Donor features also present in the
-    source are dropped from the suppression set so the inject isn't cancelled.
-
-    ``readout_layers`` is passed through to :func:`run_feature_intervention`, filling the
-    result's ``ablated_features`` with the perturbed activations at those layers — the
-    paper's Fig B3-B5 supernode "% of baseline" annotations (e.g. does say-large-zh move
-    under an en→zh language swap?).
-
-    ``patch_end_layer`` selects the paper's **constrained patching** protocol (activations
-    up to layer ``ell`` clamped at their perturbed values, real model after ``ell``); ``None``
-    = fully-propagating clean-anchored deltas (the no-pinning robustness variant).  Under
-    constrained patching every feature at layer ``<= ell`` is pinned, so %-readouts are
-    meaningful only for nodes ABOVE ``ell``.
-    """
-    ivs = swap_interventions(
-        recipient_ids,
-        source_node,
-        donor_node,
-        position,
-        source_mult=source_mult,
-        donor_mult=donor_mult,
-    )
-    return run_feature_intervention(
-        model,
-        tc,
-        recipient_ids,
-        ivs,
-        n_bos_tokens=N_BOS,
-        readout_layers=readout_layers,
-        patch_end_layer=patch_end_layer,
-    )
-
-
-def paper_swap_sweep(
-    model,
-    tc,
-    recipient_ids,
-    source_node,
-    donor_node,
-    position,
+    ivs_fn,
     tokenizer,
     *,
     kind: str,
     baseline_token: int,
     expected_token: int,
+    patch_end_layer: int,
     n_steps: int = 13,
-    patch_end_layer: int | None = None,
 ):
-    """Sweep the swap strength 0 -> donor_max (the paper's Fig B3/B4 line charts).
-
-    At strength ``s`` the donor is injected at ``s x donor_act`` and the source is steered to
-    ``(source_max/donor_max)*s x clean`` -- a proportional ramp that hits the paper's quoted
-    endpoint pair (e.g. -5x/+6x) exactly at ``s = donor_max``.  Tracks the probability of the
-    ``baseline_token`` (clean answer) and ``expected_token`` (the swapped task's answer) at
-    every step and reports the **crossover** = smallest s where P(expected) > P(baseline)
-    (paper: ~4x for the operation swap, consistent across languages).
-
-    ``patch_end_layer`` runs every step under the paper's constrained patching at that
-    fixed end layer ``ell`` (choose it with :func:`choose_patch_end_layer`); the ``s = 0``
-    baseline is the clean forward either way.
-
-    Returns a dict with ``strengths``, ``p_baseline``, ``p_expected``, ``top_tokens`` (per
-    step), ``crossover`` (None if never crossed), and ``patch_end_layer``.
+    """Fig B3/B4/B5 strength sweep 0 -> the donor endpoint, every step under the
+    paper's constrained patching at the fixed ``patch_end_layer`` (choose it first with
+    :func:`choose_swap_end_layer`).  ``ivs_fn(s)`` builds the intervention list at
+    strength ``s`` (:func:`swap_ivs_fn`); ``s = 0`` is the clean forward.  Tracks
+    P(baseline answer) and P(expected swapped answer) and reports the **crossover** =
+    smallest ``s`` with P(expected) > P(baseline) (paper: ~4x for the operation swap,
+    consistent across languages).
     """
-    src_max, don_max = PAPER_SWAP_STRENGTHS[kind]
+    _, don_max = PAPER_SWAP_STRENGTHS[kind]
     strengths = [don_max * i / (n_steps - 1) for i in range(n_steps)]
     p_base, p_exp, tops = [], [], []
     for s in strengths:
-        if s == 0.0:
-            res = run_feature_intervention(model, tc, recipient_ids, [], n_bos_tokens=N_BOS)
-            row = res.baseline_logits[-1]
-        else:
-            res = paper_swap(
-                model,
-                tc,
-                recipient_ids,
-                source_node,
-                donor_node,
-                position,
-                source_mult=1.0 + (src_max - 1.0) * (s / don_max),
-                donor_mult=s,
-                patch_end_layer=patch_end_layer,
-            )
-            row = res.ablated_logits[-1]
+        ivs = ivs_fn(s)
+        res = run_feature_intervention(
+            model,
+            tc,
+            recipient_ids,
+            ivs,
+            n_bos_tokens=N_BOS,
+            patch_end_layer=patch_end_layer if ivs else None,
+        )
+        row = res.ablated_logits[-1]
         probs = row.float().softmax(-1)
         p_base.append(float(probs[baseline_token]))
         p_exp.append(float(probs[expected_token]))
@@ -910,6 +716,84 @@ def paper_swap_sweep(
     }
 
 
+def supernode_readout(res, sn, graph, *, final_pos, ref_graph=None, patch_end_layer=None):
+    """Fig B3-B5-style %-readout of a REVIEWED supernode, per-member node positions.
+
+    Same semantics as :func:`supernode_readout_pct` — per-feature ratio first, then
+    mean; ~0-reference features skipped; rows at layers ``<= patch_end_layer`` are
+    pinned by the constrained protocol and dropped — but each member reads at ITS OWN
+    node position in ``graph`` (``final_pos`` when it has none there), and ``ref_graph``
+    selects the denominator: ``None`` = the member's clean baseline on the recipient
+    (the paper's "% of baseline"); a graph name = its stored act there (falling back to
+    its max stored act when that graph is absent), for supernodes with ~0 recipient
+    baseline (recruited donors / say-X readouts).  Requires the run to have captured
+    ``readout_layers`` covering every member layer above ``patch_end_layer``
+    (:func:`readout_layers_above`).
+    """
+    per: dict[str, float | str | None] = {}
+    ratios: list[float] = []
+    skipped = 0
+    pinned = 0
+    for m in sn["members"]:
+        L, i = m["layer"], m["feature"]
+        pos = int((m.get("positions") or {}).get(graph, final_pos))
+        key = f"L{L}f{i}@p{pos}"
+        if patch_end_layer is not None and patch_end_layer >= L:
+            per[key] = "pinned"
+            pinned += 1
+            continue
+        if L not in res.ablated_features:
+            raise KeyError(
+                f"layer {L} missing from ablated_features — pass readout_layers covering"
+                " every readout supernode layer above ell to run_feature_intervention"
+            )
+        b, a = res.baseline_features[L], res.ablated_features[L]
+        b2 = b[0] if b.dim() == 3 else b
+        a2 = a[0] if a.dim() == 3 else a
+        steered = float(a2[pos, i])
+        if ref_graph is None:
+            reference = float(b2[pos, i])
+        else:
+            acts = m.get("acts") or {}
+            reference = float(acts.get(ref_graph, max(acts.values(), default=0.0)))
+        if abs(reference) < 1e-6:
+            per[key] = None
+            skipped += 1
+            continue
+        pct = steered / reference * 100.0
+        per[key] = round(pct, 1)
+        ratios.append(pct)
+    mean_pct = round(sum(ratios) / len(ratios), 1) if ratios else None
+    return {
+        "mean_pct": mean_pct,
+        "n_used": len(ratios),
+        "n_skipped": skipped,
+        "n_pinned": pinned,
+        "per_feature": per,
+    }
+
+
+def readout_layers_above(sns, ell):
+    """Sorted member layers of ``sns`` above the patch end layer — the layers
+    ``run_feature_intervention`` must capture for the %-readouts (layers ``<= ell``
+    are pinned by the protocol and never read)."""
+    return sorted({m["layer"] for sn in sns for m in sn["members"] if m["layer"] > ell})
+
+
+def print_readout_row(tag, row):
+    """One-line print of ``{row_name: supernode_readout(...)}`` readout dicts."""
+
+    def _fmt(v):
+        parts = [f"n={v['n_used']}"]
+        if v.get("n_skipped"):
+            parts.append(f"{v['n_skipped']} skipped")
+        if v.get("n_pinned"):
+            parts.append(f"{v['n_pinned']} pinned")
+        return f"{v['mean_pct']}% ({', '.join(parts)})"
+
+    print(f"readout {tag}: " + ", ".join(f"{k.split('_pct')[0]} {_fmt(v)}" for k, v in row.items()))
+
+
 def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=None):
     """Paper-style probability-vs-strength panels, one per language (Fig B3/B4/B5)."""
     langs = list(results_by_lang)
@@ -924,7 +808,7 @@ def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=No
         if r["crossover"] is not None:
             ax.axvline(r["crossover"], color="red", ls="--", alpha=0.6)
             ax.text(r["crossover"], 0.5, f" x{r['crossover']:.1f}", color="red", fontsize=8)
-        ax.set_title(LANG_NAME[lg])
+        ax.set_title(LANG_NAME.get(lg, lg))
         ax.set_xlabel("intervention strength (x donor act)")
         ax.set_ylim(-0.02, 1.02)
         ax.grid(alpha=0.3)
@@ -934,102 +818,6 @@ def plot_swap_sweeps(results_by_lang, tokenizer, token_strs, *, title, ax_row=No
         plt.suptitle(title)
         plt.tight_layout()
     return ax_row
-
-
-def run_swap_sweeps(
-    model, tc, tokenizer, jobs, *, kind: str, n_steps: int = 13, out_png=None, title=None
-):
-    """Run :func:`paper_swap_sweep` for every job and draw the Fig B3/B4/B5 panel row.
-
-    ``jobs`` entries: ``{lang, label, recipient_ids, source, donor, position,
-    baseline_token, expected_token}`` (source/donor are ``[(layer, idx, act)]``); an
-    optional ``patch_end_layer`` per job runs that language's sweep under constrained
-    patching at the given end layer.  Prints one line per job, saves the panel to
-    ``out_png`` if given, and returns ``{lang: sweep_result}``.  NOTE: track the *actual*
-    top tokens (``top_tokens`` per step), not just ``p_expected`` — e.g. the FR operand
-    swap lands on lowercase ``f``(roid) while the recorded expected token is capitalized
-    ``F``.
-    """
-    results: dict[str, dict] = {}
-    token_strs: dict[str, tuple[str, str]] = {}
-    for job in jobs:
-        lg = job["lang"]
-        r = paper_swap_sweep(
-            model,
-            tc,
-            job["recipient_ids"],
-            job["source"],
-            job["donor"],
-            job["position"],
-            tokenizer,
-            kind=kind,
-            baseline_token=job["baseline_token"],
-            expected_token=job["expected_token"],
-            n_steps=n_steps,
-            patch_end_layer=job.get("patch_end_layer"),
-        )
-        r["label"] = job["label"]
-        results[lg] = r
-        token_strs[lg] = (
-            tokenizer.decode([job["baseline_token"]]).strip(),
-            tokenizer.decode([job["expected_token"]]).strip(),
-        )
-        print(
-            f"{kind} {job['label']}: crossover={r['crossover']} "
-            f"p_exp(max)={max(r['p_expected']):.3f} final_tops={r['top_tokens'][-1][:2]}"
-        )
-    plot_swap_sweeps(results, tokenizer, token_strs, title=title or f"{kind} (paper protocol)")
-    if out_png is not None:
-        plt.savefig(out_png, dpi=130, bbox_inches="tight")
-    return results
-
-
-def early_language_detection_supernode(
-    model,
-    tc,
-    tokenizer,
-    concept: str = "small",
-    *,
-    max_layer_frac: float = 0.34,
-    top_k: int = 40,
-    keep: int = 12,
-    raw: bool = False,
-):
-    """Language-detection supernodes per the paper: EARLY-layer, final-token features unique
-    to each language (the paper swaps 'open-quote-in-language-X' / 'beginning-of-document-
-    in-language-Y' features, which live early in the model).
-
-    Like :func:`lang_specific_final_features` but restricted to layers
-    ``< max_layer_frac * n_layers``.  ``raw=True`` builds them on the paper's raw
-    open-quote prompts, whose final token IS an open quote in the prompt's language —
-    the token the paper's detection features actually live on (the chat prompts end on
-    assistant-header tokens instead).  Returns ``{lang: [(layer, idx, act)]}``.
-    """
-    n_layers = len(tc)
-    lmax = max(1, int(n_layers * max_layer_frac))
-    prompt_fn = raw_antonym_prompt if raw else antonym_prompt
-    finals: dict[str, list[tuple[int, int, float]]] = {}
-    sets: dict[str, set[tuple[int, int]]] = {}
-    for lg in LANGS:
-        # max_layer restricts the candidate pool itself — a global top-k is dominated by
-        # late-layer activations and filtering it to early layers yields an EMPTY set.
-        node, _ = position_supernode(
-            model,
-            tc,
-            prompt_fn(concept, lg),
-            tokenizer,
-            "final",
-            top_n=top_k,
-            max_layer=lmax,
-            raw=raw,
-        )
-        finals[lg] = node
-        sets[lg] = {(L, i) for (L, i, _) in node}
-    out: dict[str, list[tuple[int, int, float]]] = {}
-    for lg in LANGS:
-        others = set().union(*(sets[o] for o in LANGS if o != lg))
-        out[lg] = [(L, i, a) for (L, i, a) in finals[lg] if (L, i) not in others][:keep]
-    return out
 
 
 # ---------------------------------------------------------------------------

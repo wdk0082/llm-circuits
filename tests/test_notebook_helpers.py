@@ -200,16 +200,63 @@ def test_readout_final_position_and_missing_layer():
 # ---------------------------------------------------------------------------
 
 
-def test_swap_interventions_dedup_convention_and_final_position():
-    rec = torch.zeros(1, 5, dtype=torch.long)
-    source = [(2, 10, 3.0), (4, 20, 1.0)]  # (4,20) also a donor -> dropped from suppression
-    donor = [(4, 20, 2.0), (6, 30, 5.0)]
-    ivs = M.swap_interventions(rec, source, donor, "final", source_mult=-5.0, donor_mult=6.0)
-    assert [(iv.layer, iv.feature_idx) for iv in ivs] == [(2, 10), (4, 20), (6, 30)]
-    assert all(iv.position == 4 for iv in ivs)  # "final" -> seq-1
-    assert ivs[0].m == pytest.approx(-6.0) and ivs[0].value is None  # M_paper=-5 -> m=-6
-    assert ivs[1].value == pytest.approx(12.0)  # donor 6x its 2.0 act, absolute
-    assert ivs[2].value == pytest.approx(30.0)
+def _sn(name, members, role="source"):
+    return {
+        "name": name,
+        "role": role,
+        "graph": "g",
+        "position": "member-positions",
+        "members": members,
+    }
+
+
+def test_supernode_suppress_ivs_member_positions_and_fallback():
+    sn = _sn(
+        "antonym (multilingual)",
+        [
+            {
+                "layer": 7,
+                "feature": 10,
+                "positions": {"antonym_en": 6},
+                "acts": {"antonym_en": 3.0},
+            },
+            {"layer": 34, "feature": 20, "positions": {"raw_antonym_en": 1}, "acts": {}},
+        ],
+    )
+    ivs = M.supernode_suppress_ivs(sn, "antonym_en", mult=-5.0, fallback_pos=28)
+    # member with a recorded position steers there; the raw-only member falls back to final
+    assert [(iv.layer, iv.feature_idx, iv.position) for iv in ivs] == [(7, 10, 6), (34, 20, 28)]
+    assert all(iv.m == pytest.approx(-6.0) and iv.value is None for iv in ivs)  # M=-5 -> m=-6
+
+
+def test_supernode_inject_ivs_span_values_and_skip():
+    sn = _sn(
+        "synonym (multilingual)",
+        [
+            {"layer": 19, "feature": 3, "acts": {"synonym_en": 5.0, "raw_synonym_en": 10.0}},
+            {"layer": 34, "feature": 4, "acts": {"raw_synonym_en": 32.0}},  # no chat act -> skipped
+        ],
+        role="donor",
+    )
+    ivs, used = M.supernode_inject_ivs(sn, "synonym_en", [6, 7], mult=6.0)
+    # one iv per span position, absolute value = 6x the DONOR-graph act; raw-only member skipped
+    assert [(iv.layer, iv.feature_idx, iv.position, iv.value) for iv in ivs] == [
+        (19, 3, 6, pytest.approx(30.0)),
+        (19, 3, 7, pytest.approx(30.0)),
+    ]
+    assert used == [(19, 3, 5.0)]
+
+
+def test_swap_ivs_fn_ramp_hits_endpoint_pair():
+    src = _sn("s", [{"layer": 2, "feature": 1, "positions": {"g": 3}, "acts": {"g": 2.0}}])
+    don = _sn("d", [{"layer": 6, "feature": 9, "acts": {"dg": 5.0}}], role="donor")
+    fn = M.swap_ivs_fn(src, "g", 4, don, "dg", [4], kind="operation")
+    assert fn(0.0) == []
+    ivs = fn(6.0)  # s = don_max -> the paper endpoint pair (-5x source, +6x donor)
+    assert ivs[0].m == pytest.approx(-6.0) and ivs[0].position == 3
+    assert ivs[1].value == pytest.approx(30.0) and ivs[1].position == 4
+    half = fn(3.0)  # proportional ramp: source_mult = 1 + (-6)(3/6) = -2 -> m = -3
+    assert half[0].m == pytest.approx(-3.0) and half[1].value == pytest.approx(15.0)
 
 
 def test_steer_interventions_m_and_position():
@@ -295,27 +342,91 @@ def test_steer_and_report_patch_end_layer_passthrough_and_pinned_readout(monkeyp
     assert "pinned" not in rep["readout_pct"]["L5f1@p3"]  # L5 > ell
 
 
-def test_paper_swap_patch_end_layer_passthrough(monkeypatch):
-    captured = {}
+def test_supernode_swap_sweep_constrained_at_fixed_ell(monkeypatch):
+    calls = []
 
     def fake_run(model, tc, input_ids, ivs, **kw):
-        captured["patch_end_layer"] = kw.get("patch_end_layer")
-        captured["n_ivs"] = len(ivs)
-        return "result"
+        calls.append((len(ivs), kw.get("patch_end_layer")))
+        k = float(len(calls))  # step counter: baseline falls, expected rises with strength
+        logits = torch.zeros(4, 16)
+        logits[-1, 1] = 3.0 - k
+        logits[-1, 2] = k
+        return SimpleNamespace(ablated_logits=logits, baseline_logits=logits)
 
     monkeypatch.setattr(M, "run_feature_intervention", fake_run)
-    out = M.paper_swap(
+    src = _sn("s", [{"layer": 2, "feature": 1, "positions": {"g": 3}, "acts": {"g": 2.0}}])
+    don = _sn("d", [{"layer": 6, "feature": 9, "acts": {"dg": 5.0}}], role="donor")
+    fn = M.swap_ivs_fn(src, "g", 4, don, "dg", [4], kind="operation")
+    tok = _FakeTokenizer([str(d) for d in range(16)])
+    r = M.supernode_swap_sweep(
         None,
         None,
         torch.zeros(1, 4, dtype=torch.long),
-        [(2, 10, 3.0)],
-        [(6, 30, 5.0)],
-        "final",
-        source_mult=-5.0,
-        donor_mult=6.0,
+        fn,
+        tok,
+        kind="operation",
+        baseline_token=1,
+        expected_token=2,
         patch_end_layer=7,
+        n_steps=4,
     )
-    assert out == "result" and captured["patch_end_layer"] == 7 and captured["n_ivs"] == 2
+    # s=0 runs the clean forward (no patching); every other step is constrained at ell=7
+    assert calls[0] == (0, None) and all(c == (2, 7) for c in calls[1:])
+    assert r["patch_end_layer"] == 7 and r["strengths"][-1] == pytest.approx(6.0)
+    assert r["crossover"] is not None
+
+
+def test_supernode_readout_member_positions_pinned_and_stored_ref():
+    res = _fake_result(layers=(0, 1))
+    # member A reads at ITS OWN node position (2), member B at the final fallback (3)
+    res.baseline_features[1][2, 1] = 10.0
+    res.ablated_features[1][2, 1] = 5.0
+    res.baseline_features[1][3, 2] = 4.0
+    res.ablated_features[1][3, 2] = 8.0
+    sn = _sn(
+        "r",
+        [
+            {"layer": 1, "feature": 1, "positions": {"g": 2}, "acts": {"g": 10.0}},
+            {"layer": 1, "feature": 2, "positions": {}, "acts": {"other": 16.0}},
+            {"layer": 0, "feature": 5, "positions": {"g": 3}, "acts": {"g": 1.0}},
+        ],
+        role="readout",
+    )
+    out = M.supernode_readout(res, sn, "g", final_pos=3, patch_end_layer=0)
+    # L0 member pinned; L1 members: 5/10=50% @p2 and 8/4=200% @p3 -> mean 125%
+    assert out["mean_pct"] == pytest.approx(125.0)
+    assert out["n_used"] == 2 and out["n_pinned"] == 1
+    assert out["per_feature"]["L0f5@p3"] == "pinned"
+    # ref_graph: stored act there, falling back to the member's max stored act
+    out2 = M.supernode_readout(res, sn, "g", final_pos=3, ref_graph="g", patch_end_layer=0)
+    assert out2["per_feature"]["L1f1@p2"] == pytest.approx(50.0)  # 5 / stored 10
+    assert out2["per_feature"]["L1f2@p3"] == pytest.approx(50.0)  # 8 / fallback max 16
+
+
+def test_load_supernodes_multilingual_global_disjointness(tmp_path):
+    import json
+
+    doc = {
+        "approved": True,
+        "supernodes": [
+            _sn("a", [{"layer": 1, "feature": 2, "acts": {}, "positions": {}}]),
+            _sn("b", [{"layer": 1, "feature": 2, "acts": {}, "positions": {}}]),
+        ],
+    }
+    p = tmp_path / "ml.json"
+    p.write_text(json.dumps(doc))
+    # same (layer, feature) in two supernodes — even with different graph/position keys —
+    # violates the multilingual file invariant (disjoint FEATURE sets)
+    with pytest.raises(ValueError, match="disjoint feature sets"):
+        M.load_supernodes(p)
+    doc["supernodes"][1]["members"][0]["feature"] = 3
+    p.write_text(json.dumps(doc))
+    out = M.load_supernodes(p)
+    assert set(out) == {"a", "b"}
+    doc["approved"] = False
+    p.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="approved=false"):
+        M.load_supernodes(p)
 
 
 def test_cjk_font_registered_for_zh_panels():

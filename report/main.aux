@@ -46,37 +46,33 @@
 \@writefile{toc}{\contentsline {paragraph}{Reimplementation.}{5}{section*.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Experiments and Results}{5}{section.3}\protected@file@percent }
 \newlabel{sec:experiments}{{3}{5}{Experiments and Results}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Setup}{5}{subsection.3.1}\protected@file@percent }
-\newlabel{sec:exp:setup}{{3.1}{5}{Setup}{subsection.3.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Verification against circuit-tracer}{5}{subsection.3.2}\protected@file@percent }
-\newlabel{sec:exp:verif}{{3.2}{5}{Verification against circuit-tracer}{subsection.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Prompts, behaviour, and attribution graphs}{5}{subsection.3.3}\protected@file@percent }
-\newlabel{sec:exp:graphs}{{3.3}{5}{Prompts, behaviour, and attribution graphs}{subsection.3.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Numerical verification of the reimplementation against circuit-tracer.}}{6}{table.1}\protected@file@percent }
-\newlabel{tab:verification}{{1}{6}{Numerical verification of the reimplementation against circuit-tracer}{table.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces First generated token, chat\,/\,raw format. The paper's expected behaviours are big\,/\,grand\,/\,\begin  {CJK}{UTF8}{gbsn}大\end  {CJK} (Claude answers ``big''; Qwen3 answers ``large'').}}{6}{table.2}\protected@file@percent }
-\newlabel{tab:behaviour}{{2}{6}{First generated token, chat\,/\,raw format. The paper's expected behaviours are big\,/\,grand\,/\,\zh {大} (Claude answers ``big''; Qwen3 answers ``large'')}{table.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Swap interventions}{6}{subsection.3.4}\protected@file@percent }
-\newlabel{sec:exp:swaps}{{3.4}{6}{Swap interventions}{subsection.3.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Simplified attribution graphs for the three raw antonym prompts. Boxes are the reviewed supernodes (member count shown); arrow widths are proportional to the aggregated signed edge weight between groups in the pruned graph (red dashed: net-negative). The paper's shared-core skeleton appears in all three languages.}}{7}{figure.1}\protected@file@percent }
-\newlabel{fig:ml-graphs}{{1}{7}{Simplified attribution graphs for the three raw antonym prompts. Boxes are the reviewed supernodes (member count shown); arrow widths are proportional to the aggregated signed edge weight between groups in the pruned graph (red dashed: net-negative). The paper's shared-core skeleton appears in all three languages}{figure.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Cross-lingual overlap, scale, and the default language}{7}{subsection.3.5}\protected@file@percent }
-\newlabel{sec:exp:overlap}{{3.5}{7}{Cross-lingual overlap, scale, and the default language}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Prompts, behaviour, supernodes, and attribution graphs}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:exp:graphs}{{3.1}{5}{Prompts, behaviour, supernodes, and attribution graphs}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Prompts and behaviour.}{5}{section*.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Examples of reviewed supernode members: each feature's top output logits and top-activating dataset examples --- the evidence the semantic selection matches against.}}{6}{figure.1}\protected@file@percent }
+\newlabel{fig:feature-examples}{{1}{6}{Examples of reviewed supernode members: each feature's top output logits and top-activating dataset examples --- the evidence the semantic selection matches against}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Simplified attribution graphs for the three raw antonym prompts. Boxes are the reviewed supernodes (member count shown); arrow widths are proportional to the aggregated signed edge weight between groups in the pruned graph (red dashed: net-negative). The paper's shared-core skeleton appears in all three languages.}}{6}{figure.2}\protected@file@percent }
+\newlabel{fig:ml-graphs}{{2}{6}{Simplified attribution graphs for the three raw antonym prompts. Boxes are the reviewed supernodes (member count shown); arrow widths are proportional to the aggregated signed edge weight between groups in the pruned graph (red dashed: net-negative). The paper's shared-core skeleton appears in all three languages}{figure.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Supernodes and attribution graphs.}{6}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Swap interventions}{6}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:exp:swaps}{{3.2}{6}{Swap interventions}{subsection.3.2}{}}
 \citation{lindsey2025biology}
 \citation{lindsey2025biology}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Swap interventions. \emph  {Top:} intervention diagrams with measured supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer $\ell $, clamped by the protocol); badges give the paper's steering multiples. \emph  {Bottom:} strength ladders, $P(\text  {expected answer})$ vs.\ donor multiple $s$, with the paper endpoint dotted. Left: the operation swap under the constrained protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated channel. Middle: the operand swap crosses in all six configurations (dots mark crossovers; raw-zh at $18\times $). Right: the language swap peaks near the paper's own $6\times $ and saturates; fr$\to $en's curve tracks ``large'' while the actual output is the paper's token ``big'' ($0.753$ at $6\times $).}}{8}{figure.2}\protected@file@percent }
-\newlabel{fig:ml-interv}{{2}{8}{Swap interventions. \emph {Top:} intervention diagrams with measured supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer $\ell $, clamped by the protocol); badges give the paper's steering multiples. \emph {Bottom:} strength ladders, $P(\text {expected answer})$ vs.\ donor multiple $s$, with the paper endpoint dotted. Left: the operation swap under the constrained protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated channel. Middle: the operand swap crosses in all six configurations (dots mark crossovers; raw-zh at $18\times $). Right: the language swap peaks near the paper's own $6\times $ and saturates; fr$\to $en's curve tracks ``large'' while the actual output is the paper's token ``big'' ($0.753$ at $6\times $)}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Verdicts}{8}{subsection.3.6}\protected@file@percent }
-\newlabel{sec:exp:verdicts}{{3.6}{8}{Verdicts}{subsection.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Cross-lingual overlap, scale, and the default language}{7}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:exp:overlap}{{3.3}{7}{Cross-lingual overlap, scale, and the default language}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Verdicts}{7}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:exp:verdicts}{{3.4}{7}{Verdicts}{subsection.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Swap interventions. \emph  {Top:} intervention diagrams with measured supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer $\ell $, clamped by the protocol); badges give the paper's steering multiples. \emph  {Bottom:} strength ladders, $P(\text  {expected answer})$ vs.\ donor multiple $s$, with the paper endpoint dotted. Left: the operation swap under the constrained protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated channel. Middle: the operand swap crosses in all six configurations (dots mark crossovers; raw-zh at $18\times $). Right: the language swap peaks near the paper's own $6\times $ and saturates; fr$\to $en's curve tracks ``large'' while the actual output is the paper's token ``big'' ($0.753$ at $6\times $).}}{8}{figure.3}\protected@file@percent }
+\newlabel{fig:ml-interv}{{3}{8}{Swap interventions. \emph {Top:} intervention diagrams with measured supernode readouts (grey percentages; ``pinned'' = at or below the patch end layer $\ell $, clamped by the protocol); badges give the paper's steering multiples. \emph {Bottom:} strength ladders, $P(\text {expected answer})$ vs.\ donor multiple $s$, with the paper endpoint dotted. Left: the operation swap under the constrained protocol (solid, flat) vs.\ the live-attention probe (dashed) --- the QK-mediated channel. Middle: the operand swap crosses in all six configurations (dots mark crossovers; raw-zh at $18\times $). Right: the language swap peaks near the paper's own $6\times $ and saturates; fr$\to $en's curve tracks ``large'' while the actual output is the paper's token ``big'' ($0.753$ at $6\times $)}{figure.3}{}}
 \bibstyle{unsrtnat}
 \bibdata{refs}
 \bibcite{ameisen2025circuit}{{1}{2025}{{Ameisen et~al.}}{{Ameisen, Lindsey, Pearce, Gurnee, Turner, Chen, Citro, Abrahams, Carter, Hosmer, et~al.}}}
 \bibcite{hanna2025circuittracer}{{2}{2025}{{Hanna et~al.}}{{Hanna, Piotrowski, Lindsey, and Ameisen}}}
 \bibcite{lindsey2025biology}{{3}{2025}{{Lindsey et~al.}}{{Lindsey, Gurnee, Ameisen, Chen, Pearce, Turner, Citro, Abrahams, Carter, Hosmer, et~al.}}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not.}}{9}{figure.3}\protected@file@percent }
-\newlabel{fig:ml-overlap}{{3}{9}{Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not}{figure.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Verdicts vs.\ \citet  {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps}).}}{9}{table.3}\protected@file@percent }
-\newlabel{tab:verdicts}{{3}{9}{Verdicts vs.\ \citet {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps})}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not.}}{9}{figure.4}\protected@file@percent }
+\newlabel{fig:ml-overlap}{{4}{9}{Baseline-subtracted cross-lingual feature overlap by layer (solid: 4B; dashed: 8B, same-recipe transcoders). The paper's inverted-U and pair ordering reproduce; its cross-scale growth does not}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Verdicts vs.\ \citet  {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps}).}}{9}{table.1}\protected@file@percent }
+\newlabel{tab:verdicts}{{1}{9}{Verdicts vs.\ \citet {lindsey2025biology}. $^{*}$At $1.5$--$12\times $ the paper's strengths. $^{\dagger }$Blocked by frozen attention patterns; the channel is QK-mediated (Section~\ref {sec:exp:swaps})}{table.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Discussion}{9}{section.4}\protected@file@percent }
 \newlabel{sec:discussion}{{4}{9}{Discussion}{section.4}{}}
 \bibcite{olah2020zoom}{{4}{2020}{{Olah et~al.}}{{Olah, Cammarata, Schubert, Goh, Petrov, and Carter}}}
@@ -93,10 +89,20 @@
 \bibcite{marks2025sparse}{{15}{2025}{{Marks et~al.}}{{Marks, Rager, Michaud, Belinkov, Bau, and Mueller}}}
 \bibcite{yang2025qwen3}{{16}{2025}{{Yang et~al.}}{{Yang, Li, Yang, Zhang, Hui, Zheng, Yu, Gao, Huang, Lv, et~al.}}}
 \bibcite{hanna2025qwen3tc}{{17}{2025}{{Hanna}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Interactive-explorer snapshots}{11}{appendix.A}\protected@file@percent }
-\newlabel{app:snapshots}{{A}{11}{Interactive-explorer snapshots}{appendix.A}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups.}}{11}{figure.4}\protected@file@percent }
-\newlabel{fig:app-chat}{{4}{11}{Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups}{figure.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Explorer views of the raw open-quote antonym graphs (the paper's format).}}{11}{figure.5}\protected@file@percent }
-\newlabel{fig:app-raw}{{5}{11}{Explorer views of the raw open-quote antonym graphs (the paper's format)}{figure.5}{}}
-\gdef \@abspage@last{11}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Verification against circuit-tracer}{11}{appendix.A}\protected@file@percent }
+\newlabel{app:verification}{{A}{11}{Verification against circuit-tracer}{appendix.A}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Numerical verification of the reimplementation against circuit-tracer.}}{11}{table.2}\protected@file@percent }
+\newlabel{tab:verification}{{2}{11}{Numerical verification of the reimplementation against circuit-tracer}{table.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Model behaviour across formats and languages}{11}{appendix.B}\protected@file@percent }
+\newlabel{app:behaviour}{{B}{11}{Model behaviour across formats and languages}{appendix.B}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces First generated token per task, chat\,/\,raw format. The paper's expected behaviours are big\,/\,grand\,/\,\begin  {CJK}{UTF8}{gbsn}大\end  {CJK} (Claude answers ``big''; Qwen3 answers ``large''). The French and Chinese synonym behaviour is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \begin  {CJK}{UTF8}{gbsn}小\end  {CJK}\,$\to $\,\begin  {CJK}{UTF8}{gbsn}小\end  {CJK}) in both formats --- so the operation-swap targets in Section~\ref {sec:exp:swaps} are the model's own answers rather than idealised synonyms.}}{11}{table.3}\protected@file@percent }
+\newlabel{tab:behaviour}{{3}{11}{First generated token per task, chat\,/\,raw format. The paper's expected behaviours are big\,/\,grand\,/\,\zh {大} (Claude answers ``big''; Qwen3 answers ``large''). The French and Chinese synonym behaviour is degenerate --- the model echoes the operand (petit\,$\to $\,pet, \zh {小}\,$\to $\,\zh {小}) in both formats --- so the operation-swap targets in Section~\ref {sec:exp:swaps} are the model's own answers rather than idealised synonyms}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Attribution graphs: chat format and explorer snapshots}{11}{appendix.C}\protected@file@percent }
+\newlabel{app:snapshots}{{C}{11}{Attribution graphs: chat format and explorer snapshots}{appendix.C}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Simplified attribution graphs for the three chat-format antonym prompts (conventions as in Figure~\ref {fig:ml-graphs}).}}{12}{figure.5}\protected@file@percent }
+\newlabel{fig:ml-graphs-chat}{{5}{12}{Simplified attribution graphs for the three chat-format antonym prompts (conventions as in Figure~\ref {fig:ml-graphs})}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups.}}{12}{figure.6}\protected@file@percent }
+\newlabel{fig:app-chat}{{6}{12}{Explorer views of the chat-format antonym graphs with the reviewed supernodes as groups}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Explorer views of the raw open-quote antonym graphs (the paper's format).}}{12}{figure.7}\protected@file@percent }
+\newlabel{fig:app-raw}{{7}{12}{Explorer views of the raw open-quote antonym graphs (the paper's format)}{figure.7}{}}
+\gdef \@abspage@last{12}

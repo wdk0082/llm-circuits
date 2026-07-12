@@ -43,15 +43,20 @@ DARKRED = "#7f2704"
 GREY_BOX = "#e8e4dc"
 GREY_EDGE = "#6b6b6b"
 
+
 # ---------------------------------------------------------------------------
 # Figure 1: simplified attribution graphs (raw antonym en/fr/zh)
 # ---------------------------------------------------------------------------
-SN_RAW = {
-    s["name"]: s
-    for s in json.loads((REPO / "notebooks/supernodes/multilingual_raw_4b.json").read_text())[
-        "supernodes"
-    ]
-}
+def load_sn(fmt):
+    return {
+        s["name"]: s
+        for s in json.loads(
+            (REPO / f"notebooks/supernodes/multilingual_{fmt}_4b.json").read_text()
+        )["supernodes"]
+    }
+
+
+SN_RAW = load_sn("raw")
 manifest = json.loads((SNI / "manifest.json").read_text())
 
 
@@ -124,26 +129,37 @@ def draw_edge(ax, p0, p1, w, wmax, *, positive=True):
     )
 
 
-def fig_graphs():
+def fig_graphs(fmt="raw"):
+    sn_file = load_sn(fmt)
     fig, axes = plt.subplots(1, 3, figsize=(10.6, 3.0))
     answers = {"en": "large", "fr": "grand", "zh": "大"}
     for ax, lg in zip(axes, ("en", "fr", "zh")):
-        gname = f"raw_antonym_{lg}"
+        gname = f"antonym_{lg}" if fmt == "chat" else f"raw_antonym_{lg}"
+        if fmt == "raw":
+            layout = {
+                f"opposite ({lg})": (0.18, 0.16),
+                "small (multilingual)": (0.50, 0.16),
+                f"quote ({lg})": (0.82, 0.16),
+                "antonym (multilingual)": (0.18, 0.52),
+                "say large (multilingual)": (0.50, 0.70),
+                f"say large ({lg})": (0.82, 0.70),
+                "_logit": (0.50, 0.94),
+            }
+        else:
+            layout = {
+                f"opposite ({lg})": (0.22, 0.16),
+                "small (multilingual)": (0.62, 0.16),
+                "antonym (multilingual)": (0.22, 0.52),
+                "say large (multilingual)": (0.44, 0.70),
+                f"say large ({lg})": (0.80, 0.70),
+                "_logit": (0.50, 0.94),
+            }
         groups: dict[str, set[tuple[int, int]]] = {}
         pos_map = {}
-        layout = {
-            f"opposite ({lg})": (0.18, 0.16),
-            "small (multilingual)": (0.50, 0.16),
-            f"quote ({lg})": (0.82, 0.16),
-            "antonym (multilingual)": (0.18, 0.52),
-            "say large (multilingual)": (0.50, 0.70),
-            f"say large ({lg})": (0.82, 0.70),
-            "_logit": (0.50, 0.94),
-        }
         for name in list(layout):
             if name == "_logit":
                 continue
-            sn = SN_RAW.get(name)
+            sn = sn_file.get(name)
             members = (
                 {
                     (m["layer"], m["feature"])
@@ -173,15 +189,20 @@ def fig_graphs():
                 base, _, suffix = name.partition(" (")
                 sub = suffix.rstrip(")")
                 n_mem = len(groups.get(name, []))
-                draw_box(ax, x, y, [base, f"{sub} · {n_mem}f"])
-        ax.set_title(f"{lg}: “{manifest['graphs'][gname]['prompt']}”".replace('"', "″"), fontsize=8)
+                draw_box(ax, x, y, [base, f"{sub} ({n_mem})"])
+        prompt = manifest["graphs"][gname]["prompt"].replace('"', "″")
+        if len(prompt) > 46:
+            cut = prompt.rfind(" ", 0, 46)
+            prompt = prompt[:cut] + "\n" + prompt[cut + 1 :]
+        ax.set_title(f"{lg}: “{prompt}”", fontsize=7)
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1.04)
         ax.axis("off")
     fig.tight_layout()
-    fig.savefig(OUT / "fig_ml_graphs.pdf", bbox_inches="tight")
+    suffix = "" if fmt == "raw" else "_chat"
+    fig.savefig(OUT / f"fig_ml_graphs{suffix}.pdf", bbox_inches="tight")
     plt.close(fig)
-    print("fig_ml_graphs.pdf")
+    print(f"fig_ml_graphs{suffix}.pdf")
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +519,8 @@ def fig_overlap():
     print("fig_ml_overlap.pdf")
 
 
-fig_graphs()
+fig_graphs("raw")
+fig_graphs("chat")
 fig_interventions()
 fig_overlap()
 print("done ->", OUT)

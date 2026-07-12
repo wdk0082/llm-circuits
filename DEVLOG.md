@@ -1829,3 +1829,17 @@ Abstract + intro edited for the single case study; Discussion planned-narrative
 comment refreshed; \FloatBarrier keeps Section 3's floats out of the references.
 Figures generated from committed artifacts (fig_ml_{graphs,interventions,overlap}.pdf).
 TeX toolchain + CJK (gbsn) installed on the node; PDF builds clean.
+
+### Section 3 revision (same session, user feedback)
+
+Verification folded into the §2 reimplementation paragraph (one sentence + links);
+its table moved to Appendix A and the §3.1/§3.2 subsections removed. §3.1 is now
+"Prompts, behaviour, supernodes, and attribution graphs": one setup sentence + the
+seeding clause, then \paragraph heads — prompts shown as display-style examples with
+the FULL chat template and answers (behaviour table moved to Appendix B, the
+operand-echo explanation now its caption), supernode selection stated concisely
+(semantics — top output logits + top-activating examples vs per-concept lexicons —
+not influence rank) with a main-text placeholder for a feature-example screenshot.
+Graph boxes use the "en (6)" member-count style; a chat-format counterpart of the
+simplified-graphs figure joins Appendix C beside the two explorer-snapshot
+placeholders. texcount: 3,129 words.

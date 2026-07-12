@@ -7,7 +7,8 @@
 %   1 Introduction              ~640   (written)
 %   2 Method                    ~1,450 (written; display math excluded by texcount)
 %   3 Experiments and Results   ~1,150 (written; multilingual case study only ---
-%                                      addition dropped from the report by decision)
+%                                      addition dropped; verification lives in
+%                                      Section 2 + Appendix A)
 %   4 Discussion                ~350   (PLACEHOLDER)
 %   Slack                       ~250
 % Keep the placeholders inside their budgets or trim Sections 1-2 to compensate.
@@ -127,7 +128,7 @@ pretrained per-layer transcoders~\citep{hanna2025qwen3tc}; no attribution, pruni
 intervention machinery is imported. A dedicated verification suite establishes
 numerical equivalence with circuit-tracer on shared inputs --- identical node sets,
 edge weights matching to floating-point noise, identical influence rankings and pruned
-graphs, and matching constrained-steering deltas (Section~\ref{sec:experiments}). \textbf{Second},
+graphs, and matching constrained-steering deltas (Appendix~\ref{app:verification}). \textbf{Second},
 we reproduce the \emph{multilingual antonyms} case study of
 \citet{lindsey2025biology} on Qwen3-4B: a shared cross-lingual ``say-large'' core with
 language-specific input and output stages, the paper's operation/operand/language swap
@@ -336,8 +337,11 @@ outputs; hooks then replace MLPs with transcoder reconstructions plus constant e
 nodes, substitute frozen-pattern attention (V/O only) and frozen-denominator norms;
 batched \texttt{autograd} computes Eq.~\eqref{eq:edge} for hundreds of targets per
 backward pass. Pruning follows Section~\ref{sec:method:prune} exactly, and
-interventions follow circuit-tracer's constrained semantics. Numerical equivalence
-with circuit-tracer is established in Section~\ref{sec:experiments}.
+interventions follow circuit-tracer's constrained semantics. An eleven-check verification
+suite plus three steering-parity cases establish numerical equivalence with
+circuit-tracer: node sets, edge weights, influence rankings, pruned graphs, and
+constrained-steering deltas all agree to floating-point noise
+(Table~\ref{tab:verification}, Appendix~\ref{app:verification}).
 
 % =============================================================================
 \section{Experiments and Results}\label{sec:experiments}
@@ -346,92 +350,73 @@ with circuit-tracer is established in Section~\ref{sec:experiments}.
 % Source material: notebooks/multilingual*.ipynb, DEVLOG.md, notes/biology_digest.md.
 % =============================================================================
 
-\subsection{Setup}\label{sec:exp:setup}
+\subsection{Prompts, behaviour, supernodes, and attribution graphs}\label{sec:exp:graphs}
 
 All experiments use Qwen3-4B (36 layers, bf16) with pretrained per-layer JumpReLU
 transcoders (163{,}840 features per layer)~\citep{hanna2025qwen3tc} on a single
-A100-80GB. Attribution graphs are built once, pruned (node threshold $0.8$ for
-chat-format prompts, $0.95$ for the paper's raw completions, edge threshold $0.98$),
-and persisted; every experiment below --- including supernode selection --- runs
-against exactly these persisted graphs, with prompt tokenisation length-checked
-against a manifest. Notebooks seed all RNGs and pin cuDNN to deterministic kernels at
-startup; re-executions reproduce every reported number exactly, and bf16 graph builds
-are bit-stable across A100 nodes.
+A100-80GB; notebooks seed all RNGs and pin cuDNN to deterministic kernels at startup,
+and re-executions reproduce every reported number exactly.
 
-\subsection{Verification against circuit-tracer}\label{sec:exp:verif}
+\paragraph{Prompts and behaviour.}
+The paper's prompts are raw completions ending on a content-bearing open quote; we run
+them exactly, with one attention-sink token prepended:
+\begin{quote}\small
+\begin{verbatim}
+<|endoftext|>The opposite of "small" is "
+\end{verbatim}
+\vspace{-0.6\baselineskip}
+first generated token: \texttt{large}
+\end{quote}
+Because Qwen3-4B is instruction-tuned, a chat-template adaptation runs alongside
+(thinking disabled; the answer is again the first generated token):
+\begin{quote}\small
+\begin{verbatim}
+<|im_start|>user
+What is the opposite of "small"? Reply with only the word,
+nothing else.<|im_end|>
+<|im_start|>assistant
+<think>
 
-Two scripts certify the reimplementation against circuit-tracer on shared inputs
-(Qwen3-0.6B, fp32). The graph suite checks forward exactness of the local replacement
-model, an exact linearity identity for the frozen-linear backward, parity of salient
-logit selection, and a full cross-check against \texttt{circuit\_tracer.attribute()};
-the intervention script compares constrained-steering \emph{deltas} across the two
-implementations for the three primitives the reproduction uses (a single negative
-steer, a two-layer coupled suppression stack, and an absolute-value donor injection).
-All eleven graph checks and all three steering cases pass
-(Table~\ref{tab:verification}); the two implementations agree to floating-point noise.
+</think>
 
-\begin{table}[t]
-\centering\small
-\begin{tabular}{ll}
-\toprule
-check & result \\
-\midrule
-forward exactness (local replacement vs.\ model) & $\max|\Delta\text{logits}| = 1.2\times10^{-5}$ \\
-linearity identity of the frozen backward & $\max$ error $1.7\times10^{-5}$ \\
-200 emitted edge weights vs.\ plain \texttt{autograd} & $\max|\Delta| = 3.7\times10^{-5}$ \\
-salient-logit selection & identical tokens and probabilities \\
-feature node sets & Jaccard $1.0$ \\
-edge weights on $2.44$M shared pairs & cosine $=$ Pearson $= 1.0000$ \\
-influence ranking & Spearman $1.0000$ \\
-pruned node sets ($0.8/0.98$) & identical ($337 = 337$) \\
-steering deltas (3 intervention primitives) & $\max|\Delta_\text{ours}-\Delta_\text{CT}| = 6\times10^{-5}$, cosine $>0.99$ \\
-\bottomrule
-\end{tabular}
-\caption{Numerical verification of the reimplementation against circuit-tracer.}
-\label{tab:verification}
-\end{table}
+\end{verbatim}
+\vspace{-0.6\baselineskip}
+first generated token: \texttt{large}
+\end{quote}
+The antonym task is intact in both formats and all three languages
+(large\,/\,grand\,/\,\zh{大}); the model's own synonym and hot-antonym answers, which
+serve as the swap targets below, are tabulated in Appendix~\ref{app:behaviour}.
 
-\subsection{Prompts, behaviour, and attribution graphs}\label{sec:exp:graphs}
-
-The paper's prompts are raw completions ending on a content-bearing open quote
-(\emph{The opposite of ``small'' is ``}); we run these exactly (one attention-sink
-token prepended), and, because Qwen3-4B is an instruction-tuned model, a chat-template
-adaptation alongside (\emph{What is the opposite of ``small''? Reply with only the
-word\ldots}). Table~\ref{tab:behaviour} shows the answers: the antonym task is intact
-in both formats and all three languages, while the model's own synonym behaviour is
-degenerate in French and Chinese (it echoes the operand) --- swap targets below are
-therefore the model's \emph{own} answers, not idealised ones.
-
-\begin{table}[t]
-\centering\small
-\begin{tabular}{lccc}
-\toprule
- & antonym of \emph{small} & synonym of \emph{small} & antonym of \emph{hot} \\
-\midrule
-en & large\,/\,large & tiny\,/\,tiny & cold\,/\,cold \\
-fr & Grand\,/\,grand & pet\,/\,pet (echo) & F\,/\,f(roid) \\
-zh & \zh{大}\,/\,\zh{大} & \zh{小}\,/\,\zh{小} (echo) & \zh{冷}\,/\,\zh{冷} \\
-\bottomrule
-\end{tabular}
-\caption{First generated token, chat\,/\,raw format. The paper's expected behaviours
-are big\,/\,grand\,/\,\zh{大} (Claude answers ``big''; Qwen3 answers ``large'').}
-\label{tab:behaviour}
-\end{table}
-
-Supernodes --- the unit the paper intervenes on --- are selected \emph{outside} the
-notebooks: a semantic scan over the persisted graphs proposes lexicon-matched
-candidates per concept, ranked earliest-layer-first and capped at six members; the
-chat and raw formats get fully separate selections, frozen in reviewed artifacts with
-per-graph activations and node positions per member, and enforced disjoint by
-(layer, feature). Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs for
-the three raw antonym prompts: the paper's skeleton --- language-specific
+\paragraph{Supernodes and attribution graphs.}
+Supernodes are selected by \emph{semantics, not influence rank}: a scan over the
+pruned graphs matches each feature's top output logits and top-activating input
+examples against per-concept lexicons, ranks candidates earliest-layer-first, and
+caps each group at six members; the chat and raw formats get fully separate
+selections, frozen in reviewed artifacts with per-graph activations and node
+positions per member, and enforced disjoint by (layer, feature).
+Figure~\ref{fig:feature-examples} shows the evidence this selection matches against
+for example members. Figure~\ref{fig:ml-graphs} shows the resulting simplified graphs
+for the three raw antonym prompts: the paper's skeleton --- language-specific
 \emph{opposite} and \emph{quote} input groups, a shared multilingual \emph{small}
 group, and a shared \emph{say large} stage feeding the answer --- is present in all
 three languages, with 107 (chat) and 67 (raw) individual features appearing in all
 three languages' pruned graphs. One structural difference is visible immediately: the
 groups sit late (the raw \emph{antonym} group has a single L34 member; \emph{quote}
-members span L23--L34), where the paper describes early detection features. Full
-interactive-explorer views are in Appendix~\ref{app:snapshots}.
+members span L23--L34), where the paper describes early detection features. The chat
+counterpart of Figure~\ref{fig:ml-graphs} and full interactive-explorer views of all
+six antonym pages are in Appendix~\ref{app:snapshots}.
+
+% TODO(screenshots): feature-example screenshot to be provided.
+\begin{figure}[t]
+\centering
+\fbox{\parbox[c][4.2cm][c]{0.9\textwidth}{\centering\itshape placeholder ---
+example reviewed features (labels, top output logits, top-activating dataset
+examples); screenshot to be provided}}
+\caption{Examples of reviewed supernode members: each feature's top output logits and
+top-activating dataset examples --- the evidence the semantic selection matches
+against.}
+\label{fig:feature-examples}
+\end{figure}
 
 \begin{figure}[t]
 \centering
@@ -593,11 +578,77 @@ QK-mediated (Section~\ref{sec:exp:swaps}).}
 
 \appendix
 
-\section{Interactive-explorer snapshots}\label{app:snapshots}
+\section{Verification against circuit-tracer}\label{app:verification}
 
-Full attribution graphs (all pruned nodes and edges, with the reviewed supernodes
-pre-loaded as groups) are best inspected in the interactive explorer shipped with the
-repository; the snapshots below show the six antonym pages.
+Two scripts certify the reimplementation against circuit-tracer on shared inputs
+(Qwen3-0.6B, fp32). The graph suite checks forward exactness of the local replacement
+model, an exact linearity identity for the frozen-linear backward, parity of salient
+logit selection, and a full cross-check against \texttt{circuit\_tracer.attribute()};
+the intervention script compares constrained-steering \emph{deltas} across the two
+implementations for the three primitives the reproduction uses (a single negative
+steer, a two-layer coupled suppression stack, and an absolute-value donor injection).
+All eleven graph checks and all three steering cases pass
+(Table~\ref{tab:verification}).
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{ll}
+\toprule
+check & result \\
+\midrule
+forward exactness (local replacement vs.\ model) & $\max|\Delta\text{logits}| = 1.2\times10^{-5}$ \\
+linearity identity of the frozen backward & $\max$ error $1.7\times10^{-5}$ \\
+200 emitted edge weights vs.\ plain \texttt{autograd} & $\max|\Delta| = 3.7\times10^{-5}$ \\
+salient-logit selection & identical tokens and probabilities \\
+feature node sets & Jaccard $1.0$ \\
+edge weights on $2.44$M shared pairs & cosine $=$ Pearson $= 1.0000$ \\
+influence ranking & Spearman $1.0000$ \\
+pruned node sets ($0.8/0.98$) & identical ($337 = 337$) \\
+steering deltas (3 intervention primitives) & $\max|\Delta_\text{ours}-\Delta_\text{CT}| = 6\times10^{-5}$, cosine $>0.99$ \\
+\bottomrule
+\end{tabular}
+\caption{Numerical verification of the reimplementation against circuit-tracer.}
+\label{tab:verification}
+\end{table}
+
+\section{Model behaviour across formats and languages}\label{app:behaviour}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+ & antonym of \emph{small} & synonym of \emph{small} & antonym of \emph{hot} \\
+\midrule
+en & large\,/\,large & tiny\,/\,tiny & cold\,/\,cold \\
+fr & Grand\,/\,grand & pet\,/\,pet (echo) & F\,/\,f(roid) \\
+zh & \zh{大}\,/\,\zh{大} & \zh{小}\,/\,\zh{小} (echo) & \zh{冷}\,/\,\zh{冷} \\
+\bottomrule
+\end{tabular}
+\caption{First generated token per task, chat\,/\,raw format. The paper's expected
+behaviours are big\,/\,grand\,/\,\zh{大} (Claude answers ``big''; Qwen3 answers
+``large''). The French and Chinese synonym behaviour is degenerate --- the model
+echoes the operand (petit\,$\to$\,pet, \zh{小}\,$\to$\,\zh{小}) in both formats ---
+so the operation-swap targets in Section~\ref{sec:exp:swaps} are the model's own
+answers rather than idealised synonyms.}
+\label{tab:behaviour}
+\end{table}
+
+\section{Attribution graphs: chat format and explorer snapshots}\label{app:snapshots}
+
+Figure~\ref{fig:ml-graphs-chat} is the chat-format counterpart of
+Figure~\ref{fig:ml-graphs} (chat pages have no quote-position nodes, so the
+\emph{quote} groups exist only on the raw side). Full attribution graphs (all pruned
+nodes and edges, with the reviewed supernodes pre-loaded as groups) are best inspected
+in the interactive explorer shipped with the repository; the snapshots below show the
+six antonym pages.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ml_graphs_chat.pdf}
+\caption{Simplified attribution graphs for the three chat-format antonym prompts
+(conventions as in Figure~\ref{fig:ml-graphs}).}
+\label{fig:ml-graphs-chat}
+\end{figure}
 
 % TODO(screenshots): replace the two placeholders with explorer screenshots
 % (chat pages: antonym_en/fr/zh; raw pages: raw_antonym_en/fr/zh), provided

@@ -10,8 +10,9 @@ LaTeX source for the project report (attribution graphs on Qwen3).
   (Section 3 — the multilingual case study only; addition was dropped from the
   report by decision) are written. *Discussion* (~350 w) is a placeholder with
   its planned narrative in a comment in situ.
-- **TODO(screenshots):** Appendix A has two framed placeholders for
-  interactive-explorer screenshots (chat + raw antonym pages), to be provided.
+- **TODO(screenshots):** three framed placeholders await screenshots — Fig.\ 1
+  (main text: example reviewed features) and Appendix C (explorer views of the
+  chat and raw antonym pages).
 - Figures are generated from the committed artifacts (nothing schematic except
   box layouts); regenerate with the session's figure script if artifacts change.
 - CJK glyphs (大/小/冷) need `latex-cjk-chinese` + the arphic `gbsn` font

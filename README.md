@@ -1,6 +1,6 @@
 # llm-circuits
 
-[![Documentation Status](https://readthedocs.org/projects/llm-circuits/badge/?version=latest&style=flat)](https://llm-circuits.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://app.readthedocs.org/projects/llm-circuits/badge/?version=latest)](https://llm-circuits.readthedocs.io/en/latest/?badge=latest)
 
 Mechanistic-interpretability research toolkit for analysing **LLM circuits** in the
 Qwen3 model family. It reproduces Anthropic's circuit-tracing method — from

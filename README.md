@@ -1,5 +1,7 @@
 # llm-circuits
 
+[![Documentation Status](https://readthedocs.org/projects/llm-circuits/badge/?version=latest)](https://llm-circuits.readthedocs.io/en/latest/?badge=latest)
+
 Mechanistic-interpretability research toolkit for analysing **LLM circuits** in the
 Qwen3 model family. It reproduces Anthropic's circuit-tracing method — from
 [*On the Biology of a Large Language Model*](https://transformer-circuits.pub/2025/attribution-graphs/biology.html)
@@ -67,3 +69,13 @@ binds `127.0.0.1` on purpose; forward the port rather than exposing it.
 | qwen3-4b | qwen3 | 4b | Qwen/Qwen3-4B | mwhanna/qwen3-4b-transcoders | per-layer |
 | qwen3-8b | qwen3 | 8b | Qwen/Qwen3-8B | mwhanna/qwen3-8b-transcoders | per-layer |
 | qwen3-14b | qwen3 | 14b | Qwen/Qwen3-14B | mwhanna/qwen3-14b-transcoders-lowl0 | per-layer |
+
+## Links
+
+- **Documentation** — <https://llm-circuits.readthedocs.io>
+- **circuit-tracer** (used only to load transcoders) — <https://github.com/safety-research/circuit-tracer>
+- **Paper** — *On the Biology of a Large Language Model* — <https://transformer-circuits.pub/2025/attribution-graphs/biology.html>
+- **Paper** — *Circuit Tracing: Revealing Computational Graphs in Language Models* — <https://transformer-circuits.pub/2025/attribution-graphs/methods.html>
+- **Transcoders** — per-layer Qwen3 transcoders (mwhanna, Hugging Face) — <https://huggingface.co/mwhanna>
+- **Models** — Qwen3 (Hugging Face) — <https://huggingface.co/Qwen>
+- **Transformer Circuits Thread** — <https://transformer-circuits.pub/>

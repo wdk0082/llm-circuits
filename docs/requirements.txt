@@ -1,0 +1,20 @@
+# Dependencies for building the docs on Read the Docs (see ../.readthedocs.yaml).
+#
+# This is intentionally minimal. The package itself is imported from ../src
+# (docs/conf.py puts it on sys.path), and its heavy runtime deps — torch,
+# transformers, circuit-tracer (which pulls transformer-lens + nnsight), ... —
+# are MOCKED in conf.py, so they are deliberately NOT installed here. That keeps
+# the RTD build fast and within the free-tier limits.
+#
+# Local/CI builds use the `docs` dependency group in pyproject.toml instead
+# (`uv sync --group docs`); keep the Sphinx pins here in sync with that group.
+sphinx>=7,<9
+furo>=2024.1
+myst-nb>=1.1
+sphinx-copybutton>=0.5
+
+# Light runtime deps that documented modules import at top level (kept real
+# rather than mocked, to avoid mock side effects in module-level code).
+numpy>=1.26
+huggingface-hub
+rich

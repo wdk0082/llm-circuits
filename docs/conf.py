@@ -11,12 +11,18 @@ Autodoc imports the package, so the docs must be built in an environment where
 from __future__ import annotations
 
 import shutil
-from importlib.metadata import version as _pkg_version
+import sys
 from pathlib import Path
 
 # -- Paths -------------------------------------------------------------------
 DOCS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DOCS_DIR.parent
+
+# Put the src-layout package on the path so autodoc can import it from source,
+# without installing the package or its heavy runtime deps (those are mocked
+# below). This is what lets Read the Docs build on the free tier — see
+# docs/requirements.txt and .readthedocs.yaml.
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 # The multilingual reproduction notebook is one of the two worked examples.
 # Keep a single source of truth in ``notebooks/`` and copy it into the docs tree
@@ -32,7 +38,8 @@ if _NB_SRC.exists():
 project = "llm-circuits"
 author = "Zixuan Wang"
 copyright = "2026, Zixuan Wang"  # noqa: A001
-release = _pkg_version("llm-circuits")
+from llm_circuits import __version__ as release  # noqa: E402  (src is on sys.path above)
+
 version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
@@ -63,10 +70,13 @@ autodoc_typehints = "signature"
 # (Parameters/Returns underlines); napoleon parses both by default.
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
-# circuit-tracer (a git dependency) and torch_xla (TPU-only) are imported lazily
-# inside functions; mock them so the API docs build without a GPU/TPU present or
-# the circuit-tracer git install.
-autodoc_mock_imports = ["circuit_tracer", "torch_xla"]
+# Mock the heavy / torch-dependent runtime deps. Autodoc only needs docstrings
+# and signatures — annotations are strings under `from __future__ import
+# annotations`, and no signature has a torch/numpy-valued default — so the real
+# libraries are never required. This keeps the docs build light enough for the
+# Read the Docs free tier (torch alone would pull a multi-GB CUDA wheel, and
+# circuit-tracer drags in transformer-lens + nnsight).
+autodoc_mock_imports = ["torch", "transformers", "circuit_tracer", "torch_xla"]
 
 # -- Intersphinx -------------------------------------------------------------
 intersphinx_mapping = {

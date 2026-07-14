@@ -3,7 +3,7 @@
 #SBATCH --partition=ampere
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
-#SBATCH --time=02:30:00
+#SBATCH --time=01:00:00
 #SBATCH --job-name=llm-addition-notebook
 #SBATCH --output=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.out
 #SBATCH --error=/rds/user/%u/hpc-work/llm-circuits/logs/%x-%j.err

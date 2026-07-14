@@ -41,13 +41,14 @@ def _ids(n: int) -> torch.Tensor:
 
 
 def test_digit_positions_teacher_forced_stops_at_equals():
-    # <sink> calc :  ' ' 4  6  +  4  9  =  9   (teacher-forced ones prompt, 46+49)
+    # <sink> calc :  ' ' 4  6  +  4  9  =  9   (teacher-forced ones prompt, 46+49):
+    # the forced answer digit after '=' must NOT leak into b_digits
     toks = ["<s>", "calc", ":", " ", "4", "6", "+", "4", "9", "=", "9"]
     pos = A.digit_token_positions(_FakeTokenizer(toks), _ids(len(toks)), 46, 49)
     assert pos["a_digits"] == [4, 5]
-    assert pos["b_digits"] == [7, 8]  # pre-fix this was [8, 10]: forced answer digit kept
-    assert pos["eq"] == [9]
-    assert pos["plus"] == [6]
+    assert pos["b_digits"] == [7, 8]
+    assert pos["eq"] == 9
+    assert pos["plus"] == 6
 
 
 def test_digit_positions_plain_prompt():
@@ -64,8 +65,14 @@ def test_digit_positions_multi_forced_digits():
     assert pos["b_digits"] == [7, 8]
 
 
+def test_digit_positions_mismatch_raises():
+    toks = ["<s>", "calc", ":", " ", "4", "7", "+", "4", "9", "="]
+    with pytest.raises(ValueError, match="operand tokens mismatch"):
+        A.digit_token_positions(_FakeTokenizer(toks), _ids(len(toks)), 46, 49)
+
+
 # ---------------------------------------------------------------------------
-# periodicity_report band criterion (basis of the magnitude-verdict upgrade)
+# classify_grid: operand-plot receptive-field families (v3 clean-room classifier)
 # ---------------------------------------------------------------------------
 
 
@@ -73,48 +80,68 @@ def test_digit_positions_multi_forced_digits():
 def grid_axes():
     a = np.repeat(np.arange(100)[:, None], 100, axis=1)
     b = np.repeat(np.arange(100)[None, :], 100, axis=0)
-    return a, b, list(range(100)), list(range(100))
+    return a, b
+
+
+def test_lookup_lattice_and_mod10_families(grid_axes):
+    a, b = grid_axes
+    lat = ((a % 10 == 6) & (b % 10 == 9)).astype(float) * 5
+    assert A.classify_grid(lat)[0] == "lookup(a%10=6,b%10=9)"
+    assert A.classify_grid((a % 10 == 6).astype(float))[0] == "mod10-a(r6)"
+    assert A.classify_grid(((a + b) % 10 == 5).astype(float))[0] == "mod10-sum(r5)"
 
 
 def test_band_a_with_weak_cross_arm(grid_axes):
-    a, b, av, bv = grid_axes
-    # max-composition (features saturate rather than add at the crossing — an additive
-    # arm would create a hotspot that resets the 0.7 core): weak arm at 0.6 of the band
-    # sits above the 0.5 activity threshold but below the 0.7 core -> band detected
+    a, b = grid_axes
+    # max-composition (features saturate rather than add at the crossing): the weak
+    # perpendicular arm must not break the magnitude-band call
     g = np.maximum(
         np.exp(-((a - 46.0) ** 2) / (2 * 4**2)), 0.6 * np.exp(-((b - 46.0) ** 2) / (2 * 4**2))
     )
-    assert A.periodicity_report(g, av, bv)["label"] == "band-a(~46)"
+    assert A.classify_grid(g)[0].startswith("band-a(~4")
 
 
 def test_band_b_razor(grid_axes):
-    a, b, av, bv = grid_axes
+    a, b = grid_axes
     g = np.maximum(
         np.exp(-((b - 49.0) ** 2) / (2 * 1.5**2)), 0.5 * np.exp(-((a - 49.0) ** 2) / (2 * 3**2))
     )
-    assert A.periodicity_report(g, av, bv)["label"] == "band-b(~49)"
+    assert A.classify_grid(g)[0].startswith("band-b(~4")
 
 
-def test_mod10_stripe_not_stolen_by_band(grid_axes):
-    a, _, av, bv = grid_axes
-    assert A.periodicity_report((a % 10 == 6).astype(float), av, bv)["label"] == "mod10-a(r6)"
-
-
-def test_equal_arm_cross_stays_out(grid_axes):
-    a, b, av, bv = grid_axes
+def test_equal_arm_cross_not_a_band(grid_axes):
+    a, b = grid_axes
     g = np.exp(-((a - 46.0) ** 2) / (2 * 3**2)) + np.exp(-((b - 46.0) ** 2) / (2 * 3**2))
-    assert not str(A.periodicity_report(g, av, bv)["label"]).startswith("band")
+    assert not A.classify_grid(g)[0].startswith("band")
 
 
-def test_uniform_and_diag(grid_axes):
-    a, b, av, bv = grid_axes
-    assert A.periodicity_report(np.ones((100, 100)), av, bv)["label"] == "mixed"
+def test_uniform_and_sum_band(grid_axes):
+    a, b = grid_axes
+    assert A.classify_grid(np.ones((100, 100)))[0] == "mixed"
     diag = (np.abs(a + b - 95) <= 3).astype(float)
-    assert A.periodicity_report(diag, av, bv)["label"] == "magnitude-diag"
+    assert A.classify_grid(diag)[0].startswith("sum-band(~9")
+    assert A.classify_grid(np.zeros((100, 100)))[0] == "dead"
+
+
+def test_cross_region_and_lookup_not_stolen(grid_axes):
+    a, b = grid_axes
+    # exact-value cross: fires when EITHER operand is 46 (the paper's "36"/"59"
+    # input-identity features) — must beat the mod10-a residue class
+    g = ((a == 46) | (b == 46)).astype(float)
+    assert A.classify_grid(g)[0] == "cross(46)"
+    # 2-D localized blob without repetition: the low-precision magnitude-lookup class
+    g2 = np.exp(-((a - 46.0) ** 2) / (2 * 4**2) - ((b - 49.0) ** 2) / (2 * 4**2))
+    assert A.classify_grid(g2)[0] == "region(~46,~49)"
+    # a smeared modular lattice (two adjacent b residues) stays in the lookup family
+    g3 = (((a % 10) == 6) & (((b % 10) == 9) | ((b % 10) == 8))).astype(float)
+    assert A.classify_grid(g3)[0].startswith("lookup(a%10=6")
+    # the studied pair's cell as a fraction of max
+    assert A.on_pair_fraction(g3, (46, 49)) == pytest.approx(1.0)
+    assert A.on_pair_fraction(np.zeros((100, 100)), (46, 49)) == 0.0
 
 
 # ---------------------------------------------------------------------------
-# direct_token_weights == direct_logit_effect (batched vs reference)
+# digit_direct_weights == direct_logit_effect (batched digits vs reference)
 # ---------------------------------------------------------------------------
 
 
@@ -140,13 +167,23 @@ def _mock_model_and_tc(d_model=16, vocab=50, d_t=32, n_layers=3, seed=0):
     return model, tc
 
 
-def test_direct_token_weights_matches_reference():
+class _DigitTokenizer(_FakeTokenizer):
+    """Callable stub: text "3" -> input_ids [3] (digit tokens are ids 0..9)."""
+
+    def __call__(self, text, **_kw):
+        return SimpleNamespace(input_ids=[self.toks.index(text)])
+
+
+def test_digit_direct_weights_matches_reference():
     model, tc = _mock_model_and_tc()
+    tok = _DigitTokenizer([str(d) for d in range(10)])
     feats = [(0, 3), (1, 7), (2, 31), (0, 0)]
-    out = A.direct_token_weights(model, tc, feats, token_id=9)
+    out = A.digit_direct_weights(model, tc, feats, tok)
     for L, i in feats:
-        ref = M.direct_logit_effect(model, tc, L, i, {"t": 9})["t"]
-        assert out[(L, i)] == pytest.approx(ref, abs=1e-4)
+        assert len(out[(L, i)]) == 10
+        for d in (0, 5, 9):
+            ref = M.direct_logit_effect(model, tc, L, i, {"t": d})["t"]
+            assert out[(L, i)][d] == pytest.approx(ref, abs=1e-4)
 
 
 # ---------------------------------------------------------------------------
@@ -272,12 +309,45 @@ def test_swap_ivs_fn_strengths_override_extends_same_ramp():
     assert at_end[0].m == pytest.approx(-15.0) and at_end[1].value == pytest.approx(75.0)
 
 
-def test_steer_interventions_m_and_position():
-    ivs = A.steer_interventions([(3, 7, 1.5), (5, 9, 0.2)], m=-2.0, position=None)
-    assert [(iv.layer, iv.feature_idx, iv.position, iv.m) for iv in ivs] == [
-        (3, 7, None, -2.0),
-        (5, 9, None, -2.0),
+def _v3_sn(name, members, *, graph="ones", position="final", role="source"):
+    return {"name": name, "role": role, "graph": graph, "position": position, "members": members}
+
+
+def test_addition_suppress_ivs_positions_and_m():
+    sn = _v3_sn(
+        "input _6",
+        [
+            {"layer": 7, "feature": 10, "position": 5, "act": 3.0},
+            {"layer": 34, "feature": 20, "position": "final", "act": 1.0},
+            {"layer": 12, "feature": 30, "position": None, "act": 2.0},
+        ],
+    )
+    ivs = A.suppress_ivs(sn, mult=-1.0, final_pos=9)
+    # recorded position kept; "final"/None resolve to final_pos; M=-1 -> m=-2
+    assert [(iv.layer, iv.feature_idx, iv.position) for iv in ivs] == [
+        (7, 10, 5),
+        (34, 20, 9),
+        (12, 30, 9),
     ]
+    assert all(iv.m == pytest.approx(-2.0) and iv.value is None for iv in ivs)
+
+
+def test_addition_inject_ivs_values_and_skip():
+    sn = _v3_sn(
+        "lookup (9,9) donors",
+        [
+            {"layer": 19, "feature": 3, "position": "final", "act": 5.0},
+            {"layer": 22, "feature": 4, "position": "final", "act": 0.0},  # no act -> skipped
+        ],
+        graph="donor",
+        role="donor",
+    )
+    ivs, used = A.inject_ivs(sn, mult=2.0, positions=[9, 10])
+    assert [(iv.layer, iv.feature_idx, iv.position, iv.value) for iv in ivs] == [
+        (19, 3, 9, pytest.approx(10.0)),
+        (19, 3, 10, pytest.approx(10.0)),
+    ]
+    assert used == [(19, 3, 5.0)]
 
 
 def test_layer_sweep_result_pick_properties():
@@ -313,15 +383,14 @@ def test_readout_pinned_rows_dropped_under_constrained_patching():
     assert out2["mean_pct"] is None and out2["n_pinned"] == 1
 
 
-def test_steer_and_report_patch_end_layer_passthrough_and_pinned_readout(monkeypatch):
+def test_steer_report_patch_end_layer_passthrough_and_pinned_readout(monkeypatch):
     captured = {}
 
     def fake_run(model, tc, input_ids, ivs, **kw):
         captured["patch_end_layer"] = kw.get("patch_end_layer")
+        captured["readout_layers"] = kw.get("readout_layers")
         base = {L: torch.zeros(4, 8) for L in (2, 5)}
         abl = {L: torch.zeros(4, 8) for L in (2, 5)}
-        base[2][3, 1] = 2.0
-        abl[2][3, 1] = 1.0
         base[5][3, 1] = 2.0
         abl[5][3, 1] = 1.0
         logits = torch.zeros(4, 16)
@@ -332,27 +401,35 @@ def test_steer_and_report_patch_end_layer_passthrough_and_pinned_readout(monkeyp
             ablated_features=abl,
         )
 
-    class _CallableTokenizer(_FakeTokenizer):
-        def __call__(self, text, **_kw):  # digit_distribution: "3" -> id 3
-            return SimpleNamespace(input_ids=[self.toks.index(text)])
-
     monkeypatch.setattr(A, "run_feature_intervention", fake_run)
-    tok = _CallableTokenizer([str(d) for d in range(10)] + [""] * 6)
-    rep = A.steer_and_report(
+    tok = _DigitTokenizer([str(d) for d in range(10)] + [""] * 6)
+    sn = _v3_sn(
+        "down",
+        [
+            {"layer": 2, "feature": 1, "position": 3, "act": 1.0},  # L2 <= ell -> pinned
+            {"layer": 5, "feature": 1, "position": 3, "act": 1.0},
+        ],
+        role="readout",
+    )
+    rep = A.steer_report(
         None,
         None,
-        torch.zeros(1, 4, dtype=torch.long),
-        [(2, 1, 1.0)],
         tok,
-        m=-1.0,
-        position=3,
-        readout=[(2, 1, 3), (5, 1, 3)],
+        torch.zeros(1, 4, dtype=torch.long),
+        [],
         patch_end_layer=3,
+        readout_sns={"down": (sn, "baseline")},
     )
     assert captured["patch_end_layer"] == 3
+    assert captured["readout_layers"] == [5]  # pinned layers not requested
     assert rep["patch_end_layer"] == 3
-    assert rep["readout_pct"]["L2f1@p3"].get("pinned") is True  # L2 <= ell=3
-    assert "pinned" not in rep["readout_pct"]["L5f1@p3"]  # L5 > ell
+    ro = rep["readouts"]["down"]
+    assert ro["per_feature"]["L2f1"] == "pinned" and ro["n_pinned"] == 1
+    assert ro["per_feature"]["L5f1"] == pytest.approx(50.0)
+    assert ro["mean_pct"] == pytest.approx(50.0)
+    # uniform logits -> renormalized digit distribution is uniform -> smear width 10
+    assert rep["width_before"] == pytest.approx(10.0)
+    assert len(rep["digits_after"]) == 10
 
 
 def test_supernode_swap_sweep_constrained_at_fixed_ell(monkeypatch):
@@ -457,7 +534,7 @@ def test_cjk_font_registered_for_zh_panels():
 
 
 # ---------------------------------------------------------------------------
-# Supernode loader (reproduction v2: selection lives in the reviewed artifact)
+# Addition supernode loader (v3: selection lives in the reviewed artifact)
 # ---------------------------------------------------------------------------
 
 
@@ -467,10 +544,10 @@ def _sn_doc(**over):
         "supernodes": [
             {
                 "name": "a",
-                "graph": "g",
+                "graph": "ones",
                 "position": "final",
                 "members": [
-                    {"layer": 1, "feature": 2, "act": 3.0, "review": "approved"},
+                    {"layer": 1, "feature": 2, "position": 5, "act": 3.0, "review": "approved"},
                 ],
             }
         ],
@@ -479,14 +556,17 @@ def _sn_doc(**over):
     return doc
 
 
-def test_load_supernodes_happy_path(tmp_path):
+def test_load_supernodes_happy_path_and_position_resolution(tmp_path):
     import json
 
     p = tmp_path / "sn.json"
     p.write_text(json.dumps(_sn_doc()))
     out = A.load_supernodes(p)
-    assert A.supernode_members(out["a"]) == [(1, 2, 3.0)]
-    assert A.supernode_members(out["a"], with_acts=False) == [(1, 2)]
+    m = out["a"]["members"][0]
+    assert (m["layer"], m["feature"], m["act"]) == (1, 2, 3.0)
+    # member position wins; "final"/None fall back through the supernode's
+    assert A.resolve_position(out["a"], m, final_pos=9) == 5
+    assert A.resolve_position(out["a"], {"layer": 1, "feature": 3}, final_pos=9) == 9
 
 
 def test_load_supernodes_refuses_unapproved_rejected_and_overlap(tmp_path):
@@ -503,24 +583,15 @@ def test_load_supernodes_refuses_unapproved_rejected_and_overlap(tmp_path):
     with pytest.raises(ValueError, match="rejected member"):
         A.load_supernodes(p)
 
+    # same (layer, feature) twice on the SAME graph -> refused
     doc = _sn_doc()
     doc["supernodes"].append(dict(doc["supernodes"][0], name="b"))
     p.write_text(json.dumps(doc))
     with pytest.raises(ValueError, match="in both"):
         A.load_supernodes(p)
 
-
-def test_exact_cross_and_region_classes(grid_axes):
-    a, b, av, bv = grid_axes
-    # exact-value cross: fires when EITHER operand is 46 (paper's "36"/"59" inputs)
-    g = ((a == 46) | (b == 46)).astype(float)
-    assert str(A.periodicity_report(g, av, bv)["label"]) == "exact-cross(46)"
-    # 2-D localized blob without repetition: the wide magnitude-lookup class
-    g2 = np.exp(-((a - 46.0) ** 2) / (2 * 4**2) - ((b - 49.0) ** 2) / (2 * 4**2))
-    lab = str(A.periodicity_report(g2, av, bv)["label"])
-    assert lab.startswith("region(~46"), lab
-    # true modular lattices must NOT be stolen by the new classes (2-wide points so
-    # the synthetic clears the 1% sparse floor, like real smeared lattices do)
-    g3 = (((a % 10) == 6) & (((b % 10) == 9) | ((b % 10) == 8))).astype(float)
-    lab3 = str(A.periodicity_report(g3, av, bv)["label"])
-    assert lab3.startswith("lookup(a%10=6"), lab3
+    # ... but the same feature on a DIFFERENT graph is legitimate (reuse-context groups)
+    doc = _sn_doc()
+    doc["supernodes"].append(dict(doc["supernodes"][0], name="b", graph="reuse"))
+    p.write_text(json.dumps(doc))
+    assert set(A.load_supernodes(p)) == {"a", "b"}

@@ -963,12 +963,40 @@ def attach_operand_grids(gd: dict, gname: str, entry: dict, ctx: GridCtx) -> dic
             if refs:
                 label = dict(nd.get("label") or {})
                 label["operand_grids"] = refs
+                # review-page diet: the grid IS the identity evidence here; keep one
+                # activation-example group (2 items) so 1,400-node pages stay loadable
+                # over a port-forward (examples were ~17 MB/page at full size)
+                exs = label.get("examples") or []
+                if exs:
+                    label["examples"] = [dict(exs[0], items=exs[0].get("items", [])[:2])]
                 nd["label"] = label
         nodes.append(nd)
     out = dict(gd)
     out["nodes"] = nodes
     out["operand_grid_store"] = store
+    out["edges"] = _slim_edges(gd["edges"], keep_per_node=30)
     return out
+
+
+def _slim_edges(edges: list[dict], *, keep_per_node: int = 30) -> list[dict]:
+    """Keep each node's top-``keep_per_node`` incoming + outgoing edges by |weight|.
+
+    Review-page-only diet (the dumps keep every edge): the detail panel shows top-15
+    rows per side and the subgraph aggregates dominant edges, so the long tail of
+    ~0-weight edges (hundreds of thousands on dense calc graphs) only slows the page.
+    """
+    by_src: dict[int, list[tuple[float, int]]] = defaultdict(list)
+    by_tgt: dict[int, list[tuple[float, int]]] = defaultdict(list)
+    for i, e in enumerate(edges):
+        w = abs(e["weight"])
+        by_src[e["source"]].append((w, i))
+        by_tgt[e["target"]].append((w, i))
+    keep: set[int] = set()
+    for ranked in (by_src, by_tgt):
+        for lst in ranked.values():
+            lst.sort(reverse=True)
+            keep.update(i for _w, i in lst[:keep_per_node])
+    return [edges[i] for i in sorted(keep)]
 
 
 def ingest_addition_exports(

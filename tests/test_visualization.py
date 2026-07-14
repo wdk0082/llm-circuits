@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import pytest
+
 from llm_circuits.circuits.visualization import (
     render_graph_html,
     render_graph_html_str,
@@ -174,6 +176,78 @@ class TestRenderGraphExplorer:
         assert {"emb", "output"} <= {q["label"] for q in ex["yticks"]}
         assert {"a", "b"} <= {q["label"] for q in ex["xticks"]}
         assert "function drawAxes" in t and "rotate(-45" in t
+
+    def test_operand_grid_panel(self, tmp_path):
+        """Grid refs in node labels + the graph's operand_grid_store reach the JS."""
+        import json
+        import re
+
+        import numpy as np
+
+        from llm_circuits.circuits.graph_explorer import render_graph_explorer_html_str
+        from llm_circuits.circuits.grid_codec import encode_grid_u8
+
+        grid = np.zeros((100, 100), dtype=np.float32)
+        grid[6::10, 9::10] = 4.0  # lookup(a%10=6, b%10=9) lattice
+        gd = {
+            "prompt": "calc: 46+49=",
+            "tokens": ["calc", "4", "6", "+", "4", "9", "="],
+            "operand_grid_store": {"first:L3f11": encode_grid_u8(grid)},
+            "nodes": [
+                {
+                    "node_type": "feature",
+                    "layer": 3,
+                    "position": 2,
+                    "feature_idx": 11,
+                    "activation": 4.0,
+                    "label": {
+                        "top_logits": ["6"],
+                        "operand_grids": [
+                            {
+                                "probe": "first",
+                                "key": "first:L3f11",
+                                "cls": "lookup(a%10=6,b%10=9)",
+                                "mark": [46, 49],
+                                "pair_frac": 1.0,
+                                "stats": {"frac_on": 0.01},
+                            }
+                        ],
+                    },
+                },
+                {
+                    "node_type": "feature",
+                    "layer": 5,
+                    "position": 6,
+                    "feature_idx": 22,
+                    "activation": 1.0,
+                    "label": {"top_logits": ["5"]},
+                },
+            ],
+            "edges": [{"source": 0, "target": 1, "weight": 0.5}],
+        }
+        doc = render_graph_explorer_html_str(gd, title="grids")
+        data = json.loads(re.search(r"const D = (\{.*?\});\nconst EX", doc, re.S).group(1))
+        ex = data["examples"][0]
+        # the store rides the payload once per example; refs ride each node
+        entry = ex["gridstore"]["first:L3f11"]
+        assert entry["enc"] == "u8z" and entry["shape"] == [100, 100]
+        assert entry["vmax"] == pytest.approx(4.0)
+        with_grid, without = ex["nodes"]
+        assert with_grid["grids"][0]["cls"] == "lookup(a%10=6,b%10=9)"
+        assert with_grid["grids"][0]["mark"] == [46, 49]
+        assert without["grids"] == []  # grid-less features stay grid-less
+        # the JS panel machinery is present (canvas heatmap, async zlib decode, magma,
+        # probe tabs, mod-10 guide, hover readout)
+        for marker in (
+            "gridSectionHtml",
+            "DecompressionStream",
+            "image-rendering:pixelated",
+            "MAGMA_ANCHORS",
+            "mod-10 guide",
+            'id="opgrid"',
+            "gridstore",
+        ):
+            assert marker in doc, marker
 
     def test_explorer_multi_graph_dropdown(self, tmp_path):
         import json

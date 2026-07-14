@@ -40,5 +40,8 @@ Visualisation
 .. automodule:: llm_circuits.circuits.graph_explorer
    :members:
 
+.. automodule:: llm_circuits.circuits.grid_codec
+   :members:
+
 .. automodule:: llm_circuits.circuits.visualization
    :members:

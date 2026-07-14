@@ -6,6 +6,11 @@ HTML page that reproduces the components of Anthropic's circuit viewer:
 * the **attribution graph** (position x layer), pan/zoom, click to inspect;
 * a node **detail panel** — input features, output features, token predictions,
   and max-activating **activation examples** (token highlighting);
+* an optional per-feature **grid plot** (2-D heatmap, e.g. the paper's addition
+  operand plots): rendered when a feature node's ``label`` carries
+  ``operand_grids`` refs into the graph dict's ``operand_grid_store`` of
+  :mod:`~llm_circuits.circuits.grid_codec`-encoded grids (see
+  ``gridSectionHtml`` in the template for the ref fields);
 * **manual grouping**: shift-click nodes, name a group, and the **subgraph**
   collapses your groups into a supergraph (with summed edges).  Groups can be
   renamed / removed and **exported** to JSON.  Grouping is kept per graph.
@@ -112,6 +117,7 @@ def _graph_payload(
                 "amax": lab.get("act_max"),
                 "hist": lab.get("histogram") or [],
                 "qv": lab.get("quantile_values") or [],
+                "grids": lab.get("operand_grids") or [],
             }
         )
     return {
@@ -124,6 +130,7 @@ def _graph_payload(
         "yticks": _y_ticks(nodes, layout),
         "xticks": _x_ticks(nodes, layout, tokens),
         "groups": resolve_groups(nodes, groups),
+        "gridstore": gd.get("operand_grid_store") or {},
     }
 
 
@@ -284,6 +291,13 @@ _TEMPLATE = """<!DOCTYPE html>
   .tk { padding:0 1px; border-radius:2px; }
   .chip { display:inline-block; padding:1px 5px; margin:1px; border-radius:3px; background:#eef; font-size:11px; }
   .chip.bot { background:#fee; }
+  .opgrid { display:block; width:248px; height:248px; image-rendering:pixelated;
+            border:1px solid #ddd; cursor:crosshair; }
+  .gtabs button { margin:0 3px 3px 0; }
+  .gtabs button.on { background:#3949ab; color:#fff; border-color:#3949ab; }
+  .gcap { color:#555; font-size:11px; margin:3px 0 1px; }
+  .gstats { color:#999; font-size:10px; margin-bottom:3px; }
+  .gaxis { color:#999; font-size:10px; margin-top:2px; }
   #groups .g { display:flex; align-items:center; gap:6px; border:1px solid #eee; border-radius:4px;
                padding:3px 6px; margin:3px 0; }
   #groups .g .nm { flex:1; }
@@ -332,8 +346,23 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // Node TYPE is encoded purely by SHAPE (no fill); fill is reserved for GROUP color.
 const PAL = ["#8e24aa","#00897b","#f4511e","#3949ab","#c0ca33","#6d4c41","#00acc1","#d81b60"];
 const PLACEHOLDER = "<em>Click a node to inspect its inputs, outputs, token predictions, and activation examples.</em>";
+// matplotlib magma, 32 anchors -> 256-entry LUT (matches the notebooks' grid figures).
+const MAGMA_ANCHORS = [[0,0,4],[3,3,18],[10,8,34],[20,14,54],[30,17,73],[42,17,92],[56,16,108],
+  [71,16,120],[84,19,125],[96,24,128],[109,29,129],[121,34,130],[136,39,129],[148,44,128],
+  [161,48,126],[174,52,123],[189,57,119],[202,62,114],[214,69,108],[226,77,102],[236,88,96],
+  [243,101,92],[248,116,92],[251,131,95],[253,146,102],[254,163,111],[254,178,122],[254,193,133],
+  [254,207,146],[253,224,161],[252,238,176],[252,253,191]];
+const MAGMA = (() => {
+  const L = new Uint8Array(256*3), n = MAGMA_ANCHORS.length;
+  for (let i=0;i<256;i++) {
+    const t = i/255*(n-1), j = Math.min(Math.floor(t), n-2), f = t-j;
+    for (let c=0;c<3;c++) L[i*3+c] = Math.round(MAGMA_ANCHORS[j][c]*(1-f) + MAGMA_ANCHORS[j+1][c]*f);
+  }
+  return L;
+})();
 
 let cur = 0, N, E, POS, W, H, XT, YT, amin, amax, arange, MAXW;
+let GS = {};  // current example's operand_grid_store (key -> encoded grid)
 let hideErr = false;  // hide reconstruction-error nodes + their edges for readability
 // Pre-loaded supernodes (the notebooks' selections) seed each example's groups; the
 // user can rename/delete/extend them exactly like hand-made ones.
@@ -540,6 +569,93 @@ function histHtml(n) {
     + `${grid}${bars}${marker}${labels}</svg>`
     + `<div style="color:#999;font-size:10px;text-align:center">activation value (log scale)${note}</div>`;
 }
+// --- Grid plot (2-D operand heatmap) -------------------------------------------
+// A feature node may carry n.grids = [{probe, key, cls, mark:[a,b]|null, pair_frac,
+// stats}] refs into GS (the example's operand_grid_store of u8/u8z-encoded grids,
+// see llm_circuits.circuits.grid_codec). Rendered as a magma heatmap with the
+// matplotlib convention of the notebooks: x = b (col), y = a (row), origin lower.
+async function gridBytes(key) {  // decode (and cache) a store entry's uint8 values
+  const e = GS[key]; if (!e) return null;
+  if (e._v) return e._v;
+  if (!e.data) { e._v = new Uint8Array(e.shape[0]*e.shape[1]); return e._v; }
+  const raw = Uint8Array.from(atob(e.data), ch => ch.charCodeAt(0));
+  if (e.enc === "u8z") {
+    const ds = new DecompressionStream("deflate");
+    e._v = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer());
+  } else e._v = raw;
+  return e._v;
+}
+function gridSectionHtml(n, idx) {
+  if (!n.grids || !n.grids.length) return "";
+  const gi = Math.min(n._gi || 0, n.grids.length-1), ref = n.grids[gi], e = GS[ref.key];
+  let h = `<h3>Grid plot &mdash; activation over operand pairs</h3>`;
+  if (n.grids.length > 1)
+    h += `<div class="gtabs">` + n.grids.map((r,j) =>
+      `<button class="gtab${j===gi?' on':''}" data-idx="${idx}" data-gi="${j}">${esc(r.probe||("grid "+(j+1)))}</button>`).join("") + `</div>`;
+  const cap = [];
+  if (ref.cls) cap.push(`class <b>${esc(ref.cls)}</b>`);
+  if (e && e.vmax != null) cap.push(`grid max <b>${(+e.vmax).toFixed(2)}</b>`);
+  if (ref.mark && ref.pair_frac != null)
+    cap.push(`pair (${ref.mark[0]},${ref.mark[1]}) = <b>${Math.round(ref.pair_frac*100)}%</b> of max`);
+  if (cap.length) h += `<div class="gcap">${cap.join(" &nbsp;&middot;&nbsp; ")}</div>`;
+  if (ref.stats) {
+    const s = Object.entries(ref.stats)
+      .map(([k,v]) => `${esc(k)}=${esc(typeof v === "number" ? +(+v).toPrecision(3) : v)}`).join(" &middot; ");
+    if (s) h += `<div class="gstats">${s}</div>`;
+  }
+  const [nA,nB] = e ? e.shape : [100,100];
+  h += `<canvas class="opgrid" id="opgrid" width="${nB}" height="${nA}" data-gi="${gi}"></canvas>`;
+  h += `<div class="gaxis">y: a (left operand), 0 bottom &rarr; ${nA-1} top &nbsp;&middot;&nbsp; `
+    + `x: b (right operand), 0 left &rarr; ${nB-1} right &nbsp;&middot;&nbsp; `
+    + `<label><input type="checkbox" id="gguide"${n._guide ? " checked" : ""}> mod-10 guide</label></div>`;
+  return h;
+}
+async function drawGrid(idx) {
+  const cv = document.getElementById("opgrid"); if (!cv) return;
+  const n = N[idx], ref = n.grids[+cv.dataset.gi], e = GS[ref.key];
+  if (!e) return;
+  let q;
+  try { q = await gridBytes(ref.key); }
+  catch (err) {
+    const d = document.createElement("div");
+    d.style.cssText = "color:#c62828;font-size:11px"; d.textContent = "grid decode failed: " + err;
+    cv.replaceWith(d); return;
+  }
+  if (!q || !document.body.contains(cv)) return;  // detail panel re-rendered meanwhile
+  const [nA,nB] = e.shape, ctx = cv.getContext("2d"), img = ctx.createImageData(nB, nA);
+  const r10 = n._guide ? ((ref.mark ? ref.mark[0]+ref.mark[1] : 0) % 10 + 10) % 10 : -1;
+  for (let a=0;a<nA;a++) {
+    const row = (nA-1-a)*nB;  // origin lower: a = 0 at the bottom
+    for (let b=0;b<nB;b++) {
+      const v = q[a*nB+b]*3, o = (row+b)*4;
+      let R = MAGMA[v], G = MAGMA[v+1], B = MAGMA[v+2];
+      if (r10 >= 0 && (a+b)%10 === r10) { R = .65*R; G = .65*G+.35*255; B = .65*B+.35*255; }
+      img.data[o] = R; img.data[o+1] = G; img.data[o+2] = B; img.data[o+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  if (ref.mark) {  // ring the studied pair's cell
+    ctx.strokeStyle = "#00e676"; ctx.lineWidth = 1;
+    ctx.strokeRect(ref.mark[1]-1.5, (nA-1-ref.mark[0])-1.5, 4, 4);
+  }
+}
+function wireGrid(idx) {
+  const cv = document.getElementById("opgrid"); if (!cv) return;
+  const n = N[idx];
+  cv.addEventListener("mousemove", ev => {
+    const ref = n.grids[+cv.dataset.gi], e = GS[ref.key];
+    if (!e || !e._v) return;  // values appear once drawGrid decoded them
+    const [nA,nB] = e.shape, r = cv.getBoundingClientRect();
+    const b = Math.min(nB-1, Math.max(0, Math.floor((ev.clientX-r.left)/r.width*nB)));
+    const a = Math.min(nA-1, Math.max(0, nA-1 - Math.floor((ev.clientY-r.top)/r.height*nA)));
+    tip.innerHTML = `a=${a}, b=${b} &rarr; ${(e._v[a*nB+b]/255*e.vmax).toFixed(3)}`;
+    tip.style.display = "block";
+    tip.style.left = (ev.clientX+12)+"px"; tip.style.top = (ev.clientY+12)+"px";
+  });
+  cv.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+  const gg = document.getElementById("gguide");
+  if (gg) gg.addEventListener("change", () => { n._guide = gg.checked; drawGrid(idx); });
+}
 function showDetail(idx) {
   const n = N[idx];
   let head;
@@ -554,6 +670,7 @@ function showDetail(idx) {
     if (n.amax != null) stats.push(`act range <b>${(+n.amin).toFixed(2)}&ndash;${(+n.amax).toFixed(2)}</b>`);
     stats.push(`peak act <b>${n.act.toFixed(3)}</b> (this token)`);
     h += `<div style="color:#555;font-size:11px;margin:2px 0">${stats.join(" &nbsp;·&nbsp; ")}</div>`;
+    h += gridSectionHtml(n, idx);  // the grid IS the feature's identity on review pages
   }
   h += `<h3>Input features (&rarr; this node)</h3>${featRows(idx,true)}`;
   h += `<h3>Output features (this node &rarr;)</h3>${featRows(idx,false)}`;
@@ -565,6 +682,7 @@ function showDetail(idx) {
     h += `<h3>Activation examples</h3>${examplesHtml(n)}`;
   }
   document.getElementById("detail").innerHTML = h;
+  if (n.t === "feature" && n.grids && n.grids.length) { drawGrid(idx); wireGrid(idx); }
   repaintNodes();
 }
 
@@ -718,15 +836,17 @@ window.addEventListener("mouseup", () => { subDrag = null; });
 // Select a node from anywhere (main graph, subgraph member, or a detail row).
 function selectNode(i){ selected=i; showDetail(i); showEdges(i); drawSub(false); }
 g.addEventListener("click", () => { selected=null; clearEdges(); nodeEls.forEach(el=>el.classList.remove("dim")); repaintNodes(); drawSub(false); });
-// Click an input/output feature row to navigate to that node.
+// Click an input/output feature row to navigate to that node; grid tabs switch probes.
 document.getElementById("detail").addEventListener("click", ev => {
   const row = ev.target.closest(".frow.nav"); if (row) selectNode(+row.dataset.idx);
+  const tab = ev.target.closest(".gtab");
+  if (tab) { const i = +tab.dataset.idx; N[i]._gi = +tab.dataset.gi; showDetail(i); }
 });
 
 function loadExample(i) {
   cur = i; const ex = EX[i];
   N = ex.nodes; E = ex.edges; POS = ex.pos; W = ex.w; H = ex.h;
-  XT = ex.xticks; YT = ex.yticks;
+  XT = ex.xticks; YT = ex.yticks; GS = ex.gridstore || {};
   groups = allGroups[i]; selected = null; selecting.clear();
   const aa = N.map(n => Math.abs(n.act||0));
   amin = Math.min(...aa); amax = Math.max(...aa); arange = (amax - amin) || 1;

@@ -27,6 +27,12 @@ from llm_circuits.circuits.graph_pruning import (
 from llm_circuits.circuits.graph_pruning import (
     prune_graph as prune_graph,
 )
+from llm_circuits.circuits.grid_codec import (
+    decode_grid_u8 as decode_grid_u8,
+)
+from llm_circuits.circuits.grid_codec import (
+    encode_grid_u8 as encode_grid_u8,
+)
 from llm_circuits.circuits.interventions import (
     AblationResult as AblationResult,
 )

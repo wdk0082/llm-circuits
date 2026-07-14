@@ -1,29 +1,32 @@
-"""Stage 2 (CPU) of the supernode pipeline: SEMANTIC supernode selection + review files.
+"""Stage 2 (CPU) of the supernode pipeline: seeds, review pages, and export ingest.
 
 Scans ALL feature nodes of the pruned graphs persisted by ``build_supernode_inputs.py``
-and proposes paper-aligned supernodes by **label/example semantics** (+ operand-grid
-class for addition) — influence is recorded as evidence only, never used to select.
-Paper reference (notes/biology_digest.md): supernodes are small hand-curated clusters
-(antonym=6, synonym=6, small=3, hot=3, FR-detect=3, ZH-detect=5), disjoint within an
-experiment, named after concepts (Fig A2 / B1-B5).
+and SEEDS paper-aligned supernodes — multilingual by **label/example semantics**,
+addition (v3) by **operand-grid geometry** (``addition_helper.classify_grid``) —
+influence is recorded as evidence only, never used to select. The seeds only populate
+the review pages: for BOTH tasks the authoritative selection is the human's explorer
+"Export groups" JSONs, ingested via ``--from-exports`` (routed per page: addition
+graphs carry ``task: "addition"`` in the manifest).
 
 Outputs:
-* ``notebooks/supernodes/{multilingual,addition}_<size>.json`` — the reviewable
-  proposal files (committed). Every member carries its evidence inline (top logits,
-  an activation-example snippet, grid class, activation, influence) plus a ``review``
-  field (``"proposed"`` until a human flips it). Top-level ``"approved": false`` —
-  the notebook loader refuses unapproved files.
 * ``artifacts/supernode_inputs/<size>/review_<graph>.html`` — reviewer explorer pages
-  with the proposed supernodes pre-loaded as groups (click a member to see its label,
-  logits, and activation examples).
+  with the seed supernodes pre-loaded as groups. Addition pages are GRID-ENABLED:
+  every feature node shows its operand plots (per-probe tabs, studied-pair mark,
+  mod-10 guide) via ``attach_operand_grids``, plus "(overflow) ..." helper groups for
+  candidates that lost the seed's size cut. KEEP THE CANONICAL GROUP NAMES
+  (:func:`addition_names`) — the notebook drives supernodes by name.
+* ``notebooks/supernodes/{multilingual_{chat,raw},addition}_<size>.json`` — written
+  ONLY by the ingest paths, with hand-review provenance in ``review_log`` and
+  ``approved: true``; the notebook loaders refuse anything unapproved.
 
-Hard rules: ≤ MAX_MEMBERS per supernode (paper-small); disjoint within each task's
-supernode set (same graph+position+feature can belong to one supernode only) — the
-script fails loudly on violations. Overflow candidates (passed the semantic rule but
-lost the size cut) are kept in ``overflow`` for the reviewer to swap in.
+Hard rules: supernodes are disjoint per selection; canonical addition groups must
+arrive from their own page and the required ones must be non-empty — the script fails
+loudly on violations.
 
-Run:  uv run python notebooks/build_supernodes.py --size 4b
-Check committed files only:  uv run python notebooks/build_supernodes.py --check
+Seeds + review pages:  uv run python notebooks/build_supernodes.py --size 4b
+Ingest a hand review:  uv run python notebooks/build_supernodes.py --from-exports \\
+                           notebooks/supernodes/exports/groups_<graph>.json ...
+Check committed files: uv run python notebooks/build_supernodes.py --check
 """
 
 from __future__ import annotations
@@ -625,337 +628,269 @@ def build_multilingual(size: str, root: Path, manifest: dict, graphs: dict) -> d
 
 
 # ---------------------------------------------------------------------------
-# Addition selection (grid classes are the evidence)
+# Addition v3 (clean-room): operand grids ARE the evidence; the hand review in
+# the grid-enabled explorer is the selection. The scan below only SEEDS the
+# review pages — the authoritative file is written by --from-exports.
 # ---------------------------------------------------------------------------
 
 
-def build_addition(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
-    mg = manifest["graphs"]
-    z = np.load(root / "grids.npz")
-    a_vals, b_vals = z["a_vals"].tolist(), z["b_vals"].tolist()
+class GridCtx:
+    """``grids.npz`` index + memoized classifier reports.
 
-    reports: dict[str, dict[tuple[int, int], dict]] = {}
-    for probe in ("first", "ones", "last"):
-        feats = [tuple(x) for x in z[f"{probe}_features"]]
-        arr = z[f"{probe}_grids"]
-        reports[probe] = {
-            f: A.periodicity_report(arr[i], a_vals, b_vals) for i, f in enumerate(feats)
+    Shared by the seed scan, the review-page grid attachment, and the export ingest so
+    every consumer sees the same (probe, layer, feature) -> grid/class mapping. Probe
+    arrays decompress lazily (once each).
+    """
+
+    PROBES = ("final", "ones", "peak")
+
+    def __init__(self, root: Path):
+        self._z = np.load(root / "grids.npz")
+        self.index: dict[str, dict[tuple[int, int], int]] = {
+            probe: {
+                (int(layer), int(feat)): i
+                for i, (layer, feat) in enumerate(self._z[f"{probe}_features"])
+            }
+            for probe in self.PROBES
+            if f"{probe}_features" in self._z
+        }
+        self._arrays: dict[str, np.ndarray] = {}
+        self._reports: dict[tuple[str, int, int], tuple[str, dict] | None] = {}
+
+    def grid(self, probe: str, layer: int, feat: int) -> np.ndarray | None:
+        i = self.index.get(probe, {}).get((layer, feat))
+        if i is None:
+            return None
+        if probe not in self._arrays:
+            self._arrays[probe] = self._z[f"{probe}_grids"]
+        return self._arrays[probe][i]
+
+    def report(self, probe: str, layer: int, feat: int) -> tuple[str, dict] | None:
+        key = (probe, layer, feat)
+        if key not in self._reports:
+            g = self.grid(probe, layer, feat)
+            self._reports[key] = None if g is None else A.classify_grid(g)
+        return self._reports[key]
+
+
+def load_grid_ctx(root: Path) -> GridCtx | None:
+    return GridCtx(root) if (root / "grids.npz").exists() else None
+
+
+def addition_names(manifest: dict) -> dict[str, dict]:
+    """The canonical v3 supernode names -> {role, graph, position} (pair-parametric).
+
+    These are the group names the review pages seed and the notebook drives; the
+    ingest hard-checks the required ones, so REVIEWERS MUST NOT RENAME THEM (adding
+    custom groups is fine — they ingest with role "custom").
+    """
+    add = manifest["addition"]
+    (a0, b0), (da_, db_) = add["pair"], add["donor_pair"]
+    ra, rb, s0 = a0 % 10, b0 % 10, a0 + b0
+    dra, drb = da_ % 10, db_ % 10
+    dp = manifest["graphs"]["ones"]["digit_positions"]
+
+    def spec(role, graph, position, required=False, note=""):
+        return {
+            "role": role,
+            "graph": graph,
+            "position": position,
+            "required": required,
+            "note": note,
         }
 
-    def rep(probe, node):
-        return reports[probe].get((node["layer"], node["feature_idx"]))
+    return {
+        f"input _{ra}": spec("source", "ones", dp["a_digits"][-1], required=True),
+        f"input _{rb}": spec("source", "ones", dp["b_digits"][-1], required=True),
+        f"input {a0} (exact)": spec("annotation", "ones", None),
+        f"input {b0} (exact)": spec("annotation", "ones", None),
+        f"magnitude ~{a0}": spec("source", "first", None),
+        f"magnitude ~{b0}": spec("source", "first", None),
+        f"add ~{b0} (function)": spec("annotation", "first", "final"),
+        f"magnitude lookup (~{a0}+~{b0})": spec("annotation", "first", "final"),
+        f"sum ~{s0} (low precision)": spec("readout", "first", "final", required=True),
+        f"lookup (_{ra}+_{rb})": spec("source", "ones", "final", required=True),
+        f"sum = _{s0 % 10}": spec("readout", "ones", "final", required=True),
+        f"lookup (_{dra}+_{drb}) donors": spec("donor", "donor", "final", required=True),
+        f"reuse lookups (_{ra}+_{rb})": spec("annotation", "reuse", "final"),
+    }
 
-    def classed(graph_name, position, probe, predicate, matched_fmt):
-        # dedup by (layer, feature): with position=None the same feature can appear as a
-        # node at several positions — keep the highest-activation instance.
+
+def _addition_graph_names(manifest: dict) -> set[str]:
+    return {g for g, e in manifest["graphs"].items() if e.get("task") == "addition"}
+
+
+def build_addition_seed(size: str, root: Path, manifest: dict, graphs: dict, ctx: GridCtx) -> dict:
+    """Seed proposal for the addition review pages, from operand-grid geometry alone.
+
+    Pure scan output (no baked-in review decisions): each candidate's grid class under
+    the group's probe must match the paper family, ranked earliest-layer-first (leaves
+    the constrained-patching sweep room), capped at MAX_MEMBERS with the remainder kept
+    as ``overflow`` (surfaced on the review pages as "(overflow) ..." groups).
+    """
+    mg = manifest["graphs"]
+    add = manifest["addition"]
+    (a0, b0), (da_, db_) = add["pair"], add["donor_pair"]
+    ra, rb, s0 = a0 % 10, b0 % 10, a0 + b0
+    dra, drb = da_ % 10, db_ % 10
+    dp = mg["ones"]["digit_positions"]
+    names = addition_names(manifest)
+    EARLY = 12  # input-identity features live in the first third of the 36 layers
+
+    def collect(gname, positions, probe, pred, *, max_layer=None):
         best: dict[tuple[int, int], dict] = {}
-        for n in feature_nodes(graphs[graph_name], position):
-            r = rep(probe, n)
-            if r is None or not predicate(r):
+        for n in feature_nodes(graphs[gname]):
+            if positions is not None and n["position"] not in positions:
+                continue
+            if max_layer is not None and n["layer"] >= max_layer:
+                continue
+            rep = ctx.report(probe, n["layer"], n["feature_idx"])
+            if rep is None:
+                continue
+            cls, stats = rep
+            if not pred(cls, stats):
                 continue
             key = (n["layer"], n["feature_idx"])
-            entry = member_entry(n, matched=matched_fmt(r), grid_class=str(r["label"]))
-            if key not in best or entry["act"] > best[key]["act"]:
-                best[key] = entry
+            e = member_entry(n, matched=f"grid[{probe}]:{cls}", grid_class=cls)
+            if key not in best or e["act"] > best[key]["act"]:
+                best[key] = e
         return list(best.values())
+
+    def near(stats_key, center, tol):
+        def pred(cls, stats):
+            fam = {"band_a": "band-a", "band_b": "band-b", "sum_band": "sum-band"}[stats_key]
+            return cls.startswith(fam) and abs(stats[stats_key][0] + 7 - center) <= tol
+
+        return pred
 
     sns: list[dict] = []
-    ones, first = mg["ones"], mg["first"]
-    dp = ones["digit_positions"]
-    fin_ones, fin_first = ones["final_position"], first["final_position"]
-    fin_donor = mg["donor99"]["final_position"]
 
-    def lab(r):
-        return str(r["label"])
-
-    # input supernodes: grid class + residue at the operand-digit NODE positions
-    # (the v1 notebook's reviewed predicates: label startswith (mod10-a|lookup) with
-    # a_top == a%10, from the a-digit position pool — here the pool is every graph node
-    # at those positions, layer < n//4 like the v1 pools).
-    def at_positions(graph_name, positions, max_layer=9):
-        seen = set()
-        for pos in positions:
-            for n in feature_nodes(graphs[graph_name], pos):
-                if n["layer"] >= max_layer:
-                    continue
-                key = (n["layer"], n["feature_idx"], n["position"])
-                if key not in seen:
-                    seen.add(key)
-                    yield n
-
-    def input_class(positions, pred, steer_position):
-        best: dict[tuple[int, int], dict] = {}
-        for n in at_positions("ones", positions):
-            r = rep("first", n)
-            if r is None or not pred(r):
-                continue
-            key = (n["layer"], n["feature_idx"])
-            entry = member_entry(n, matched=f"grid:{lab(r)}", grid_class=lab(r))
-            if key not in best or entry["act"] > best[key]["act"]:
-                best[key] = entry
-        return list(best.values())
-
-    a_res, b_res = 46 % 10, 49 % 10
-    for name, paper, positions, steer_pos, pred in (
-        (
-            "input _6",
-            "_6",
-            dp["a_digits"],
-            dp["a_digits"][-1],
-            lambda r: lab(r).startswith(("mod10-a", "lookup")) and r.get("a_top") == a_res,
-        ),
-        (
-            "input _9",
-            "_9",
-            dp["b_digits"],
-            dp["b_digits"][-1],
-            lambda r: lab(r).startswith(("mod10-b", "lookup")) and r.get("b_top") == b_res,
-        ),
-        (
-            "magnitude ~46",
-            "~36-analogue",
-            dp["a_digits"] + dp["b_digits"],
-            None,
-            lambda r: lab(r).startswith("band-a"),
-        ),
-        (
-            "magnitude ~49",
-            "~59-analogue",
-            dp["a_digits"] + dp["b_digits"],
-            None,
-            lambda r: lab(r).startswith("band-b"),
-        ),
-    ):
-        cands = input_class(positions, pred, steer_pos)
-        members, overflow = cap_members(cands)
-        sns.append(supernode(name, paper, "source", "ones", steer_pos, members, overflow))
-
-    # answer-side classes (probe="ones": the predict-ones position)
-    lookup_cands = classed(
-        "ones",
-        fin_ones,
-        "ones",
-        lambda r: lab(r).startswith("lookup"),
-        lambda r: f"grid:{lab(r)}",
-    )
-
-    def add_on_pair(cands, probe, a, b):
-        """Evidence: activation on the studied pair as a fraction of the grid max —
-        multi-pair lattices count as on-concept only if the pair is in their receptive
-        field; auto-flag members below 0.3."""
-        feats = [tuple(int(v) for v in x) for x in z[f"{probe}_features"]]
-        idx = {f: i for i, f in enumerate(feats)}
-        arr = z[f"{probe}_grids"]
-        for m in cands:
-            i = idx.get((m["layer"], m["feature"]))
-            if i is None:
-                continue
-            g = arr[i]
-            mx = float(np.nanmax(g)) or 1.0
-            frac = float(g[a_vals.index(a), b_vals.index(b)]) / mx
-            m["evidence"]["on_pair_frac_of_max"] = round(frac, 3)
-            if frac < 0.3:
-                m["review_note"] = (
-                    m.get("review_note", "")
-                    + f" on-pair activation only {frac:.0%} of grid max — verify the"
-                    " receptive field really includes the studied pair"
-                ).strip()
-
-    add_on_pair(lookup_cands, "ones", 46, 49)
-    members, overflow = cap_members(lookup_cands)
-    sns.append(
-        supernode(
-            "lookup (6,9-class)",
-            "_6+_9",
-            "source",
-            "ones",
-            "final",
-            members,
-            overflow,
-            note="active multi-pair lookup lattices whose receptive fields include (6,9)",
-        )
-    )
-    sum_cands = classed(
-        "ones",
-        fin_ones,
-        "ones",
-        lambda r: lab(r).startswith("mod10-sum(r5)"),
-        lambda r: f"grid:{lab(r)}",
-    )
-    members, overflow = cap_members(sum_cands)
-    sns.append(
-        supernode(
-            "sum = _5",
-            "sum = _5",
-            "readout",
-            "ones",
-            "final",
-            members,
-            overflow,
-            note="residue-5 sum features (95 % 10); other-residue mod10-sum features that"
-            " are also active on this prompt are deliberately excluded",
-        )
-    )
-
-    lowprec_cands = classed(
-        "first",
-        fin_first,
-        "last",
-        lambda r: lab(r).startswith("magnitude-diag"),
-        lambda r: f"grid:{lab(r)}",
-    )
-    members, overflow = cap_members(lowprec_cands)
-    sns.append(
-        supernode(
-            "sum ~95 (low precision)",
-            "sum ~92-analogue",
-            "readout",
-            "first",
-            "final",
-            members,
-            overflow,
-        )
-    )
-
-    donor_cands = classed(
-        "donor99",
-        fin_donor,
-        "ones",
-        lambda r: lab(r).startswith("lookup") and r.get("a_top") == 9 and r.get("b_top") == 9,
-        lambda r: f"grid:{lab(r)} a_top=9 b_top=9",
-    )
-    add_on_pair(donor_cands, "ones", 49, 49)
-    members, overflow = cap_members(donor_cands)
-    sns.append(
-        supernode(
-            "lookup (9,9) donors",
-            "_9+_9",
-            "donor",
-            "donor99",
-            "final",
-            members,
-            overflow,
-            note="swap donor; injected value = +1x the stored act (paper +1x)",
-        )
-    )
-
-    # the paper's add-function class (`add _9`, `add ~57`): one-operand stripe/band
-    # signatures read at the answer position — a MEASURED NEGATIVE on Qwen3-4B (v1,
-    # third session). The supernode stays in the file so the negative is a live,
-    # reviewable scan result instead of a retired figure.
-    def addf_pred(r):
-        # PAIR-CONSISTENT one-operand signatures only: for 46+49 the paper's class
-        # would be `add _6`/`add _9` (the operands' residues) or `add ~46`/`add ~49`
-        # (their magnitudes). Unconstrained stripe/band classes at the answer position
-        # are dominated by junk-labeled textures (first scan: 13 candidates, all with
-        # off-pair classes like band-a(~6) or mod10-a(r9) — grid-class false positives).
-        label = lab(r)
-        return (
-            label.startswith(("mod10-a(r6)", "mod10-b(r9)"))
-            or (label.startswith("band-a") and 40 <= r.get("a_mean", -99) <= 52)
-            or (label.startswith("band-b") and 43 <= r.get("b_mean", -99) <= 55)
-        )
-
-    addf_cands = classed("ones", fin_ones, "ones", addf_pred, lambda r: f"grid:{lab(r)}")
-    for m in addf_cands:
-        m["review_note"] = (
-            "add-function candidate — verify labels/examples read as add-semantics and"
-            " the grid visually shows a clean one-operand stripe/band (v1's single"
-            " nominal flag was rejected as a diffuse texture)"
-        )
-    members, overflow = cap_members(addf_cands)
-    sns.append(
-        supernode(
-            "add function (hunt)",
-            "add _9 / add ~57",
-            "annotation",
-            "ones",
-            "final",
-            members,
-            overflow,
-            note="EXPECTED (EFFECTIVELY) EMPTY — the paper's add-function class at the"
-            " answer position is a measured negative on Qwen3-4B: the pair-consistent"
-            " scan yields only junk-labeled candidates. The operator-token"
-            " mostly-active signature remains the only add-function-adjacent finding.",
-        )
-    )
-
-    # exact-value inputs (the paper's `36`/`59` nodes): cross class at digit positions
-    for name, paper, val in (
-        ("input 46 (exact)", "36-analogue", 46),
-        ("input 49 (exact)", "59-analogue", 49),
-    ):
-        cands = input_class(
-            dp["a_digits"] + dp["b_digits"],
-            lambda r, v=val: lab(r) == f"exact-cross({v})",
-            None,
-        )
-        members, overflow = cap_members(cands)
+    def add_sn(name, cands, note=""):
+        spec = names[name]
+        members, overflow = cap_members(cands, key=early_first)
         sns.append(
             supernode(
                 name,
-                paper,
-                "annotation",
-                "ones",
-                None,
+                name,
+                spec["role"],
+                spec["graph"],
+                spec["position"],
                 members,
                 overflow,
-                note="exact-value input class (fires whenever either operand IS the"
-                " value); descriptive — no experiment steers it",
+                note=note,
             )
         )
 
-    # magnitude-lookup regions (the paper's wide/narrow `~36+~60` class): the
-    # first-digit circuit's local blobs feeding the low-precision sum
-    region_cands = classed(
-        "first",
-        fin_first,
-        "last",
-        lambda r: lab(r).startswith("region("),
-        lambda r: f"grid:{lab(r)}",
+    fin = {g: mg[g]["final_position"] for g in ("first", "ones", "donor", "reuse") if g in mg}
+
+    # inputs: the operand's ones-digit identity, read at its digit tokens (peak probe)
+    def residue_pred(res_key, residue):
+        def pred(cls, stats):
+            r, share = stats.get(res_key, [None, 0.0])[:2]
+            return r == residue and share > 0.4
+
+        return pred
+
+    add_sn(
+        f"input _{ra}",
+        collect("ones", set(dp["a_digits"]), "peak", residue_pred("mod10_a", ra), max_layer=EARLY),
+        note="fires when a's ones digit is the studied residue (mod10-a mass > 0.4)",
     )
-    members, overflow = cap_members(region_cands)
-    sns.append(
-        supernode(
-            "magnitude lookup (~46+~49)",
-            "~36+~60",
-            "annotation",
+    add_sn(
+        f"input _{rb}",
+        collect("ones", set(dp["b_digits"]), "peak", residue_pred("mod10_b", rb), max_layer=EARLY),
+        note="fires when b's ones digit is the studied residue (mod10-b mass > 0.4)",
+    )
+
+    def exact_pred(value, side):
+        def pred(cls, stats):
+            r_star, c_star, rs, cs = stats.get("cross", [None, None, 0.0, 0.0])
+            return (
+                (r_star == value and rs > 0.28) if side == "a" else (c_star == value and cs > 0.28)
+            )
+
+        return pred
+
+    add_sn(
+        f"input {a0} (exact)",
+        collect("ones", set(dp["a_digits"]), "peak", exact_pred(a0, "a"), max_layer=EARLY),
+        note="exact-value identity (single-row mass > 0.28 at a=pair)",
+    )
+    add_sn(
+        f"input {b0} (exact)",
+        collect("ones", set(dp["b_digits"]), "peak", exact_pred(b0, "b"), max_layer=EARLY),
+        note="exact-value identity (single-column mass > 0.28 at b=pair)",
+    )
+
+    # magnitude path (the FIRST-digit graph): operand-magnitude bands at the digits,
+    # add-function bands + the low-precision joint region + the sum band at '='
+    add_sn(
+        f"magnitude ~{a0}",
+        collect(
+            "first", set(mg["first"]["digit_positions"]["a_digits"]), "peak", near("band_a", a0, 6)
+        ),
+    )
+    add_sn(
+        f"magnitude ~{b0}",
+        collect(
+            "first", set(mg["first"]["digit_positions"]["b_digits"]), "peak", near("band_b", b0, 6)
+        ),
+    )
+    add_sn(
+        f"add ~{b0} (function)",
+        collect("first", {fin["first"]}, "final", near("band_b", b0, 6)),
+        note="the paper's 'add something near-b' function features, read at '='",
+    )
+    add_sn(
+        f"magnitude lookup (~{a0}+~{b0})",
+        collect(
             "first",
+            {fin["first"]},
             "final",
-            members,
-            overflow,
-            note="2-D localized non-repeating blobs — the paper's wide/narrow"
-            " magnitude-lookup class; descriptive — no experiment steers it",
-        )
+            lambda cls, st: (
+                cls.startswith("region")
+                and abs(st["peak"][0] - a0) <= 8
+                and abs(st["peak"][1] - b0) <= 8
+            ),
+        ),
+    )
+    add_sn(
+        f"sum ~{s0} (low precision)",
+        collect("first", {fin["first"]}, "final", near("sum_band", s0, 8)),
     )
 
-    # polymer reuse: lookup members active at the polymer ones moment
-    pol = json.loads((root / "polymer_ones_acts.json").read_text())
-    active = {(int(L), int(i)): float(a) for L, i, a in pol["active_final"]}
-    lookup_sn = next(s for s in sns if s["name"] == "lookup (6,9-class)")
-    reuse_members = []
-    for m in lookup_sn["members"]:
-        k = (m["layer"], m["feature"])
-        if k in active:
-            mm = dict(m)
-            mm["act"] = round(active[k], 4)
-            mm["evidence"] = dict(
-                m["evidence"], matched=m["evidence"]["matched"] + "; active at polymer ones moment"
-            )
-            reuse_members.append(mm)
-    sns.append(
-        supernode(
-            "polymer-active lookups",
-            "_6+_9 (reuse)",
-            "source",
-            "polymer-ones-moment",
-            "final",
-            reuse_members,
-            [],
-            note="members = lookup (6,9-class) ∩ active at 'K. Whang…, 199' predicting 5; "
-            "acts are the polymer-moment activations",
-        )
+    # high-precision modular path (the ONES graph at its teacher-forced moment)
+    add_sn(
+        f"lookup (_{ra}+_{rb})",
+        collect(
+            "ones", {fin["ones"]}, "ones", lambda cls, st: cls == f"lookup(a%10={ra},b%10={rb})"
+        ),
     )
+    add_sn(
+        f"sum = _{s0 % 10}",
+        collect("ones", {fin["ones"]}, "ones", lambda cls, st: cls == f"mod10-sum(r{s0 % 10})"),
+    )
+
+    # the donor problem's lookup features (the paper's substitution source)
+    add_sn(
+        f"lookup (_{dra}+_{drb}) donors",
+        collect(
+            "donor", {fin["donor"]}, "ones", lambda cls, st: cls == f"lookup(a%10={dra},b%10={drb})"
+        ),
+    )
+
+    # the same studied-pair lookup class appearing on the prose reuse page
+    if "reuse" in fin:
+        add_sn(
+            f"reuse lookups (_{ra}+_{rb})",
+            collect(
+                "reuse",
+                {fin["reuse"]},
+                "ones",
+                lambda cls, st: cls == f"lookup(a%10={ra},b%10={rb})",
+            ),
+            note="calc lookup class firing at the citation prompt's ones moment",
+        )
 
     return {
         "task": "addition",
@@ -967,61 +902,241 @@ def build_addition(size: str, root: Path, manifest: dict, graphs: dict) -> dict:
     }
 
 
+def attach_operand_grids(gd: dict, gname: str, entry: dict, ctx: GridCtx) -> dict:
+    """A copy of graph dict *gd* with per-feature operand grids wired for the explorer.
+
+    Every feature node gets ``label.operand_grids`` refs (position-appropriate probe
+    first) into a page-level ``operand_grid_store`` of :mod:`grid_codec`-encoded grids;
+    the studied pair is marked on calc/reuse pages. The input *gd* is not mutated.
+    """
+    from llm_circuits.circuits.grid_codec import encode_grid_u8
+
+    pair = entry.get("pair")
+    fin = entry.get("final_position")
+    target = str(entry.get("target", ""))
+    final_probe = "ones" if target in ("ones", "reuse-ones") else "final"
+    stat_keys = (
+        "frac_on",
+        "lattice_cell",
+        "mod10_sum",
+        "band_a",
+        "band_b",
+        "sum_band",
+        "cross",
+        "peak",
+    )
+
+    store: dict[str, dict] = {}
+    nodes = []
+    for nd in gd["nodes"]:
+        nd = dict(nd)
+        if nd["node_type"] == "feature":
+            layer, feat = nd["layer"], nd["feature_idx"]
+            primary = final_probe if nd["position"] == fin else "peak"
+            refs = []
+            for probe in (primary, *[p for p in GridCtx.PROBES if p != primary]):
+                rep = ctx.report(probe, layer, feat)
+                if rep is None:
+                    continue
+                cls, stats = rep
+                key = f"{probe}:L{layer}f{feat}"
+                if key not in store:
+                    store[key] = encode_grid_u8(ctx.grid(probe, layer, feat))
+                refs.append(
+                    {
+                        "probe": probe,
+                        "key": key,
+                        "cls": cls,
+                        "mark": list(pair) if pair else None,
+                        "pair_frac": (
+                            round(A.on_pair_fraction(ctx.grid(probe, layer, feat), tuple(pair)), 3)
+                            if pair
+                            else None
+                        ),
+                        "stats": {k: stats[k] for k in stat_keys if k in stats},
+                    }
+                )
+            if refs:
+                label = dict(nd.get("label") or {})
+                label["operand_grids"] = refs
+                nd["label"] = label
+        nodes.append(nd)
+    out = dict(gd)
+    out["nodes"] = nodes
+    out["operand_grid_store"] = store
+    return out
+
+
+def ingest_addition_exports(
+    size, files, root, manifest, graphs, ctx: GridCtx, review_log: str | None = None
+) -> None:
+    """Write ``addition_<size>.json`` FROM the review pages' 'Export groups' JSONs.
+
+    v3: the hand review in the grid-enabled explorer IS the selection. Groups keep the
+    canonical names (:func:`addition_names` — renaming a required group is a hard
+    error because the notebook drives supernodes by name); unknown names ingest with
+    role "custom" and need wiring before they steer. Addition supernodes are per-graph
+    selections (no cross-page merge); "(overflow) ..." helper groups are skipped.
+    Evidence (grid class, on-pair fraction) is auto-filled from ``grids.npz``; the
+    written file must pass :func:`validate` and ``addition_helper.load_supernodes``.
+    """
+    names = addition_names(manifest)
+    add = manifest["addition"]
+    pair, donor_pair = tuple(add["pair"]), tuple(add["donor_pair"])
+    sns: dict[str, dict] = {}
+    src_files: list[str] = []
+
+    for f in files:
+        exp = json.loads(Path(f).read_text())
+        gname = str(exp.get("example", "")).strip()
+        if manifest["graphs"].get(gname, {}).get("task") != "addition" or gname not in graphs:
+            raise SystemExit(
+                f"{f}: example label {gname!r} is not a dumped addition graph — re-export"
+                f" from the CURRENT review pages (addition: {sorted(_addition_graph_names(manifest))})"
+            )
+        src_files.append(Path(f).name)
+        entry = manifest["graphs"][gname]
+        final_probe = "ones" if str(entry.get("target", "")) in ("ones", "reuse-ones") else "final"
+        nodes_at = {
+            (n["layer"], n["feature_idx"], n["position"]): n for n in feature_nodes(graphs[gname])
+        }
+        claimed: dict[tuple[int, int], str] = {}
+        for grp in exp.get("groups", []):
+            name = str(grp["name"]).strip()
+            if name.startswith("(overflow)"):
+                print(f"  [skip] {gname}: helper group {name!r}")
+                continue
+            spec = names.get(name)
+            if spec and spec["graph"] != gname:
+                raise SystemExit(
+                    f"{f}: canonical group {name!r} belongs on the {spec['graph']!r} page,"
+                    f" not {gname!r} — regroup there and re-export"
+                )
+            if name in sns:
+                raise SystemExit(
+                    f"{f}: group {name!r} appears on two addition pages — addition"
+                    " supernodes are per-graph selections (no cross-page merge)"
+                )
+            members: list[dict] = []
+            for ndref in grp.get("nodes", []):
+                key = (int(ndref["layer"]), int(ndref["feature_idx"]))
+                if key in claimed and claimed[key] != name:
+                    raise SystemExit(
+                        f"{f}: L{key[0]}f{key[1]} is in both {claimed[key]!r} and {name!r}"
+                        " — supernodes are disjoint on a page; fix in the UI and re-export"
+                    )
+                claimed[key] = name
+                node = nodes_at.get((key[0], key[1], ndref.get("position")))
+                probe = (
+                    final_probe if ndref.get("position") == entry.get("final_position") else "peak"
+                )
+                rep = ctx.report(probe, key[0], key[1])
+                cls = rep[0] if rep else None
+                if node is not None:
+                    m = member_entry(node, matched="manual (explorer export)", grid_class=cls)
+                else:
+                    m = {
+                        "layer": key[0],
+                        "feature": key[1],
+                        "position": ndref.get("position"),
+                        "act": 0.0,
+                        "influence": None,
+                        "evidence": {
+                            "matched": "manual (explorer export; not found in dump at that"
+                            " position)",
+                            "top_logits": [],
+                            "example": "",
+                            "grid_class": cls,
+                        },
+                    }
+                m["source"] = "explorer-export"
+                m["review"] = "approved"
+                grid = ctx.grid(probe, key[0], key[1])
+                if grid is not None:
+                    ref_pair = donor_pair if (spec or {}).get("role") == "donor" else pair
+                    m["evidence"]["on_pair_frac_of_max"] = round(
+                        A.on_pair_fraction(grid, ref_pair), 3
+                    )
+                members.append(m)
+            members.sort(key=lambda m: -m["act"])
+            positions = {m.get("position") for m in members}
+            if spec:
+                position = spec["position"]
+            elif positions == {entry.get("final_position")}:
+                position = "final"
+            elif len(positions) == 1:
+                position = next(iter(positions))
+            else:
+                position = None
+            sns[name] = {
+                "name": name,
+                "paper_name": name,
+                "role": spec["role"] if spec else "custom",
+                "graph": gname,
+                "position": position,
+                "members": members,
+            }
+            if not spec:
+                sns[name]["note"] = "custom group from the hand review — wire before steering"
+
+    missing_required = [
+        n for n, spec in names.items() if spec["required"] and not sns.get(n, {}).get("members")
+    ]
+    if missing_required:
+        raise SystemExit(
+            "required supernodes empty or missing after ingest: "
+            + ", ".join(repr(n) for n in missing_required)
+            + " — the notebook cannot run without them (do not rename canonical groups)"
+        )
+    mag_names = [n for n in names if n.startswith("magnitude ~")]
+    if not any(sns.get(n, {}).get("members") for n in mag_names):
+        raise SystemExit(
+            f"both magnitude groups ({', '.join(mag_names)}) are empty — keep at least one"
+        )
+    for n, spec in names.items():  # keep measured-negative annotations visible
+        if n not in sns:
+            sns[n] = {
+                "name": n,
+                "paper_name": n,
+                "role": spec["role"],
+                "graph": spec["graph"],
+                "position": spec["position"],
+                "members": [],
+                "note": "absent after hand review (no group exported)",
+            }
+
+    ordered = [sns[n] for n in names if n in sns]
+    ordered += [sn for n, sn in sns.items() if n not in names]
+    biggest = max((len(sn["members"]) for sn in ordered), default=0)
+    doc = {
+        "task": "addition",
+        "size": size,
+        "built_from": f"{root}@{manifest.get('git', '?')}",
+        "selection": "explorer-export (grid-enabled review pages)",
+        "source_files": sorted(src_files),
+        "max_members": max(MAX_MEMBERS, biggest),
+        "supernodes": ordered,
+        "approved": True,
+        "review_log": review_log
+        or "selected and reviewed by hand in the grid-enabled explorer (Export groups);"
+        " ingested by build_supernodes.py --from-exports",
+    }
+    errs = validate(doc, require_approved=True)
+    if errs:
+        raise SystemExit("addition: validation failed:\n  " + "\n  ".join(errs))
+    SUPERNODE_DIR.mkdir(parents=True, exist_ok=True)
+    out = SUPERNODE_DIR / f"addition_{size}.json"
+    out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
+    A.load_supernodes(out)  # the notebook loader is the final gate
+    print(f"{out} written:")
+    for sn in doc["supernodes"]:
+        flag = "" if sn["members"] else "   <-- empty (documented absence)"
+        print(f"   {sn['name']:34s} {len(sn['members'])} members{flag}")
+
+
 # ---------------------------------------------------------------------------
 # Disjointness + validation + reviewer HTMLs
 # ---------------------------------------------------------------------------
-
-
-# First-pass reviewer flags (2026-07-11 evidence read): members I would question but
-# do not decide on — the review gate owns the verdicts. Keyed (supernode, layer, feature).
-MANUAL_FLAGS: dict = {}  # (supernode, layer, feature) -> reviewer note, if ever needed
-
-
-# Delegated review record (2026-07-11; the user waived the manual gate for the
-# grid-principled addition selection). Re-applied on every emit so selector re-runs
-# reproduce the reviewed state instead of clobbering it. Multilingual stays unapproved.
-REJECTED_MEMBERS = {
-    ("addition", "lookup (6,9-class)", 33, 109892): (
-        "on-pair activation 20% of grid max fails the >=30% receptive-field sanity;"
-        " replaced by the top act-ranked overflow qualifier"
-    ),
-}
-APPROVED_TASKS = {
-    "addition": "grid-principled selection reviewed by delegation (user waived the"
-    " manual gate); rejections in REJECTED_MEMBERS; all other members approved",
-}
-
-
-def apply_review_decisions(task: str, doc: dict) -> None:
-    for sn in doc["supernodes"]:
-        kept, rejected = [], []
-        for m in sn["members"]:
-            reason = REJECTED_MEMBERS.get((task, sn["name"], m["layer"], m["feature"]))
-            if reason:
-                m["review"] = "rejected"
-                m["review_note"] = (m.get("review_note", "") + " REVIEW: " + reason).strip()
-                rejected.append(m)
-            else:
-                kept.append(m)
-        if rejected:
-            promoted = sn.get("overflow", [])[: len(rejected)]
-            sn["overflow"] = rejected + sn.get("overflow", [])[len(rejected) :]
-            kept += promoted
-        sn["members"] = kept
-        if task in APPROVED_TASKS:
-            for m in sn["members"]:
-                m["review"] = "approved"
-    if task in APPROVED_TASKS:
-        doc["approved"] = True
-        doc["review_log"] = f"2026-07-11: {APPROVED_TASKS[task]}"
-
-
-def apply_manual_flags(doc: dict) -> None:
-    for sn in doc["supernodes"]:
-        for m in sn["members"]:
-            note = MANUAL_FLAGS.get((sn["name"], m["layer"], m["feature"]))
-            if note:
-                m["review_note"] = (m.get("review_note", "") + " " + note).strip()
 
 
 def check_disjoint(doc: dict) -> list[str]:
@@ -1053,35 +1168,51 @@ def validate(doc: dict, *, require_approved: bool) -> list[str]:
     return errs
 
 
-def emit_review_htmls(root: Path, manifest: dict, graphs: dict, docs: list[dict]) -> None:
+def emit_review_htmls(
+    root: Path, manifest: dict, graphs: dict, docs: list[dict], *, ctx: GridCtx | None = None
+) -> None:
     per_graph: dict[str, list[dict]] = defaultdict(list)
     for doc in docs:
+        is_addition = doc.get("task") == "addition"
         for sn in doc["supernodes"]:
             for gname in str(sn["graph"]).split(";"):
                 if gname not in graphs:
                     continue
-                members = [(m["layer"], m["feature"]) for m in sn["members"]]
-                if not members:
-                    continue
                 pos = sn["position"]
                 # Only "final" and integer positions restrict resolution; markers like
                 # "operand"/"member-positions" mean the (L,f) members pin the nodes.
-                per_graph[gname].append(
-                    {
-                        "name": sn["name"],
-                        "members": members,
-                        "position": pos if pos == "final" or isinstance(pos, int) else None,
-                    }
-                )
-    for gname, gspecs in per_graph.items():
+                pos = pos if pos == "final" or isinstance(pos, int) else None
+                members = [(m["layer"], m["feature"]) for m in sn["members"]]
+                if members:
+                    per_graph[gname].append(
+                        {"name": sn["name"], "members": members, "position": pos}
+                    )
+                if is_addition and sn.get("overflow"):
+                    # candidates that lost the seed's size cut — exactly what the hand
+                    # review should reconsider; ingest skips "(overflow) ..." groups
+                    per_graph[gname].append(
+                        {
+                            "name": f"(overflow) {sn['name']}",
+                            "members": [(m["layer"], m["feature"]) for m in sn["overflow"]],
+                            "position": pos,
+                        }
+                    )
+    for gname in _addition_graph_names(manifest):
+        if gname in graphs:
+            per_graph.setdefault(gname, [])  # addition pages emit even when unseeded
+    for gname, gspecs in sorted(per_graph.items()):
         # Filename convention: review_chat_* / review_raw_* for the multilingual pairs
         # (the manifest's "raw" flag exists only for those); addition stays review_*.
         # The DUMP name (= export "example" label) is unprefixed either way.
-        raw_flag = manifest["graphs"].get(gname, {}).get("raw")
+        entry = manifest["graphs"].get(gname, {})
+        raw_flag = entry.get("raw")
         stem = f"chat_{gname}" if raw_flag is False else gname
+        gd = graphs[gname]
+        if ctx is not None and entry.get("task") == "addition":
+            gd = attach_operand_grids(gd, gname, entry, ctx)  # the grid-enabled pages
         out_html = root / f"review_{stem}.html"
         render_graph_explorer_html(
-            graphs[gname],
+            gd,
             out_html,
             labels=[gname],  # exports carry this as "example" -> unambiguous mapping
             title=f"review {stem}",
@@ -1337,10 +1468,28 @@ def main() -> None:
         sys.exit(1 if errs_all else 0)
 
     root, manifest, graphs = load_inputs(args.size)
+    ctx = load_grid_ctx(root)
+    add_graphs = _addition_graph_names(manifest)
+    ml_present = any(
+        g in graphs for g in manifest["graphs"] if manifest["graphs"][g].get("task") != "addition"
+    )
     SUPERNODE_DIR.mkdir(exist_ok=True)
 
     if args.from_exports:
-        ingest_exports(args.size, args.from_exports, root, manifest, graphs)
+        # Route each export by its page's manifest entry (addition graphs carry
+        # task="addition" — checked FIRST, so raw-format addition prompts can never
+        # fall into the multilingual raw router).
+        add_files, ml_files = [], []
+        for f in args.from_exports:
+            gname = str(json.loads(Path(f).read_text()).get("example", "")).strip()
+            is_add = manifest["graphs"].get(gname, {}).get("task") == "addition"
+            (add_files if is_add else ml_files).append(f)
+        if add_files:
+            if ctx is None:
+                raise SystemExit("grids.npz missing — the addition ingest needs grid evidence")
+            ingest_addition_exports(args.size, add_files, root, manifest, graphs, ctx)
+        if ml_files:
+            ingest_exports(args.size, ml_files, root, manifest, graphs)
         return
 
     if args.materialize_seeds:
@@ -1358,34 +1507,36 @@ def main() -> None:
         )
         return
 
+    # Default: SEEDS ONLY, for both tasks — nothing writes the reviewed files here.
+    # The authoritative selections are the human's explorer "Export groups" JSONs,
+    # ingested via --from-exports (v3: addition included; the old delegated-review
+    # scan-write path is retired).
     docs = []
-    # ADDITION: the grid-evidenced scan IS the selection (delegated review encoded).
-    doc = build_addition(args.size, root, manifest, graphs)
-    apply_manual_flags(doc)
-    apply_review_decisions("addition", doc)
-    errs = validate(doc, require_approved=False)
-    if errs:
-        raise SystemExit("addition: validation failed:\n  " + "\n  ".join(errs))
-    out = SUPERNODE_DIR / f"addition_{args.size}.json"
-    out.write_text(json.dumps(doc, indent=1, ensure_ascii=False))
-    docs.append(doc)
-    print(f"{out} written:")
-    for sn in doc["supernodes"]:
-        print(f"   {sn['name']:34s} {len(sn['members'])} members")
+    if add_graphs & set(graphs):
+        if ctx is None:
+            raise SystemExit("grids.npz missing — run build_supernode_inputs.py first")
+        seed_add = build_addition_seed(args.size, root, manifest, graphs, ctx)
+        docs.append(seed_add)
+        print("addition: grid-scan seeds for the review pages (no file written)")
+        for sn in seed_add["supernodes"]:
+            flag = "" if sn["members"] else "   <-- empty seed"
+            print(f"   {sn['name']:34s} {len(sn['members'])} seeded{flag}")
 
-    # MULTILINGUAL: the scan only SEEDS the review pages. The authoritative selection
-    # is the human's explorer "Export groups" JSONs, ingested via --from-exports.
-    seed = build_multilingual(args.size, root, manifest, graphs)
-    docs.append(seed)
-    print("\nmultilingual: scan used as review-page seeds only (no file written)")
-    for sn in seed["supernodes"]:
-        flag = "" if sn["members"] else "   <-- empty seed"
-        print(f"   {sn['name']:34s} {len(sn['members'])} seeded{flag}")
+    if ml_present:
+        seed = build_multilingual(args.size, root, manifest, graphs)
+        docs.append(seed)
+        print("\nmultilingual: scan used as review-page seeds only (no file written)")
+        for sn in seed["supernodes"]:
+            flag = "" if sn["members"] else "   <-- empty seed"
+            print(f"   {sn['name']:34s} {len(sn['members'])} seeded{flag}")
+    else:
+        print("\nmultilingual: no dumps on this machine — skipping its seeds/pages")
 
-    emit_review_htmls(root, manifest, graphs, docs)
+    emit_review_htmls(root, manifest, graphs, docs, ctx=ctx)
     print(
-        "\nNEXT (multilingual): adjust groups in the review_*.html pages, Export"
-        "\ngroups per page, then: build_supernodes.py --from-exports <files...>"
+        "\nNEXT: review the review_*.html pages (addition pages show each feature's"
+        "\noperand grid — keep the canonical group names), Export groups per page,"
+        "\nthen: build_supernodes.py --from-exports <files...>"
     )
 
 

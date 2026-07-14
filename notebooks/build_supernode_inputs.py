@@ -10,19 +10,23 @@ Outputs under ``artifacts/supernode_inputs/<size>/``:
   Multilingual: antonym_{en,fr,zh}, synonym_en, hot_en + raw_ variants of ALL of them.
   The raw forms are the paper's exact prompts (the paper never uses chat formatting);
   the chat forms are the Qwen3-instruct adaptation the notebook uses as primary.
-  Addition: ones/first (studied pair), donor99 (49+49 ones), polymer (bare prompt).
-* ``grids.npz`` — operand-grid evidence for EVERY feature node of the calc graphs
-  (single readout pass per probe, cost ~10k forwards each, independent of feature
-  count): ``first`` probe (peak over positions — input-side evidence) for all
-  features; ``ones`` probe (teacher-forced final) for ones+donor final-position
-  features; ``last`` probe for first-graph final-position features.
-* ``polymer_ones_acts.json`` — activations of ones/donor final-position features at
-  the polymer ONES moment (``POLYMER_PROMPT + "99"``), for the polymer-reuse
-  supernode.
+  Addition (v3): ``first``/``ones`` (the studied pair's two answer moments), ``donor``
+  (the _9+_9-class pair's ones moment — the paper's substitution donor), ``reuse``
+  (the citation-style prose prompt at its ones moment). The studied pair is DERIVED
+  here (accuracy grid -> ``pick_studied_pair``) and recorded in the manifest;
+  re-runs reuse the recorded pair unless ``--repick-pair``.
+* ``grids.npz`` — operand-grid evidence (the paper's operand plots) for the UNION of
+  feature nodes across all four addition graphs, under all three probes
+  (``final`` = the ``=`` token, ``ones`` = the teacher-forced ones moment,
+  ``peak`` = max over positions). One readout pass per probe (~10k forwards each,
+  independent of feature count); every review-page node gets its grids.
+* ``reuse_moment_acts.json`` — calc-graph feature activations at the reuse prompt's
+  ones moment (evidence that the lookup features fire in prose).
 * ``manifest.json`` — exact prompts, token lists, key positions (operand tokens,
-  digit positions, finals), answers, git sha.
+  digit positions, finals), answers, accuracy, pairs, git sha; addition entries
+  carry ``"task": "addition"`` (the export-ingest routing key).
 
-Run (A100-80GB, warm caches, ~35 min):
+Run (A100-80GB, warm caches; sbatch hpc/run_supernode_inputs.sbatch):
     uv run python notebooks/build_supernode_inputs.py --size 4b
 """
 
@@ -45,9 +49,6 @@ from llm_circuits.models.qwen3 import load_qwen3
 from llm_circuits.settings import artifacts_dir, default_device
 from llm_circuits.transcoders.circuit_tracer_loader import load_transcoder
 
-A0, B0 = 46, 49  # the studied pair (auto-selected in earlier sessions; fixed here)
-DA, DB = 49, 49  # the verified lookup(9,9) donor pair
-
 
 def dump_graph(out_dir: Path, name: str, gd: dict) -> None:
     path = out_dir / f"graph_{name}.json"
@@ -67,6 +68,12 @@ def main() -> None:
         default=None,
         help="build only these multilingual graph names (partial rebuild; the manifest"
         " merges, other entries stay). Addition graphs are all-or-nothing.",
+    )
+    ap.add_argument(
+        "--repick-pair",
+        action="store_true",
+        help="re-derive the studied/donor pairs from a fresh accuracy grid even when the"
+        " manifest already records them",
     )
     ap.add_argument(
         "--node-threshold",
@@ -143,107 +150,136 @@ def main() -> None:
             del gd
             torch.cuda.empty_cache()
 
-    # ---- addition graphs --------------------------------------------------------------
+    # ---- addition (v3): behavior -> pair, four graphs, three-probe grids ---------------
     if not args.skip_addition:
+        recorded = manifest.get("addition") or {}
+        if recorded.get("pair") and not args.repick_pair:
+            (a0, b0), (da, db) = recorded["pair"], recorded["donor_pair"]
+            note = recorded.get("pair_note", "") + " (pair reused from manifest)"
+            acc_pct = recorded.get("accuracy_pct")
+        else:
+            print("Addition behavior: accuracy over the full operand grid ...", flush=True)
+            correct, predicted = A.accuracy_grid(model, tokenizer)
+            (a0, b0), note = A.pick_studied_pair(correct)
+            donor = A.pick_pair_by_class(correct, ones=(9, 9), near=(a0, b0))
+            if donor is None:
+                raise SystemExit("no correct _9+_9 pair — cannot stage the paper's lookup swap")
+            da, db = donor
+            acc_pct = round(float(correct.mean()) * 100, 2)
+            np.save(out / "accuracy_correct.npy", correct)
+            np.save(out / "accuracy_predicted.npy", predicted)
+        print(f"  pair {a0}+{b0} ({note}); donor {da}+{db}; accuracy {acc_pct}%", flush=True)
+        manifest["addition"] = {
+            "pair": [a0, b0],
+            "donor_pair": [da, db],
+            "pair_note": note,
+            "accuracy_pct": acc_pct,
+        }
+
         print("Addition graphs ...", flush=True)
         add_graphs: dict[str, dict] = {}
-        for name, (a, b, target) in {
-            "ones": (A0, B0, "ones"),
-            "first": (A0, B0, "first"),
-            "donor99": (DA, DB, "ones"),
+        for name, (pa, pb, target) in {
+            "first": (a0, b0, "first"),
+            "ones": (a0, b0, "ones"),
+            "donor": (da, db, "ones"),
         }.items():
-            gd, ans_id, ids = A.build_addition_graph(
+            gd, ans_id, ids = A.build_calc_graph(
                 model,
                 tc,
                 tokenizer,
-                a,
-                b,
+                pa,
+                pb,
                 target=target,
-                style="calc",
                 size_key=size,
                 node_threshold=args.node_threshold,
             )
             add_graphs[name] = gd
             dump_graph(out, name, gd)
             manifest["graphs"][name] = {
-                "prompt": A.addition_prompt(a, b, "calc"),
-                "pair": [a, b],
-                "node_threshold": args.node_threshold,
+                "task": "addition",
+                "prompt": A.addition_prompt(pa, pb, str(pa + pb)[:-1] if target == "ones" else ""),
+                "pair": [pa, pb],
                 "target": target,
+                "node_threshold": args.node_threshold,
                 "answer": tokenizer.decode([ans_id]),
                 "answer_token_id": int(ans_id),
                 "n_tokens": int(ids.shape[1]),
                 "final_position": int(ids.shape[1] - 1),
-                "digit_positions": A.digit_token_positions(tokenizer, ids, a, b),
+                "digit_positions": A.digit_token_positions(tokenizer, ids, pa, pb),
             }
-        pg, _p_aid, _ = A.build_graph_raw(
+            del gd
+            torch.cuda.empty_cache()
+
+        # The citation-style reuse prompt at ITS ones moment (paper: the same lookup
+        # features act in prose). Behavior is recorded, not required — a miss is a
+        # documented negative, and the graph still shows what the model does instead.
+        reuse_ones_prompt = A.reuse_prompt(a0, b0) + str(a0 + b0)[:-1]
+        expected_ones = str(a0 + b0)[-1]
+        gd, ans_id, ids = A.build_text_graph(
             model,
             tc,
             tokenizer,
-            A.POLYMER_PROMPT,
+            reuse_ones_prompt,
             size_key=size,
             node_threshold=args.node_threshold,
+            metadata={"pair": [a0, b0], "target": "reuse-ones"},
         )
-        dump_graph(out, "polymer", pg)
-        manifest["graphs"]["polymer"] = {
-            "prompt": A.POLYMER_PROMPT,
-            "raw": True,
-            "ones_moment_prompt": A.POLYMER_PROMPT + "99",
+        add_graphs["reuse"] = gd
+        dump_graph(out, "reuse", gd)
+        manifest["graphs"]["reuse"] = {
+            "task": "addition",
+            "prompt": reuse_ones_prompt,
+            "pair": [a0, b0],
+            "target": "reuse-ones",
+            "node_threshold": args.node_threshold,
+            "answer": tokenizer.decode([ans_id]),
+            "answer_token_id": int(ans_id),
+            "expected_answer": expected_ones,
+            "behavior_ok": tokenizer.decode([ans_id]).strip() == expected_ones,
+            "n_tokens": int(ids.shape[1]),
+            "final_position": int(ids.shape[1] - 1),
         }
+        del gd
+        torch.cuda.empty_cache()
 
-        # ---- operand-grid evidence: one readout pass per probe, ALL features ----------
+        # ---- operand-grid evidence: the union of ALL four graphs' features under ALL
+        # three probes (cost per probe ~10k forwards, independent of feature count) —
+        # every review-page node gets its operand plots.
         a_vals, b_vals = list(range(100)), list(range(100))
-
-        def feats_of(name: str, position: int | None = None) -> list[tuple[int, int]]:
-            gd = add_graphs[name]
-            return sorted(
-                {
-                    (n["layer"], n["feature_idx"])
-                    for n in gd["nodes"]
-                    if n["node_type"] == "feature"
-                    and (position is None or n["position"] == position)
-                }
-            )
-
-        fin_ones = manifest["graphs"]["ones"]["final_position"]
-        fin_first = manifest["graphs"]["first"]["final_position"]
-        fin_donor = manifest["graphs"]["donor99"]["final_position"]
-        probe_sets = {
-            "first": sorted(set(feats_of("ones")) | set(feats_of("first"))),
-            "ones": sorted(set(feats_of("ones", fin_ones)) | set(feats_of("donor99", fin_donor))),
-            "last": feats_of("first", fin_first),
-        }
+        union = sorted(
+            {
+                (n["layer"], n["feature_idx"])
+                for g in add_graphs.values()
+                for n in g["nodes"]
+                if n["node_type"] == "feature"
+            }
+        )
         grid_arrays: dict[str, np.ndarray] = {}
-        for probe, feats in probe_sets.items():
-            print(f"Grid pass probe={probe!r}: {len(feats)} features ...", flush=True)
-            grids = A.feature_grids(
-                model, tc, feats, a_vals, b_vals, tokenizer, probe=probe, style="calc"
-            )
-            grid_arrays[f"{probe}_grids"] = np.stack([grids[f] for f in feats])
-            grid_arrays[f"{probe}_features"] = np.array(feats, dtype=np.int64)
+        for probe in ("final", "ones", "peak"):
+            print(f"Grid pass probe={probe!r}: {len(union)} features ...", flush=True)
+            grids = A.operand_grids(model, tc, tokenizer, union, a_vals, b_vals, probe=probe)
+            grid_arrays[f"{probe}_grids"] = np.stack([grids[f] for f in union])
+            grid_arrays[f"{probe}_features"] = np.array(union, dtype=np.int64)
             del grids
         np.savez_compressed(
             out / "grids.npz", a_vals=np.array(a_vals), b_vals=np.array(b_vals), **grid_arrays
         )
         print(f"  grids.npz: {(out / 'grids.npz').stat().st_size / 1e6:.1f} MB")
 
-        # ---- polymer ones-moment activations for the reuse supernode -------------------
-        probe_feats = probe_sets["ones"]
-        acts, active_final, _ids = A.probe_features_on_prompt(
-            model, tc, tokenizer, probe_feats, A.POLYMER_PROMPT + "99"
+        # ---- reuse-moment activations (which calc features fire in the prose context) --
+        _, active_final, _ = A.probe_features_on_prompt(
+            model, tc, tokenizer, union, reuse_ones_prompt
         )
-        (out / "polymer_ones_acts.json").write_text(
+        (out / "reuse_moment_acts.json").write_text(
             json.dumps(
                 {
-                    "prompt": A.POLYMER_PROMPT + "99",
-                    "acts": acts,
-                    "active_final": [[L, i, a] for (L, i, a) in active_final],
+                    "prompt": reuse_ones_prompt,
+                    "active_final": [[L, i, act] for (L, i, act) in active_final],
                 },
                 ensure_ascii=False,
-                default=str,
             )
         )
-        print(f"  polymer_ones_acts.json: {len(active_final)} active at the ones moment")
+        print(f"  reuse_moment_acts.json: {len(active_final)} active at the reuse ones moment")
 
     mpath.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
     print(f"DONE -> {out}")

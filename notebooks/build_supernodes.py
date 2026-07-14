@@ -859,12 +859,23 @@ def build_addition_seed(size: str, root: Path, manifest: dict, graphs: dict, ctx
         collect("first", {fin["first"]}, "final", near("sum_band", s0, 8)),
     )
 
-    # high-precision modular path (the ONES graph at its teacher-forced moment)
+    # high-precision modular path (the ONES graph at its teacher-forced moment).
+    # Lookup groups seed on the LATTICE-CELL STATISTIC, not the class label: every
+    # (ra, rb) cell also lies on the (ra+rb)%10 anti-diagonal, so partially smeared
+    # lookups classify as mod10-sum — the cell share (uniform-within-diagonal = 0.104)
+    # is the discriminator. Floor 0.2 ~ 2x enrichment; the review decides from grids.
+    def lattice_pred(cell, floor=0.2):
+        def pred(cls, stats):
+            row, col, share = stats.get("lattice_cell", [None, None, 0.0])
+            return (row, col) == cell and share >= floor
+
+        return pred
+
     add_sn(
         f"lookup (_{ra}+_{rb})",
-        collect(
-            "ones", {fin["ones"]}, "ones", lambda cls, st: cls == f"lookup(a%10={ra},b%10={rb})"
-        ),
+        collect("ones", {fin["ones"]}, "ones", lattice_pred((ra, rb))),
+        note=f"mass on the (a%10={ra}, b%10={rb}) cell >= 2x the within-diagonal uniform"
+        " share; crisp lookups can be rare — check smeared mod10-sum grids too",
     )
     add_sn(
         f"sum = _{s0 % 10}",
@@ -874,21 +885,14 @@ def build_addition_seed(size: str, root: Path, manifest: dict, graphs: dict, ctx
     # the donor problem's lookup features (the paper's substitution source)
     add_sn(
         f"lookup (_{dra}+_{drb}) donors",
-        collect(
-            "donor", {fin["donor"]}, "ones", lambda cls, st: cls == f"lookup(a%10={dra},b%10={drb})"
-        ),
+        collect("donor", {fin["donor"]}, "ones", lattice_pred((dra, drb))),
     )
 
     # the same studied-pair lookup class appearing on the prose reuse page
     if "reuse" in fin:
         add_sn(
             f"reuse lookups (_{ra}+_{rb})",
-            collect(
-                "reuse",
-                {fin["reuse"]},
-                "ones",
-                lambda cls, st: cls == f"lookup(a%10={ra},b%10={rb})",
-            ),
+            collect("reuse", {fin["reuse"]}, "ones", lattice_pred((ra, rb))),
             note="calc lookup class firing at the citation prompt's ones moment",
         )
 

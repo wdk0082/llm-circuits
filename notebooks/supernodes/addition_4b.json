@@ -1,395 +1,215 @@
 {
  "task": "addition",
  "size": "4b",
- "built_from": "/teamspace/studios/this_studio/llm-circuits/artifacts/supernode_inputs/4b@82b3e72",
+ "built_from": "/home/zw499/rds/hpc-work/llm-circuits/artifacts/supernode_inputs/4b@8999443",
+ "selection": "explorer-export (grid-enabled review pages)",
+ "source_files": [
+  "groups_donor.json",
+  "groups_first.json",
+  "groups_ones.json"
+ ],
  "max_members": 6,
  "supernodes": [
   {
    "name": "input _6",
-   "paper_name": "_6",
+   "paper_name": "input _6",
    "role": "source",
    "graph": "ones",
    "position": 5,
    "members": [
     {
      "layer": 7,
-     "feature": 58014,
+     "feature": 75406,
      "position": 5,
-     "act": 6.9062,
-     "influence": 0.002617,
+     "act": 4.3438,
+     "influence": 0.001304,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       " pron",
-       "喜",
-       " Tax",
-       " tax",
-       "Tax"
+       "招待",
+       "认识到",
+       "意识",
+       "妪",
+       "성이"
       ],
-      "example": "2 sets of chromosomes in their nuclei. The human species contain 4⟦6⟧ chromosomes in their",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": " test results are inaccurate, according to the CDC⏎(NaturalHealth3⟦6⟧5) The market is bein",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 0.945
      },
-     "review": "approved"
-    },
-    {
-     "layer": 5,
-     "feature": 93821,
-     "position": 5,
-     "act": 4.5625,
-     "influence": 0.003746,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "semble",
-       "フォ",
-       "arest",
-       "antor",
-       "teenth"
-      ],
-      "example": " control inflammatory triggers such as interleukin 6, or IL-⟦6⟧.⏎\"If you can connect all t",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 8,
-     "feature": 45133,
-     "position": 5,
-     "act": 3.8906,
-     "influence": 0.000641,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "Gain",
-       "社区",
-       "Coal",
-       "_UNSUPPORTED",
-       "恂"
-      ],
-      "example": " material is carried on chromosomes. Humans have 23 pairs (4⟦6⟧ in total) of these. One of",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 4,
-     "feature": 108544,
-     "position": 5,
-     "act": 3.0312,
-     "influence": 0.003365,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "(Dense",
-       "ãi",
-       "...⏎",
-       "\"\"⏎",
-       "大家一起"
-      ],
-      "example": "3-1794⏎Joseph Priestly, 17⟦6⟧6-1844⏎Marie Curie, 1",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 7,
-     "feature": 73276,
+     "feature": 34162,
      "position": 5,
-     "act": 2.6719,
-     "influence": 0.000716,
+     "act": 3.25,
+     "influence": 0.000923,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "tere",
-       "峭",
-       " surprises",
-       " tackle",
-       "Campaign"
+       " Van",
+       "孪",
+       " Uns",
+       " phantom",
+       "ask"
       ],
-      "example": " people out of one of his feature mediums: cardboard.⏎Using 8⟦6⟧ paper tubes each weighing",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": " via a mirror), the scanner can scan up to a full 3⟦6⟧0 degrees around itself.⏎The accurac",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 1.0
      },
-     "review": "approved"
-    },
-    {
-     "layer": 5,
-     "feature": 36523,
-     "position": 5,
-     "act": 2.6562,
-     "influence": 0.001661,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=5)",
-      "top_logits": [
-       "闺",
-       "どころ",
-       "荚",
-       "金陵",
-       "cycle"
-      ],
-      "example": ".⏎Isaiah 44:6-8; 4⟦6⟧:9-10 – “Is there a God besides Me?",
-      "grid_class": "lookup(a%10=6,b%10=5)"
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 6,
-     "feature": 41349,
-     "position": 5,
-     "act": 2.5469,
-     "influence": 0.000771,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "入选",
-       " emerg",
-       "fans",
-       "semble",
-       "ắng"
-      ],
-      "example": ". You can print 1, 2, 4, ⟦6⟧ or 8-to-a-page.⏎These algebra posters are great for bulletin",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 8,
-     "feature": 163534,
-     "position": 5,
-     "act": 2.5,
-     "influence": 0.000557,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=3)",
-      "top_logits": [
-       "urpose",
-       " mural",
-       "marks",
-       " penn",
-       "atoms"
-      ],
-      "example": " marching heroically to her death. The tragedy was presented in 4⟦4⟧2 BC.⏎Why Athens Tip: ",
-      "grid_class": "lookup(a%10=6,b%10=3)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 0,
-     "feature": 126841,
-     "position": 5,
-     "act": 1.5625,
-     "influence": 0.003445,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "侵犯",
-       "氪",
-       "ilee",
-       "ánt",
-       "ty"
-      ],
-      "example": " devices or HD High definition suitable for users with fast internet connections⏎3⟦6⟧0° VR",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 6,
-     "feature": 93112,
+     "feature": 110119,
      "position": 5,
-     "act": 1.5312,
-     "influence": 0.000553,
+     "act": 3.0312,
+     "influence": 0.001591,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "各行",
-       "liga",
-       "我就",
-       " shar",
-       "他就"
+       "inality",
+       "候",
+       "环",
+       "现实",
+       "ider"
       ],
-      "example": " Standard ASCII set, HTML Entity names, ISO 1064⟦6⟧, ISO 8879, ISO 8859",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": "1 doi: https://doi.org/10.113⟦6⟧/bmj.311.7016.13",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 0.924
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 3,
-     "feature": 130238,
+     "layer": 6,
+     "feature": 63117,
      "position": 5,
-     "act": 1.1719,
-     "influence": 0.001423,
+     "act": 2.7188,
+     "influence": 0.001222,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "毛",
-       "INLINE",
-       "-dem",
-       "iverse",
-       "\"\"⏎"
+       " covariance",
+       "硕",
+       ".DropDown",
+       " spokes",
+       "cov"
       ],
-      "example": " many fine galaxies, however Cat's Eye planetary nebula (NGC⟦6⟧543) constitues its telesco",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": ".⏎- Rooftop ranging systems use lasers to capture a 3⟦6⟧0 degree view of the car’s surroun",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 1.0
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 5,
-     "feature": 155827,
-     "position": 5,
-     "act": 1.1562,
-     "influence": 0.000452,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "irus",
-       "енную",
-       "ens",
-       "Sum",
-       " seam"
-      ],
-      "example": "Contact details of provider:|| Postal: Kiellinie 6⟦6⟧, D-2410",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 0,
-     "feature": 113968,
-     "position": 5,
-     "act": 1.0938,
-     "influence": 0.002395,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "theid",
-       "plusplus",
-       "roach",
-       ".VAL",
-       "\"\"⏎"
-      ],
-      "example": "kernel 2.6.13⏎and later). See IPv⟦6⟧ support in SQL Anywhere.<|im_end|>⏎<|im_start|>user⏎",
-      "grid_class": "lookup(a%10=6,b%10=6)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 2,
-     "feature": 163495,
+     "feature": 145875,
      "position": 5,
-     "act": 0.7422,
-     "influence": 0.000713,
+     "act": 0.6133,
+     "influence": 0.000594,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "ellig",
-       "憎",
-       "ertility",
-       "邸",
-       "シー"
+       "nio",
+       " om",
+       "pty",
+       "LLU",
+       " dynamic"
       ],
-      "example": " Edie and Skink? Are they ever resolved?⏎Essay Topic ⟦6⟧⏎How are the laws of the land igno",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": " again on June 3. After docking with the ISS around 3⟦6⟧ hours after launch, the spacecraf",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 1.0
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 1,
-     "feature": 47436,
+     "feature": 85984,
      "position": 5,
-     "act": 0.5898,
-     "influence": 0.000577,
+     "act": 0.3633,
+     "influence": 0.000471,
      "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "zac",
-       "+')",
-       " …⏎⏎",
-       "...)⏎⏎",
-       "…”⏎⏎"
+       "gerald",
+       "就好了",
+       "妤",
+       "(Il",
+       "盲"
       ],
-      "example": "em!⏎Akcija: ZiņotājsPRO uz ⟦6⟧ mēnešiem - bezmaksas!Abonē",
-      "grid_class": "lookup(a%10=6,b%10=6)"
+      "example": " devices or HD High definition suitable for users with fast internet connections⏎3⟦6⟧0° VR",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 0.984
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     }
    ]
   },
   {
    "name": "input _9",
-   "paper_name": "_9",
+   "paper_name": "input _9",
    "role": "source",
    "graph": "ones",
    "position": 8,
    "members": [
     {
      "layer": 5,
-     "feature": 121933,
+     "feature": 130519,
      "position": 8,
-     "act": 4.3438,
-     "influence": 0.002572,
+     "act": 3.3906,
+     "influence": 0.002023,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "先",
-       "fat",
-       " Cristina",
-       "ted",
-       "edly"
+       "听过",
+       "更像是",
+       "endcode",
+       " tread",
+       "lood"
       ],
-      "example": "6. http://dx.doi.org/10.15⟦9⟧0/S0365-0596201",
-      "grid_class": "lookup(a%10=9,b%10=9)"
+      "example": " is the delicate communication between employers and employees working in exchange of pay.",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.871
      },
-     "review": "approved"
-    },
-    {
-     "layer": 4,
-     "feature": 126502,
-     "position": 8,
-     "act": 4.0,
-     "influence": 0.003679,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       " lag",
-       "有一定的",
-       "一时",
-       "瘕",
-       "\"\"⏎"
-      ],
-      "example": "4 swordfish, 887 seafire, 8⟦9⟧7 spitfire, 885 seafire squadrons.",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 6,
-     "feature": 97123,
+     "feature": 115861,
      "position": 8,
-     "act": 3.3125,
-     "influence": 0.001213,
+     "act": 2.8594,
+     "influence": 0.001097,
      "evidence": {
-      "matched": "grid:lookup(a%10=4,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       " Şe",
-       "勤",
-       " Barg",
-       " Гр",
-       "/pm"
+       "比亚",
+       " stab",
+       "FFE",
+       " essentials",
+       "ByUrl"
       ],
-      "example": " air masses produces frequent and sometimes violent thunderstorms, particularly from April",
-      "grid_class": "lookup(a%10=4,b%10=9)"
+      "example": "90 expulsion of the Jews from England and the notorious 14⟦9⟧2 expulsion of the Jews from ",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.797
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 6,
      "feature": 42244,
      "position": 8,
-     "act": 2.9531,
-     "influence": 0.00095,
+     "act": 2.7812,
+     "influence": 0.001026,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
        " unins",
        " zwykł",
@@ -398,140 +218,64 @@
        ".ins"
       ],
       "example": " instance from January 1920 through December 192⟦9⟧. The one exception is the teen years s",
-      "grid_class": "lookup(a%10=9,b%10=9)"
+      "grid_class": "mod10-a(r9)",
+      "on_pair_frac_of_max": 0.795
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 7,
-     "feature": 153678,
+     "layer": 6,
+     "feature": 145952,
      "position": 8,
-     "act": 2.6562,
-     "influence": 0.00061,
+     "act": 2.3281,
+     "influence": 0.001153,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "蜓",
-       " Damien",
-       "童",
-       "很难",
-       "idebar"
+       "涂层",
+       "衰",
+       "iode",
+       "istes",
+       "齿"
       ],
-      "example": ", Summa, Bible and more all for only $19.⟦9⟧9...⏎This society was founded in 1817 by Very",
-      "grid_class": "lookup(a%10=9,b%10=9)"
+      "example": " for maintaining grid discipline and a frequency variation in the range of 4⟦9⟧.5 to 50.5 ",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.882
      },
-     "review": "approved"
-    },
-    {
-     "layer": 7,
-     "feature": 92780,
-     "position": 8,
-     "act": 2.5781,
-     "influence": 0.000599,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "ушки",
-       "IDA",
-       "矿物",
-       " mol",
-       "ase"
-      ],
-      "example": ". The Institute's trustees open the facility in March 192⟦9⟧.⏎First successful removal of ",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 7,
-     "feature": 68307,
-     "position": 8,
-     "act": 2.4844,
-     "influence": 0.000698,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "elman",
-       " dl",
-       "Vo",
-       " Vo",
-       "��"
-      ],
-      "example": " national anthem racist?⏎John J. Dunphy⏎San Francisco 4⟦9⟧ers quarterback Colin Kaepernick",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 0,
-     "feature": 58276,
-     "position": 8,
-     "act": 2.2969,
-     "influence": 0.003678,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       " ioutil",
-       "edly",
-       "煞",
-       "一个人",
-       "一方"
-      ],
-      "example": " true! Organic crops aren’t more nutritious1https://youtu.be/k⟦9⟧p2jXhYRCk, or even free o",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 5,
-     "feature": 121055,
+     "feature": 80730,
      "position": 8,
-     "act": 2.125,
+     "act": 1.6406,
      "influence": 0.001047,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "乜",
-       "continent",
-       "pled",
-       "的地图",
-       "thal"
+       "bras",
+       "ьте",
+       "再来",
+       "pé",
+       "ooks"
       ],
-      "example": " — for the driver and/or the pedestrian — was reported in 4⟦8⟧ percent of the traffic cras",
-      "grid_class": "lookup(a%10=9,b%10=9)"
+      "example": "io became a holding of the United States. The 1,4⟦9⟧1 acre base was decommissioned in 1989",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.894
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 3,
-     "feature": 7318,
-     "position": 8,
-     "act": 1.2266,
-     "influence": 0.001142,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "orias",
-       "earing",
-       "alis",
-       "kir",
-       "撇"
-      ],
-      "example": "degeneration (MPAN) is caused by mutations in the C1⟦9⟧orf12 gene. This gene is found on c",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 0,
      "feature": 21485,
      "position": 8,
-     "act": 0.6562,
-     "influence": 0.000486,
+     "act": 0.6445,
+     "influence": 0.000525,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
        "ugo",
        "熟",
@@ -540,914 +284,679 @@
        "熟悉的"
       ],
       "example": "<|im_start|>user⏎FREE Violin Lesson #2⟦9⟧ Andantino op 22D by Elgar EASY TUTOR",
-      "grid_class": "lookup(a%10=9,b%10=9)"
+      "grid_class": "mod10-b(r9)",
+      "on_pair_frac_of_max": 0.702
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 2,
-     "feature": 113210,
-     "position": 8,
-     "act": 0.6328,
-     "influence": 0.000485,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "ouser",
-       "__',",
-       ",',",
-       "afil",
-       ".nz"
-      ],
-      "example": ", homes and businesses⏎8-Arrests without due process⏎⟦9⟧-Massive “papers please” checkpoin",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 1,
-     "feature": 152373,
-     "position": 8,
-     "act": 0.6211,
-     "influence": 0.000449,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "…)",
-       " …⏎⏎",
-       "…”",
-       "[…",
-       "…”⏎⏎"
-      ],
-      "example": " cause of disease and premature death in the United States. Created: ⟦9⟧/5/2008 by MMWR.⏎D",
-      "grid_class": "lookup(a%10=9,b%10=9)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     }
    ]
   },
   {
-   "name": "magnitude ~46",
-   "paper_name": "~36-analogue",
-   "role": "source",
+   "name": "input 36 (exact)",
+   "paper_name": "input 36 (exact)",
+   "role": "annotation",
    "graph": "ones",
    "position": null,
    "members": [
     {
-     "layer": 4,
-     "feature": 148151,
+     "layer": 6,
+     "feature": 72298,
      "position": 5,
-     "act": 2.375,
-     "influence": 0.001868,
+     "act": 7.2188,
+     "influence": 0.004447,
      "evidence": {
-      "matched": "grid:band-a(~45)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "=Y",
-       " bid",
-       "一侧",
-       "qid",
-       ".sym"
+       "inality",
+       "finalize",
+       " Arc",
+       "-du",
+       "du"
       ],
-      "example": "ics. Using phonics helps children to decode words using the 4⟦4⟧ sounds in the English lan",
-      "grid_class": "band-a(~45)"
+      "example": " taken by the earth to make one revolution around the sun; 3⟦6⟧5 and 1/4 days equals one y",
+      "grid_class": "mixed",
+      "on_pair_frac_of_max": 0.898
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 9,
+     "feature": 148246,
+     "position": 5,
+     "act": 6.4375,
+     "influence": 0.001272,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "ero",
+       "apes",
+       "BSD",
+       "opies",
+       "fst"
+      ],
+      "example": " taken by the earth to make one revolution around the sun; 3⟦6⟧5 and 1/4 days equals one y",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 1.0
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 8,
+     "feature": 16502,
+     "position": 5,
+     "act": 5.2188,
+     "influence": 0.001186,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "taş",
+       "sheet",
+       " shoulders",
+       "不起",
+       "posta"
+      ],
+      "example": " present value of an annuity formula. The author uses a 3⟦6⟧-month mortgage to demonstrate",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 1.0
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 8,
+     "feature": 15328,
+     "position": 5,
+     "act": 3.9062,
+     "influence": 0.000877,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " breakout",
+       "iek",
+       "欢迎",
+       " clang",
+       ".inv"
+      ],
+      "example": "ireragh).⏎An ancient battle fought here in the AM 3⟦6⟧56 (1538 BC) by legendary Miles",
+      "grid_class": "cross(36)",
+      "on_pair_frac_of_max": 0.896
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 10,
+     "feature": 16471,
+     "position": 5,
+     "act": 3.7812,
+     "influence": 0.000595,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "晚",
+       "(NS",
+       "页",
+       " гр",
+       "vro"
+      ],
+      "example": "rttemberg, Germany.⏎The power station previously had a 3⟦6⟧ MW coal-fired generation unit,",
+      "grid_class": "band-a(~30)",
+      "on_pair_frac_of_max": 1.0
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 9,
+     "feature": 143938,
+     "position": 5,
+     "act": 3.25,
+     "influence": 0.000496,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " UIAlertView",
+       "铃",
+       "代表",
+       "estr",
+       "estro"
+      ],
+      "example": "Direct praise or criticism.⏎The Open-Faced Sandwich.⏎The 3⟦6⟧0-Degree Feedback.⏎In open-fa",
+      "grid_class": "mod10-a(r6)",
+      "on_pair_frac_of_max": 1.0
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    }
+   ]
+  },
+  {
+   "name": "input 49 (exact)",
+   "paper_name": "input 49 (exact)",
+   "role": "annotation",
+   "graph": "ones",
+   "position": null,
+   "members": [
+    {
+     "layer": 8,
+     "feature": 15033,
+     "position": 8,
+     "act": 4.6875,
+     "influence": 0.001313,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "整体",
+       " youngest",
+       "煜",
+       "(ns",
+       "_ns"
+      ],
+      "example": " who compromised the interests of the people.”⏎Remembering Malcolm X 4⟦9⟧ Years On⏎by Ama ",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.823
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 9,
+     "feature": 50661,
+     "position": 8,
+     "act": 4.5312,
+     "influence": 0.00118,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "FieldType",
+       " unf",
+       " upscale",
+       " dock",
+       "ić"
+      ],
+      "example": " mass larger than Texas, California and Montana combined, became the 4⟦9⟧th state in the u",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.81
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 7,
+     "feature": 31501,
+     "position": 8,
+     "act": 4.3438,
+     "influence": 0.001101,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "isa",
+       " guessed",
+       " leap",
+       " Guess",
+       " guess"
+      ],
+      "example": "<|im_start|>user⏎Phone: +4⟦9⟧ (0) 106-3362⏎N",
+      "grid_class": "mixed",
+      "on_pair_frac_of_max": 0.908
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 9,
+     "feature": 48307,
+     "position": 8,
+     "act": 2.6719,
+     "influence": 0.00071,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "新年",
+       "报酬",
+       "放眼",
+       "一日",
+       "奂"
+      ],
+      "example": " had equestrian sculpture⏎on his mind in 144⟦9⟧, as he also refers to the ultimate predece",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.85
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 7,
+     "feature": 114780,
+     "position": 8,
+     "act": 2.1719,
+     "influence": 0.000897,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "_hi",
+       "澄清",
+       "玳",
+       " equivalence",
+       "抽烟"
+      ],
+      "example": " of the world’s population will be urban (compared to 4⟦9⟧ percent today). Income levels w",
+      "grid_class": "cross(49)",
+      "on_pair_frac_of_max": 0.813
+     },
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 6,
-     "feature": 48077,
-     "position": 5,
-     "act": 1.8125,
-     "influence": 0.000646,
+     "feature": 42667,
+     "position": 8,
+     "act": 1.1797,
+     "influence": 0.000457,
      "evidence": {
-      "matched": "grid:band-a(~40)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "低调",
-       "око",
-       " Stripe",
-       " Bingo",
-       "董事长"
+       "-mask",
+       "urf",
+       "@m",
+       "渍",
+       "yte"
       ],
-      "example": " entire world will rejoice in God’s salvation.⏎Isaiah 4⟦0⟧:1-26 — Speak to Her Heart⏎God b",
-      "grid_class": "band-a(~40)"
+      "example": " on Climate Change and Forestry (APIKI Network)⏎Mahawan Kar⟦un⟧iasa said the need to chang",
+      "grid_class": "sparse",
+      "on_pair_frac_of_max": 0.43
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
+    }
+   ]
+  },
+  {
+   "name": "magnitude ~36",
+   "paper_name": "magnitude ~36",
+   "role": "source",
+   "graph": "first",
+   "position": null,
+   "members": [
+    {
+     "layer": 5,
+     "feature": 104820,
+     "position": 5,
+     "act": 3.6875,
+     "influence": 0.002055,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "存",
+       " Gund",
+       "发",
+       "资金",
+       "失"
+      ],
+      "example": " much that it moved them to sell him into slavery (Genesis 3⟦7⟧:4 - 28)!⏎Miriam and Aaron,",
+      "grid_class": "band-a(~34)",
+      "on_pair_frac_of_max": 0.831
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 7,
+     "feature": 159625,
+     "position": 5,
+     "act": 3.2656,
+     "influence": 0.000801,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "Bow",
+       " informational",
+       " sack",
+       " дол",
+       " Amend"
+      ],
+      "example": ". After having visited the Canary Islands he crossed the Atlantic in 3⟦6⟧ days⏎and along w",
+      "grid_class": "band-a(~31)",
+      "on_pair_frac_of_max": 0.977
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 4,
+     "feature": 155339,
+     "position": 5,
+     "act": 2.4219,
+     "influence": 0.001461,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "具体内容",
+       "ariat",
+       "一侧",
+       ".sym",
+       "qid"
+      ],
+      "example": " old city despite its lack of strategic importance.⏎In all, 3⟦8⟧2 residential structures a",
+      "grid_class": "band-a(~38)",
+      "on_pair_frac_of_max": 0.969
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 5,
+     "feature": 16764,
+     "position": 5,
+     "act": 2.25,
+     "influence": 0.001342,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Elli",
+       "elig",
+       "爆",
+       "omon",
+       "inati"
+      ],
+      "example": "40-2855; doi:10.3⟦3⟧90/su5072840⏎Published:",
+      "grid_class": "band-a(~32)",
+      "on_pair_frac_of_max": 0.899
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 3,
+     "feature": 30998,
+     "position": 5,
+     "act": 1.3906,
+     "influence": 0.000788,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       ";',⏎",
+       "APH",
+       " halftime",
+       "пси",
+       "аниз"
+      ],
+      "example": "<|im_start|>user⏎In Australia, 3⟦3⟧% percent of Year 12 students strongly agree they will ",
+      "grid_class": "band-a(~35)",
+      "on_pair_frac_of_max": 0.947
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 2,
+     "feature": 142369,
+     "position": 4,
+     "act": 0.8789,
+     "influence": 0.000825,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "voir",
+       "жд",
+       " dateString",
+       "接管",
+       "ToProps"
+      ],
+      "example": " which are indicated with a 2-digit code.⏎III. The ⟦3⟧-digit level, the groups belonging t",
+      "grid_class": "band-a(~32)",
+      "on_pair_frac_of_max": 1.0
+     },
+     "review": "approved",
+     "source": "explorer-export"
     }
    ]
   },
   {
    "name": "magnitude ~49",
-   "paper_name": "~59-analogue",
+   "paper_name": "magnitude ~49",
    "role": "source",
-   "graph": "ones",
+   "graph": "first",
    "position": null,
+   "members": [],
+   "note": "absent after hand review (no group exported)"
+  },
+  {
+   "name": "add ~49 (function)",
+   "paper_name": "add ~49 (function)",
+   "role": "annotation",
+   "graph": "first",
+   "position": "final",
    "members": [
     {
-     "layer": 7,
-     "feature": 69527,
-     "position": 8,
-     "act": 4.3438,
-     "influence": 0.001176,
+     "layer": 27,
+     "feature": 2412,
+     "position": 9,
+     "act": 3.8594,
+     "influence": 0.000566,
      "evidence": {
-      "matched": "grid:band-b(~49)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "anni",
-       "gest",
-       "evenodd",
-       "vester",
-       "dest"
+       "用户名",
+       "апр",
+       "lok",
+       "睫",
+       "注明来源"
       ],
-      "example": " without knowing it.⏎The temperature in some parts of Russia is 5⟦0⟧ degrees below zero. R",
-      "grid_class": "band-b(~49)"
+      "example": "||Obese (Class I)|⏎|35.0-⟦3⟧9.9||Obese (Class II)|⏎|40",
+      "grid_class": "band-b(~46)",
+      "on_pair_frac_of_max": 0.569
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 25,
+     "feature": 153940,
+     "position": 9,
+     "act": 2.2344,
+     "influence": 0.000687,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "ches",
+       "apiro",
+       "ơn",
+       "茫",
+       "IÊ"
+      ],
+      "example": "ham. \"In the future, a doubling of PTA to +⟦7⟧0 could mean expecting those cows to mobilis",
+      "grid_class": "band-b(~46)",
+      "on_pair_frac_of_max": 0.405
+     },
+     "review": "approved",
+     "source": "explorer-export"
     }
    ]
   },
   {
-   "name": "lookup (6,9-class)",
-   "paper_name": "_6+_9",
+   "name": "magnitude lookup (~36+~49)",
+   "paper_name": "magnitude lookup (~36+~49)",
+   "role": "annotation",
+   "graph": "first",
+   "position": "final",
+   "members": [],
+   "note": "absent after hand review (no group exported)"
+  },
+  {
+   "name": "sum ~85 (low precision)",
+   "paper_name": "sum ~85 (low precision)",
+   "role": "readout",
+   "graph": "first",
+   "position": "final",
+   "members": [
+    {
+     "layer": 26,
+     "feature": 84235,
+     "position": 9,
+     "act": 16.25,
+     "influence": 0.00699,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "�",
+       "铲",
+       "Rnd",
+       "眇",
+       "rand"
+      ],
+      "example": " March (Number 5058) and 26-⟦2⟧8 March (Number 5059). This particular issue contains",
+      "grid_class": "sum-band(~81)",
+      "on_pair_frac_of_max": 0.562
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 29,
+     "feature": 5939,
+     "position": 9,
+     "act": 15.9375,
+     "influence": 0.017454,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " Eight",
+       " eighth",
+       "八",
+       "八大",
+       " eight"
+      ],
+      "example": " in History⏎Today is Friday, Aug. 17, the⟦ ⟧229th day of 2018. There are",
+      "grid_class": "sum-band(~85)",
+      "on_pair_frac_of_max": 0.333
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 25,
+     "feature": 33199,
+     "position": 9,
+     "act": 7.0312,
+     "influence": 0.004171,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "August",
+       "健",
+       "8",
+       "八十",
+       "第八"
+      ],
+      "example": ", Mexico at 11:42 a.m. EDT (⟦1⟧542 GMT). Recovery ships have spotted the capsule and are e",
+      "grid_class": "sum-band(~85)",
+      "on_pair_frac_of_max": 0.411
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 27,
+     "feature": 132398,
+     "position": 9,
+     "act": 5.1562,
+     "influence": 0.000987,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " authorities",
+       " Erdogan",
+       "魁",
+       "权威",
+       " authority"
+      ],
+      "example": " Tangential: 5.2%, Volumetric: 9⟦.⟧9%, T/R Ratio: 1.1⏎Color/Ap",
+      "grid_class": "sum-band(~85)",
+      "on_pair_frac_of_max": 0.525
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 29,
+     "feature": 128200,
+     "position": 9,
+     "act": 4.4062,
+     "influence": 0.000456,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       " drag",
+       " abc",
+       "lap",
+       " dragons",
+       "丢"
+      ],
+      "example": "193 billion, including $97 billion in lost productivity and⟦ $⟧96 billion in direct health",
+      "grid_class": "sum-band(~89)",
+      "on_pair_frac_of_max": 0.267
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 26,
+     "feature": 28445,
+     "position": 9,
+     "act": 1.3125,
+     "influence": 0.000609,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "subs",
+       "LBL",
+       "眇",
+       "за",
+       "兰"
+      ],
+      "example": "||7,762||9.1||+4,⟦1⟧80||+116.7||10||0",
+      "grid_class": "sum-band(~81)",
+      "on_pair_frac_of_max": 0.184
+     },
+     "review": "approved",
+     "source": "explorer-export"
+    }
+   ]
+  },
+  {
+   "name": "lookup (_6+_9)",
+   "paper_name": "lookup (_6+_9)",
    "role": "source",
    "graph": "ones",
    "position": "final",
    "members": [
     {
-     "layer": 24,
-     "feature": 163113,
+     "layer": 34,
+     "feature": 5477,
      "position": 10,
-     "act": 21.0,
-     "influence": 0.011672,
+     "act": 10.6875,
+     "influence": 0.005949,
      "evidence": {
-      "matched": "grid:lookup(a%10=3,b%10=9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "二十五",
-       "5",
-       "五个",
-       " five",
-       "五大"
-      ],
-      "example": " 30-year period (1860s through 1⟦8⟧90s) as a part of the US Geological Survey’s explor",
-      "grid_class": "lookup(a%10=3,b%10=9)",
-      "on_pair_frac_of_max": 0.933
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 24,
-     "feature": 130991,
-     "position": 10,
-     "act": 11.6875,
-     "influence": 0.001818,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "lab",
-       ".connections",
-       "ivor",
-       "假装",
-       "ched"
-      ],
-      "example": " Before it Happens⏎National Fire Prevention Week, October 9-⟦1⟧5⏎With National Fire Preven",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.487
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 90687,
-     "position": 10,
-     "act": 11.0,
-     "influence": 0.008432,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=9)",
-      "top_logits": [
-       "五一",
-       "6",
-       "五四",
-       "5",
-       "4"
-      ],
-      "example": "affney⏎Edwin Cannan (1861-1⟦9⟧35) is best known for his 1904 edition",
-      "grid_class": "lookup(a%10=5,b%10=9)",
-      "on_pair_frac_of_max": 0.552
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 24,
-     "feature": 49157,
-     "position": 10,
-     "act": 9.0,
-     "influence": 0.004376,
-     "evidence": {
-      "matched": "grid:lookup(a%10=3,b%10=3)",
-      "top_logits": [
-       "三是",
-       " thirty",
-       " thirds",
-       "三百",
-       " third"
-      ],
-      "example": "Lustrous and relatively crisp fabric of 35% silk and⟦ ⟧65% wool, with the silk in the warp",
-      "grid_class": "lookup(a%10=3,b%10=3)",
-      "on_pair_frac_of_max": 0.372
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 31548,
-     "position": 10,
-     "act": 8.5625,
-     "influence": 0.005024,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "笞",
-       "五十",
-       "第五届",
-       "5",
-       "二十五"
-      ],
-      "example": " Dmitri Mendeleev, making 2019 its ⟦1⟧50th anniversary. To celebrate, the United Nations (",
-      "grid_class": "lookup(a%10=6,b%10=6)",
-      "on_pair_frac_of_max": 0.547
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 24,
-     "feature": 99664,
-     "position": 10,
-     "act": 8.25,
-     "influence": 0.001799,
-     "evidence": {
-      "matched": "grid:lookup(a%10=4,b%10=4)",
-      "top_logits": [
-       "ALSE",
-       "BM",
-       "alf",
-       "tml",
-       "EM"
-      ],
-      "example": " AC, 1 (0.1%) had Hb AD and⟦ ⟧1 (0.1%) was suggestive for beta- thalassa",
-      "grid_class": "lookup(a%10=4,b%10=4)",
-      "on_pair_frac_of_max": 0.627
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 33,
-     "feature": 109892,
-     "position": 10,
-     "act": 10.875,
-     "influence": 0.009306,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=0)",
-      "top_logits": [
-       "五",
-       " Fifth",
+       "-five",
+       "Five",
        " five",
        " Five",
-       "5"
+       "五"
       ],
-      "example": ", there will still be 5.4 million deaths in children under⟦ ⟧5 in 2035,\" lead author Dr. N",
-      "grid_class": "lookup(a%10=5,b%10=0)",
-      "on_pair_frac_of_max": 0.199
+      "example": " articles, are explicitly restricted by the Constitution (these restrictions are imposed b",
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 1.0
      },
-     "review": "rejected",
-     "review_note": "on-pair activation only 20% of grid max — verify the receptive field really includes the studied pair REVIEW: on-pair activation 20% of grid max fails the >=30% receptive-field sanity; replaced by the top act-ranked overflow qualifier"
-    },
-    {
-     "layer": 25,
-     "feature": 145046,
-     "position": 10,
-     "act": 8.1875,
-     "influence": 0.005711,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       " fünf",
-       " Fifth",
-       " fifty",
-       " five",
-       "五个"
-      ],
-      "example": ", 2009 (Journal of Morphology, 2⟦7⟧0, 536-557). The abstract is",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.42
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 25848,
-     "position": 10,
-     "act": 7.7812,
-     "influence": 0.001649,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "彼",
-       "uld",
-       " ups",
-       "าร",
-       "wal"
-      ],
-      "example": " (c.1490 – 95-c.1⟦5⟧67) were two artists known to have produced portraits like this.",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.335
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 149084,
-     "position": 10,
-     "act": 7.5938,
-     "influence": 0.001575,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       "igrated",
-       "的步伐",
-       " libero",
-       " abducted",
-       ".au"
-      ],
-      "example": " frequent changes of address in search of progressively cheaper accommodation. In 1⟦8⟧7",
-      "grid_class": "lookup(a%10=6,b%10=6)",
-      "on_pair_frac_of_max": 0.398
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 26,
-     "feature": 107505,
-     "position": 10,
-     "act": 7.4062,
-     "influence": 0.00137,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "jets",
-       " jets",
-       "的最后一",
-       "を見つけ",
-       "resses"
-      ],
-      "example": " 6-8 pm - Hate Speech: Who Benefits?⏎- Nov⟦ ⟧18, 6-8 pm - Hate Speech: How to",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.297
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 30% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 15244,
-     "position": 10,
-     "act": 7.2188,
-     "influence": 0.002507,
-     "evidence": {
-      "matched": "grid:lookup(a%10=2,b%10=2)",
-      "top_logits": [
-       "十四条",
-       "第四",
-       " fourth",
-       " seventh",
-       " Fourth"
-      ],
-      "example": " find mean of numbers from 25 to 82 that is⟦ ⟧53.5⏎3. Point out the wrong statement?⏎Expla",
-      "grid_class": "lookup(a%10=2,b%10=2)",
-      "on_pair_frac_of_max": 0.26
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 26% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 19465,
-     "position": 10,
-     "act": 6.9375,
-     "influence": 0.001871,
-     "evidence": {
-      "matched": "grid:lookup(a%10=7,b%10=7)",
-      "top_logits": [
-       "Fall",
-       "十月",
-       "🍁",
-       "秋天",
-       " Fall"
-      ],
-      "example": " days getting shorter, frost coating windshields over night and signs for⟦ pumpkin⟧-flavou",
-      "grid_class": "lookup(a%10=7,b%10=7)",
-      "on_pair_frac_of_max": 0.603
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 33,
-     "feature": 51511,
-     "position": 10,
-     "act": 6.1562,
-     "influence": 0.001221,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=0)",
-      "top_logits": [
-       " SPDX",
-       " remainder",
-       " sh",
-       "帖",
-       "8"
-      ],
-      "example": "2 again: 210 �� 2 = 1⟦0⟧5. Now 105 �� 3 = 3",
-      "grid_class": "lookup(a%10=5,b%10=0)",
-      "on_pair_frac_of_max": 0.247
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 25% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 56394,
-     "position": 10,
-     "act": 5.625,
-     "influence": 0.001779,
-     "evidence": {
-      "matched": "grid:lookup(a%10=7,b%10=7)",
-      "top_logits": [
-       "apphire",
-       "五一",
-       "载",
-       "pring",
-       "REA"
-      ],
-      "example": " 1762, London – 31 October 1⟦8⟧42, London) was the Chief Rabbi of Great Britain, ",
-      "grid_class": "lookup(a%10=7,b%10=7)",
-      "on_pair_frac_of_max": 0.336
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 27,
-     "feature": 53172,
-     "position": 10,
-     "act": 5.5312,
-     "influence": 0.000549,
-     "evidence": {
-      "matched": "grid:lookup(a%10=0,b%10=9)",
-      "top_logits": [
-       " formation",
-       " Speaking",
-       " Formation",
-       "PerPixel",
-       "Formation"
-      ],
-      "example": " Determine the value of $S_{15}$.⏎A) ⟦1⟧625⏎B) 1695⏎C)",
-      "grid_class": "lookup(a%10=0,b%10=9)",
-      "on_pair_frac_of_max": 0.376
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 25,
-     "feature": 101598,
-     "position": 10,
-     "act": 5.1875,
-     "influence": 0.00074,
-     "evidence": {
-      "matched": "grid:lookup(a%10=7,b%10=9)",
-      "top_logits": [
-       "暑期",
-       "七八",
-       " seven",
-       " Seventh",
-       " seventh"
-      ],
-      "example": " 6, Issue 2, Page 874 - ⟦8⟧88DOI: https://doij.org/10.1",
-      "grid_class": "lookup(a%10=7,b%10=9)",
-      "on_pair_frac_of_max": 0.337
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 30,
-     "feature": 45542,
-     "position": 10,
-     "act": 5.0938,
-     "influence": 0.0028,
-     "evidence": {
-      "matched": "grid:lookup(a%10=1,b%10=4)",
-      "top_logits": [
-       " Fourth",
-       " FOUR",
-       " fourth",
-       "4",
-       "四是"
-      ],
-      "example": " from the set {1, 2, 3, 4⟦,⟧ 5, 6, 7, 8}, the positive",
-      "grid_class": "lookup(a%10=1,b%10=4)",
-      "on_pair_frac_of_max": 0.206
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 21% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 23,
-     "feature": 77189,
-     "position": 10,
-     "act": 4.9062,
-     "influence": 0.00117,
-     "evidence": {
-      "matched": "grid:lookup(a%10=2,b%10=2)",
-      "top_logits": [
-       "cles",
-       "erot",
-       "GN",
-       "gress",
-       "�性"
-      ],
-      "example": "6. Participants were followed for 25 years until January 2⟦0⟧11; the presence of risk",
-      "grid_class": "lookup(a%10=2,b%10=2)",
-      "on_pair_frac_of_max": 0.366
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 112773,
-     "position": 10,
-     "act": 4.7812,
-     "influence": 0.001153,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "前三",
-       "сор",
-       "火",
-       "诒",
-       "前"
-      ],
-      "example": " storm today. Winds are reaching 80 knots; that's ⟦9⟧2 mph. The waves are kicking up and s",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.583
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 24,
-     "feature": 9107,
-     "position": 10,
-     "act": 4.7188,
-     "influence": 0.002034,
-     "evidence": {
-      "matched": "grid:lookup(a%10=4,b%10=4)",
-      "top_logits": [
-       "四个",
-       " Four",
-       "第四",
-       " fourth",
-       " Fourth"
-      ],
-      "example": " past 10 years or more;⏎Making a total of 1⟦0⟧9 countries which have abolished the death p",
-      "grid_class": "lookup(a%10=4,b%10=4)",
-      "on_pair_frac_of_max": 0.201
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 20% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 26,
-     "feature": 138203,
-     "position": 10,
-     "act": 4.625,
-     "influence": 0.000758,
-     "evidence": {
-      "matched": "grid:lookup(a%10=2,b%10=2)",
-      "top_logits": [
-       "想起了",
-       "plotlib",
-       "你知道",
-       "驷",
-       "<Class"
-      ],
-      "example": " mi)|⏎|• Density||380/km2 (⟦9⟧90/sq mi)|⏎|Racial makeup (200",
-      "grid_class": "lookup(a%10=2,b%10=2)",
-      "on_pair_frac_of_max": 0.359
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 22567,
-     "position": 10,
-     "act": 4.5938,
-     "influence": 0.000735,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6)",
-      "top_logits": [
-       " khoá",
-       "团",
-       "广",
-       " world",
-       " Trip"
-      ],
-      "example": "60 km there and 60 km back, which is ⟦1⟧20 km total. Got that.⏎⏎Now, for the total time",
-      "grid_class": "lookup(a%10=6,b%10=6)",
-      "on_pair_frac_of_max": 0.517
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 60793,
-     "position": 10,
-     "act": 4.3125,
-     "influence": 0.0009,
-     "evidence": {
-      "matched": "grid:lookup(a%10=4,b%10=4)",
-      "top_logits": [
-       "内饰",
-       "iture",
-       " repeat",
-       " Repeat",
-       "Repeat"
-      ],
-      "example": "’s description was composed of two brief sentences in the June 19⟦3⟧9 Annals of the Entomo",
-      "grid_class": "lookup(a%10=4,b%10=4)",
-      "on_pair_frac_of_max": 0.531
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 23,
-     "feature": 27410,
-     "position": 10,
-     "act": 3.3906,
-     "influence": 0.00115,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=0)",
-      "top_logits": [
-       "掳",
-       "释",
-       " hin",
-       ".Dispatcher",
-       "ur"
-      ],
-      "example": "2 people, (101, 759 males and⟦ ⟧134,223 females) are living with HIV in",
-      "grid_class": "lookup(a%10=9,b%10=0)",
-      "on_pair_frac_of_max": 0.261
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 26% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 23,
-     "feature": 11227,
-     "position": 10,
-     "act": 3.3438,
-     "influence": 0.000577,
-     "evidence": {
-      "matched": "grid:lookup(a%10=7,b%10=7)",
-      "top_logits": [
-       " conformity",
-       " equal",
-       " conform",
-       " conforms",
-       "使之"
-      ],
-      "example": " by power plants. Simply by requiring the worst-polluting plants to⟦ match⟧ the performanc",
-      "grid_class": "lookup(a%10=7,b%10=7)",
-      "on_pair_frac_of_max": 0.225
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 22% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 30,
-     "feature": 42436,
-     "position": 10,
-     "act": 3.125,
-     "influence": 0.000769,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=0)",
-      "top_logits": [
-       "headed",
-       "融入",
-       "服",
-       "owed",
-       "融"
-      ],
-      "example": " those together gives 7 + 3.5 = 10⟦.⟧5 cm. So",
-      "grid_class": "lookup(a%10=5,b%10=0)",
-      "on_pair_frac_of_max": 0.261
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 26% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 23,
-     "feature": 148640,
-     "position": 10,
-     "act": 3.1094,
-     "influence": 0.000721,
-     "evidence": {
-      "matched": "grid:lookup(a%10=3,b%10=3)",
-      "top_logits": [
-       " Buster",
-       "arcer",
-       "姿势",
-       "enta",
-       "与其他"
-      ],
-      "example": " working a regular soil garden you will need 30 sqm (⟦3⟧20 sqf) to feed a typical family o",
-      "grid_class": "lookup(a%10=3,b%10=3)",
-      "on_pair_frac_of_max": 0.183
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 18% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 26,
-     "feature": 83744,
-     "position": 10,
-     "act": 2.9062,
-     "influence": 0.000533,
-     "evidence": {
-      "matched": "grid:lookup(a%10=1,b%10=6)",
-      "top_logits": [
-       "纵",
-       " Brett",
-       "Translated",
-       "此时",
-       " dl"
-      ],
-      "example": " = 0$⏎⏎B: $x + 4y - ⟦1⟧0 = 0$⏎⏎C: $x + 4y -",
-      "grid_class": "lookup(a%10=1,b%10=6)",
-      "on_pair_frac_of_max": 0.276
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 28% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 105059,
-     "position": 10,
-     "act": 2.875,
-     "influence": 0.000449,
-     "evidence": {
-      "matched": "grid:lookup(a%10=4,b%10=5)",
-      "top_logits": [
-       "负责",
-       " strtok",
-       "ToStr",
-       "自称",
-       "drs"
-      ],
-      "example": "10.54-0.31=34.⟦7⟧2 \\text{ (billion rubles)}⏎\\]⏎⏎b)",
-      "grid_class": "lookup(a%10=4,b%10=5)",
-      "on_pair_frac_of_max": 0.207
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 21% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 23,
-     "feature": 38932,
-     "position": 10,
-     "act": 2.5312,
-     "influence": 0.000593,
-     "evidence": {
-      "matched": "grid:lookup(a%10=1,b%10=1)",
-      "top_logits": [
-       "感官",
-       "plates",
-       "读后感",
-       "电台",
-       "瓒"
-      ],
-      "example": " for women.⏎“And the life expectancy for South Africa is estimated at ⟦6⟧4.7 years.”⏎A pro",
-      "grid_class": "lookup(a%10=1,b%10=1)",
-      "on_pair_frac_of_max": 0.28
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 28% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 32751,
-     "position": 10,
-     "act": 2.2656,
-     "influence": 0.000457,
-     "evidence": {
-      "matched": "grid:lookup(a%10=7,b%10=5)",
-      "top_logits": [
-       "wpdb",
-       " LPC",
-       "不成",
-       "acy",
-       "elly"
-      ],
-      "example": " now. However, according to reports in the Nature Energy on September ⟦1⟧2th 2016, researc",
-      "grid_class": "lookup(a%10=7,b%10=5)",
-      "on_pair_frac_of_max": 0.245
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 25% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 27,
-     "feature": 72987,
-     "position": 10,
-     "act": 2.2188,
-     "influence": 0.001534,
-     "evidence": {
-      "matched": "grid:lookup(a%10=2,b%10=3)",
-      "top_logits": [
-       " five",
-       " fifth",
-       "第五",
-       " Fifth",
-       "5"
-      ],
-      "example": " the last 8 years and we believe 23 sqm (⟦2⟧50 sqft) of AP gardening space is needed to fe",
-      "grid_class": "lookup(a%10=2,b%10=3)",
-      "on_pair_frac_of_max": 0.307
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 22,
-     "feature": 82908,
-     "position": 10,
-     "act": 1.7422,
-     "influence": 0.000508,
-     "evidence": {
-      "matched": "grid:lookup(a%10=0,b%10=0)",
-      "top_logits": [
-       " modeling",
-       "伦理",
-       "Pan",
-       "俯",
-       "angu"
-      ],
-      "example": " 3⏎⏎and⏎⏎n + 5 = 0 => n⟦ =⟧ -5⏎⏎So, the critical points are at n = -5",
-      "grid_class": "lookup(a%10=0,b%10=0)",
-      "on_pair_frac_of_max": 0.248
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 25% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 27,
-     "feature": 133070,
-     "position": 10,
-     "act": 1.6641,
-     "influence": 0.00087,
-     "evidence": {
-      "matched": "grid:lookup(a%10=1,b%10=1)",
-      "top_logits": [
-       "6",
-       "清明",
-       "5",
-       "4",
-       "3"
-      ],
-      "example": " later to Olive Sergeant. The Colt family included eight siblings: five boys⟦ and⟧ three g",
-      "grid_class": "lookup(a%10=1,b%10=1)",
-      "on_pair_frac_of_max": 0.232
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 23% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 25,
-     "feature": 42677,
-     "position": 10,
-     "act": 1.3125,
-     "influence": 0.000757,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9)",
-      "top_logits": [
-       "3",
-       "第八",
-       " third",
-       "三是",
-       "8"
-      ],
-      "example": "1868 to 1948, a span of⟦ ⟧80 years, a New Yorker was on the presidential ticket every elec",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.041
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 4% of grid max — verify the receptive field really includes the studied pair"
+     "review": "approved",
+     "source": "explorer-export"
     }
-   ],
-   "note": "active multi-pair lookup lattices whose receptive fields include (6,9)"
+   ]
   },
   {
    "name": "sum = _5",
@@ -1457,73 +966,13 @@
    "position": "final",
    "members": [
     {
-     "layer": 34,
-     "feature": 51125,
-     "position": 10,
-     "act": 105.0,
-     "influence": 0.062079,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "-five",
-       " fifth",
-       " Five",
-       " five",
-       "五"
-      ],
-      "example": "8 pgs, HB, 6.25x9.⟦2⟧5, photos.<|im_end|>⏎<|im_start|>user⏎",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 33,
-     "feature": 150857,
-     "position": 10,
-     "act": 58.25,
-     "influence": 0.03856,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "-five",
-       " five",
-       " fifty",
-       " Five",
-       "5"
-      ],
-      "example": " even a way to slow disease progression:⏎HUMAN TOLL: About⟦ ⟧5.4 million Americans are suf",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 35,
-     "feature": 153400,
-     "position": 10,
-     "act": 41.0,
-     "influence": 0.008652,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       " Fifty",
-       "第五届",
-       "五千",
-       " Fifth",
-       "５"
-      ],
-      "example": ", much like the Voting Rights Act that would follow in 19⟦6⟧5.⏎PBS NewsHour has already st",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "approved"
-    },
-    {
      "layer": 27,
      "feature": 77434,
      "position": 10,
-     "act": 19.25,
-     "influence": 0.018176,
+     "act": 18.625,
+     "influence": 0.016277,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
        "５",
        "-five",
@@ -1532,120 +981,20 @@
        "5"
       ],
       "example": " male of this species weighed 4.77 kg (10⟦.⟧5 lb), whereas females can typically range up ",
-      "grid_class": "mod10-sum(r5)"
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.517
      },
-     "review": "approved"
-    },
-    {
-     "layer": 31,
-     "feature": 163379,
-     "position": 10,
-     "act": 17.625,
-     "influence": 0.008634,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "Friday",
-       "恙",
-       "律",
-       " пят",
-       "5"
-      ],
-      "example": "0 adults (13,500 men and 10⟦,⟧550 women) in the United States will be diagnosed with multi",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 30,
-     "feature": 158056,
-     "position": 10,
-     "act": 16.25,
-     "influence": 0.009952,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "five",
-       " Five",
-       " fifth",
-       " five",
-       "五"
-      ],
-      "example": "'s like a five-pointed star made by connecting every other vertex of⟦ a⟧ regular pentagon.",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 34,
-     "feature": 142632,
-     "position": 10,
-     "act": 15.8125,
-     "influence": 0.003617,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       " forty",
-       "6",
-       " Four",
-       " four",
-       "4"
-      ],
-      "example": "95 in total tax). In this example the rounding variance is .⟦0⟧5. The example is extreme. ",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 35,
-     "feature": 123414,
-     "position": 10,
-     "act": 15.6875,
-     "influence": 0.016225,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "фт",
-       "GER",
-       "wik",
-       "gué",
-       "TÜ"
-      ],
-      "example": "<think>⏎Okay, so I need to find the minimum value of μ⟦�⟧�, which is the ratio of the maxi",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 32,
-     "feature": 158872,
-     "position": 10,
-     "act": 15.0,
-     "influence": 0.006895,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "津贴",
-       "追究",
-       "aket",
-       "供货",
-       "5"
-      ],
-      "example": " 33... Hmm, 24 plus 30 is⟦ ⟧54, and then plus 3 more is 57.",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 29,
      "feature": 80619,
      "position": 10,
-     "act": 14.625,
-     "influence": 0.009466,
+     "act": 15.25,
+     "influence": 0.009096,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
        " May",
        "五个",
@@ -1654,98 +1003,42 @@
        "5"
       ],
       "example": " was the 6th of May, a day which corresponds to the⟦ ⟧6th of November in the countries of ",
-      "grid_class": "mod10-sum(r5)"
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.529
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 30,
-     "feature": 4660,
+     "layer": 28,
+     "feature": 5743,
      "position": 10,
-     "act": 13.6875,
-     "influence": 0.001344,
+     "act": 11.0,
+     "influence": 0.001728,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "力量",
-       "一代",
-       "多样",
-       "劲",
-       "ournée"
+       " Shak",
+       "gü",
+       "畹",
+       "边",
+       "ileo"
       ],
-      "example": " found.⏎But the proportion of male births among the 4,7⟦8⟧5 women with shorter times to pr",
-      "grid_class": "mod10-sum(r5)"
+      "example": "0 B.C., after the time of Moses.⏎Genesis 12⟦:⟧6",
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.569
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 33,
-     "feature": 100969,
-     "position": 10,
-     "act": 13.1875,
-     "influence": 0.000896,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "狭",
-       "mono",
-       "铱",
-       "蚁",
-       "软"
-      ],
-      "example": " kilometers) out of 5,930 miles (9,⟦5⟧45 kilometers) of surveyed shoreline affected by the",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 32,
-     "feature": 47778,
-     "position": 10,
-     "act": 10.375,
-     "influence": 0.000986,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       " Qur",
-       "吉祥",
-       "隽",
-       "sten",
-       "boss"
-      ],
-      "example": "⏎- Acta tropica 2011 v.1⟦1⟧7 no.1 pp. 14-18⏎-",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 32,
-     "feature": 87496,
-     "position": 10,
-     "act": 9.6875,
-     "influence": 0.004335,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "第五",
-       " Fifth",
-       " sixth",
-       "5",
-       " fifth"
-      ],
-      "example": " qualities of the soil. Lawn grass grows best at a soil pH between⟦ ⟧6.8 and 7.2. The test",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
      "layer": 28,
      "feature": 154805,
      "position": 10,
-     "act": 9.1875,
-     "influence": 0.000823,
+     "act": 8.5625,
+     "influence": 0.000759,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
        "亹",
        "conomy",
@@ -1754,1030 +1047,209 @@
        "�"
       ],
       "example": " than 7 percent, from 2.3 million to 2⟦.⟧5 million.⏎Employment across all industries and c",
-      "grid_class": "mod10-sum(r5)"
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.534
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 29,
-     "feature": 13694,
+     "layer": 27,
+     "feature": 72987,
      "position": 10,
-     "act": 9.125,
-     "influence": 0.006157,
+     "act": 3.875,
+     "influence": 0.002445,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       " Six",
-       " SIX",
-       " Eighth",
-       " eighth",
-       " seventh"
+       " five",
+       " fifth",
+       "第五",
+       " Fifth",
+       "5"
       ],
-      "example": " of Switzerland|⏎|• Total||8.94 km2 (⟦3⟧.45 sq mi)|⏎|Elevation||840",
-      "grid_class": "mod10-sum(r5)"
+      "example": " the last 8 years and we believe 23 sqm (⟦2⟧50 sqft) of AP gardening space is needed to fe",
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.535
      },
-     "review": "proposed"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 33,
-     "feature": 69931,
+     "layer": 26,
+     "feature": 138203,
      "position": 10,
-     "act": 4.4375,
-     "influence": 0.002156,
+     "act": 3.7344,
+     "influence": 0.000585,
      "evidence": {
-      "matched": "grid:mod10-sum(r5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "2",
-       "8",
-       "9",
-       "5",
-       "4"
+       "想起了",
+       "plotlib",
+       "你知道",
+       "驷",
+       "<Class"
       ],
-      "example": "ms||685.34 Sq. Kms||1⟦4⟧83 Sq.Km|⏎|As per 2001",
-      "grid_class": "mod10-sum(r5)"
+      "example": " mi)|⏎|• Density||380/km2 (⟦9⟧90/sq mi)|⏎|Racial makeup (200",
+      "grid_class": "mod10-sum(r5)",
+      "on_pair_frac_of_max": 0.272
      },
-     "review": "proposed"
-    },
-    {
-     "layer": 33,
-     "feature": 59163,
-     "position": 10,
-     "act": 3.6719,
-     "influence": 0.000533,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "了一遍",
-       "pha",
-       "пу",
-       "喜",
-       "prise"
-      ],
-      "example": " It means, an enormous 40,000 km (⟦2⟧4,850 miles) or the distance around the world.",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 32,
-     "feature": 131843,
-     "position": 10,
-     "act": 3.2812,
-     "influence": 0.000715,
-     "evidence": {
-      "matched": "grid:mod10-sum(r5)",
-      "top_logits": [
-       "uncate",
-       "拿来",
-       " gent",
-       "尧",
-       "用来"
-      ],
-      "example": " the Update Sequence Array in this particular case is 30h or⟦ ⟧42 decimal. If you look 42 ",
-      "grid_class": "mod10-sum(r5)"
-     },
-     "review": "proposed"
-    }
-   ],
-   "note": "residue-5 sum features (95 % 10); other-residue mod10-sum features that are also active on this prompt are deliberately excluded"
-  },
-  {
-   "name": "sum ~95 (low precision)",
-   "paper_name": "sum ~92-analogue",
-   "role": "readout",
-   "graph": "first",
-   "position": "final",
-   "members": [
-    {
-     "layer": 33,
-     "feature": 47962,
-     "position": 9,
-     "act": 29.125,
-     "influence": 0.022195,
-     "evidence": {
-      "matched": "grid:magnitude-diag",
-      "top_logits": [
-       "Nine",
-       "-nine",
-       " Nine",
-       " nine",
-       "九"
-      ],
-      "example": " paintings and other remains testify.⏎2 On August 24, ⟦7⟧9 C.E., Mount Vesuvius began to e",
-      "grid_class": "magnitude-diag"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 34,
-     "feature": 61077,
-     "position": 9,
-     "act": 14.4375,
-     "influence": 0.014787,
-     "evidence": {
-      "matched": "grid:magnitude-diag",
-      "top_logits": [
-       " الخبر",
-       "iko",
-       "gesch",
-       "_DEST",
-       "��"
-      ],
-      "example": " The outcome of the various conferences held, from Agenda 21 (⟦1⟧992), through the Barbado",
-      "grid_class": "magnitude-diag"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 32,
-     "feature": 6999,
-     "position": 9,
-     "act": 12.125,
-     "influence": 0.002647,
-     "evidence": {
-      "matched": "grid:magnitude-diag",
-      "top_logits": [
-       " Battle",
-       "foreign",
-       "腔",
-       " esl",
-       "stalk"
-      ],
-      "example": " a pseudonymous person or persons named Satoshi Nakamoto in 20⟦0⟧9 and has since gone on t",
-      "grid_class": "magnitude-diag"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 34,
-     "feature": 84117,
-     "position": 9,
-     "act": 7.0,
-     "influence": 0.00052,
-     "evidence": {
-      "matched": "grid:magnitude-diag",
-      "top_logits": [
-       "4",
-       "5",
-       "Over",
-       " over",
-       " Over"
-      ],
-      "example": " multidrug-resistant tuberculosis are successfully treated.⏎The Belarus trial success rate",
-      "grid_class": "magnitude-diag"
-     },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     }
    ]
   },
   {
-   "name": "lookup (9,9) donors",
-   "paper_name": "_9+_9",
+   "name": "lookup (_9+_9) donors",
+   "paper_name": "lookup (_9+_9) donors",
    "role": "donor",
-   "graph": "donor99",
+   "graph": "donor",
    "position": "final",
    "members": [
     {
      "layer": 23,
-     "feature": 25848,
+     "feature": 71826,
      "position": 10,
-     "act": 18.125,
-     "influence": 0.003999,
+     "act": 12.625,
+     "influence": 0.002771,
      "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "彼",
-       "uld",
-       " ups",
-       "าร",
-       "wal"
+       "iko",
+       " Redistributions",
+       " tail",
+       "理解和",
+       "Bulletin"
       ],
-      "example": " (c.1490 – 95-c.1⟦5⟧67) were two artists known to have produced portraits like this.",
+      "example": ".Kms||891.09 Sq.Kms||1⟦4⟧83 Sq.Km|⏎The increment of Delhi's population from the",
       "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.792
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 42677,
-     "position": 10,
-     "act": 18.125,
-     "influence": 0.011643,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "3",
-       "第八",
-       " third",
-       "三是",
-       "8"
-      ],
-      "example": "1868 to 1948, a span of⟦ ⟧80 years, a New Yorker was on the presidential ticket every elec",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.571
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 127159,
-     "position": 10,
-     "act": 10.4375,
-     "influence": 0.004641,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       " three",
-       " VIII",
-       " üç",
-       " Three",
-       "三是"
-      ],
-      "example": " hole decreased in size to about 22 million square kilometers (8⟦.⟧5 million square miles)",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.722
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 23,
-     "feature": 23014,
-     "position": 10,
-     "act": 8.3125,
-     "influence": 0.002097,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "quina",
-       "匿名",
-       " democr",
-       "民主",
-       "nnen"
-      ],
-      "example": "4-0.8 °C (0.72-1⟦.⟧44 °F) over this period of time.⏎A warmer earth",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.831
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 27,
-     "feature": 88511,
-     "position": 10,
-     "act": 7.875,
-     "influence": 0.001932,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       " griev",
-       "聊",
-       "谈",
-       " hex",
-       " сто"
-      ],
-      "example": ".3 per 100,000 (a ⟦4⟧0% rise).⏎But while death",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.464
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 23,
-     "feature": 112773,
-     "position": 10,
-     "act": 7.0,
-     "influence": 0.001802,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "前三",
-       "сор",
-       "火",
-       "诒",
-       "前"
-      ],
-      "example": " storm today. Winds are reaching 80 knots; that's ⟦9⟧2 mph. The waves are kicking up and s",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.845
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 24,
-     "feature": 47294,
-     "position": 10,
-     "act": 6.9375,
-     "influence": 0.001665,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       " ten",
-       " ninety",
-       "九",
-       " ninth",
-       " nine"
-      ],
-      "example": " the religion followed by majority (90%) is Christianity. The remaining⟦ ⟧10% of the popul",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.384
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 24,
-     "feature": 130991,
-     "position": 10,
-     "act": 6.7812,
-     "influence": 0.001904,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "lab",
-       ".connections",
-       "ivor",
-       "假装",
-       "ched"
-      ],
-      "example": " Before it Happens⏎National Fire Prevention Week, October 9-⟦1⟧5⏎With National Fire Preven",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.285
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 29% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 24,
-     "feature": 57260,
-     "position": 10,
-     "act": 6.0,
-     "influence": 0.001811,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "тан",
-       " vere",
-       " Nin",
-       " tú",
-       "十九"
-      ],
-      "example": " before in Cameroon.⏎Lake Kivu is a 90 kilometers⟦ (⟧56 miles) long and 50 km (31 miles",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.752
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 25,
-     "feature": 121292,
-     "position": 10,
-     "act": 5.5938,
-     "influence": 0.001074,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "okin",
-       "rozen",
-       "enn",
-       "三个方面",
-       " dozen"
-      ],
-      "example": " others as a brake. Together, they regulate every one of the ⟦2⟧.5 billion heartbeats most",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.886
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 31,
-     "feature": 149850,
-     "position": 10,
-     "act": 5.125,
-     "influence": 0.001387,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "３",
-       "４",
-       "4",
-       "3",
-       "eka"
-      ],
-      "example": "|Extent||20,004 km / 12⟦,⟧430 mi North-South|⏎40,008",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.168
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 17% of grid max — verify the receptive field really includes the studied pair"
-    },
-    {
-     "layer": 16,
-     "feature": 155835,
-     "position": 10,
-     "act": 4.2812,
-     "influence": 0.000863,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "�",
-       "ENA",
-       " AppState",
-       "Bat",
-       "roots"
-      ],
-      "example": "50 A.D. and was inhabited continuously until around 13⟦0⟧0 A.D., when the Anasazi left the",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.493
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 26,
-     "feature": 53416,
-     "position": 10,
-     "act": 2.8125,
-     "influence": 0.000598,
-     "evidence": {
-      "matched": "grid:lookup(a%10=9,b%10=9) a_top=9 b_top=9",
-      "top_logits": [
-       "两个月",
-       "&utm",
-       "绢",
-       "twitter",
-       "十二条"
-      ],
-      "example": "arsecs/second, or 6.5 x 10⟦^⟧28 megaparsecs/Planck time.⏎I am not",
-      "grid_class": "lookup(a%10=9,b%10=9)",
-      "on_pair_frac_of_max": 0.174
-     },
-     "review": "proposed",
-     "review_note": "on-pair activation only 17% of grid max — verify the receptive field really includes the studied pair"
-    }
-   ],
-   "note": "swap donor; injected value = +1x the stored act (paper +1x)"
-  },
-  {
-   "name": "add function (hunt)",
-   "paper_name": "add _9 / add ~57",
-   "role": "annotation",
-   "graph": "ones",
-   "position": "final",
-   "members": [
-    {
-     "layer": 33,
-     "feature": 152007,
-     "position": 10,
-     "act": 7.7812,
-     "influence": 0.000487,
-     "evidence": {
-      "matched": "grid:mod10-b(r9)",
-      "top_logits": [
-       "ionale",
-       "archs",
-       "趟",
-       " idiots",
-       "noinspection"
-      ],
-      "example": " And⏎Current location: There⏎Member since: Fri Jun 1⟦1⟧, 2004, 11:37 AM",
-      "grid_class": "mod10-b(r9)"
+      "on_pair_frac_of_max": 0.809
      },
      "review": "approved",
-     "review_note": "add-function candidate — verify labels/examples read as add-semantics and the grid visually shows a clean one-operand stripe/band (v1's single nominal flag was rejected as a diffuse texture)"
+     "source": "explorer-export"
     },
     {
-     "layer": 25,
-     "feature": 28983,
+     "layer": 23,
+     "feature": 52459,
      "position": 10,
-     "act": 2.5,
-     "influence": 0.000459,
+     "act": 4.9688,
+     "influence": 0.000819,
      "evidence": {
-      "matched": "grid:mod10-b(r9)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "ỏi",
-       "tags",
-       "orsch",
-       " tags",
-       "uger"
+       "一大",
+       "bucks",
+       "ilen",
+       "option",
+       "iqué"
       ],
-      "example": " broken, (7,755 record highs and 7,⟦5⟧17 record high overnight lows), according to Chris V",
-      "grid_class": "mod10-b(r9)"
+      "example": "What is the resultant displacement ?⏎The body travels a total distance of ⟦1⟧2 km east, wh",
+      "grid_class": "lookup(a%10=9,b%10=9)",
+      "on_pair_frac_of_max": 0.696
      },
      "review": "approved",
-     "review_note": "add-function candidate — verify labels/examples read as add-semantics and the grid visually shows a clean one-operand stripe/band (v1's single nominal flag was rejected as a diffuse texture)"
-    }
-   ],
-   "note": "EXPECTED (EFFECTIVELY) EMPTY — the paper's add-function class at the answer position is a measured negative on Qwen3-4B: the pair-consistent scan yields only junk-labeled candidates. The operator-token mostly-active signature remains the only add-function-adjacent finding."
-  },
-  {
-   "name": "input 46 (exact)",
-   "paper_name": "36-analogue",
-   "role": "annotation",
-   "graph": "ones",
-   "position": null,
-   "members": [
-    {
-     "layer": 8,
-     "feature": 19799,
-     "position": 5,
-     "act": 4.3438,
-     "influence": 0.000627,
-     "evidence": {
-      "matched": "grid:exact-cross(46)",
-      "top_logits": [
-       "indexes",
-       "icit",
-       "iless",
-       " Adopt",
-       "序"
-      ],
-      "example": " is +7 3537; postal codes - 4⟦6⟧2400-462455.⏎Orsk",
-      "grid_class": "exact-cross(46)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 6,
-     "feature": 107963,
-     "position": 5,
-     "act": 3.7188,
-     "influence": 0.001527,
-     "evidence": {
-      "matched": "grid:exact-cross(46)",
-      "top_logits": [
-       "新闻发布",
-       "der",
-       "滑",
-       "一批",
-       "一大批"
-      ],
-      "example": " ensure GPS relay accuracy. The satellite constellation is operated by the 4⟦6⟧0th Space W",
-      "grid_class": "exact-cross(46)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 7,
-     "feature": 52753,
-     "position": 5,
-     "act": 2.375,
-     "influence": 0.000514,
-     "evidence": {
-      "matched": "grid:exact-cross(46)",
-      "top_logits": [
-       "nger",
-       ".functional",
-       "Copying",
-       "ibold",
-       "Extras"
-      ],
-      "example": " The united states and mexico went to war in may 184⟦6⟧ 18-12-1983 an essay on",
-      "grid_class": "exact-cross(46)"
-     },
-     "review": "approved"
-    }
-   ],
-   "note": "exact-value input class (fires whenever either operand IS the value); descriptive — no experiment steers it"
-  },
-  {
-   "name": "input 49 (exact)",
-   "paper_name": "59-analogue",
-   "role": "annotation",
-   "graph": "ones",
-   "position": null,
-   "members": [
-    {
-     "layer": 8,
-     "feature": 15033,
-     "position": 8,
-     "act": 4.5938,
-     "influence": 0.000984,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "整体",
-       " youngest",
-       "煜",
-       "(ns",
-       "_ns"
-      ],
-      "example": " who compromised the interests of the people.”⏎Remembering Malcolm X 4⟦9⟧ Years On⏎by Ama ",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 7,
-     "feature": 31501,
-     "position": 8,
-     "act": 4.3438,
-     "influence": 0.000958,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "isa",
-       " guessed",
-       " leap",
-       " Guess",
-       " guess"
-      ],
-      "example": "<|im_start|>user⏎Phone: +4⟦9⟧ (0) 106-3362⏎N",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 5,
-     "feature": 130519,
-     "position": 8,
-     "act": 3.1875,
-     "influence": 0.0017,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "听过",
-       "更像是",
-       "endcode",
-       " tread",
-       "lood"
-      ],
-      "example": " is the delicate communication between employers and employees working in exchange of pay.",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 6,
-     "feature": 115861,
-     "position": 8,
-     "act": 2.6562,
-     "influence": 0.000858,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "比亚",
-       " stab",
-       "FFE",
-       " essentials",
-       "ByUrl"
-      ],
-      "example": "90 expulsion of the Jews from England and the notorious 14⟦9⟧2 expulsion of the Jews from ",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 6,
-     "feature": 145952,
-     "position": 8,
-     "act": 2.3438,
-     "influence": 0.000937,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "涂层",
-       "衰",
-       "iode",
-       "istes",
-       "齿"
-      ],
-      "example": " for maintaining grid discipline and a frequency variation in the range of 4⟦9⟧.5 to 50.5 ",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 7,
-     "feature": 114780,
-     "position": 8,
-     "act": 2.0938,
-     "influence": 0.000662,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "_hi",
-       "澄清",
-       "玳",
-       " equivalence",
-       "抽烟"
-      ],
-      "example": " of the world’s population will be urban (compared to 4⟦9⟧ percent today). Income levels w",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "approved"
-    }
-   ],
-   "overflow": [
-    {
-     "layer": 5,
-     "feature": 80730,
-     "position": 8,
-     "act": 1.6328,
-     "influence": 0.000864,
-     "evidence": {
-      "matched": "grid:exact-cross(49)",
-      "top_logits": [
-       "bras",
-       "ьте",
-       "再来",
-       "pé",
-       "ooks"
-      ],
-      "example": "io became a holding of the United States. The 1,4⟦9⟧1 acre base was decommissioned in 1989",
-      "grid_class": "exact-cross(49)"
-     },
-     "review": "proposed"
-    }
-   ],
-   "note": "exact-value input class (fires whenever either operand IS the value); descriptive — no experiment steers it"
-  },
-  {
-   "name": "magnitude lookup (~46+~49)",
-   "paper_name": "~36+~60",
-   "role": "annotation",
-   "graph": "first",
-   "position": "final",
-   "members": [
-    {
-     "layer": 23,
-     "feature": 110614,
-     "position": 9,
-     "act": 12.4375,
-     "influence": 0.002511,
-     "evidence": {
-      "matched": "grid:region(~44,~44)",
-      "top_logits": [
-       " covered",
-       "invoke",
-       "弟兄",
-       "igion",
-       "不高"
-      ],
-      "example": "4%. B) 5.41%. C) 5⟦.⟧14%.⏎Question 12 - #9361",
-      "grid_class": "region(~44,~44)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 31,
-     "feature": 117236,
-     "position": 9,
-     "act": 6.625,
-     "influence": 0.003385,
-     "evidence": {
-      "matched": "grid:region(~8,~9)",
-      "top_logits": [
-       "8",
-       "6",
-       "3",
-       "2",
-       "1"
-      ],
-      "example": ". It's certainly much easier to spot when using larger 20⟦x⟧80 models. Small telescopes fa",
-      "grid_class": "region(~8,~9)"
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 34,
-     "feature": 5752,
-     "position": 9,
-     "act": 4.875,
-     "influence": 0.000572,
-     "evidence": {
-      "matched": "grid:region(~5,~4)",
-      "top_logits": [
-       " D",
-       " S",
-       " As",
-       " B",
-       " A"
-      ],
-      "example": "th ed next topic strategic management process. Ccssela-literacyw⟦9⟧-101 write arguments to",
-      "grid_class": "region(~5,~4)"
-     },
-     "review": "approved"
+     "source": "explorer-export"
     },
     {
      "layer": 23,
-     "feature": 80322,
-     "position": 9,
-     "act": 4.2812,
-     "influence": 0.001011,
+     "feature": 35041,
+     "position": 10,
+     "act": 4.3125,
+     "influence": 0.000685,
      "evidence": {
-      "matched": "grid:region(~7,~6)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "同时",
-       "搞得",
-       "AD",
-       "配料",
-       "灾难"
+       " controls",
+       "+l",
+       " mart",
+       " martin",
+       "trib"
       ],
-      "example": ".⏎⏎Let me calculate the numerator first. 1 times 4 is⟦ ⟧4, and then 4 times 9... Hmm, 4",
-      "grid_class": "region(~7,~6)"
+      "example": ".Kms||891.09 Sq.Kms||1⟦4⟧83 Sq.Km|⏎The increment of Delhi's population from the",
+      "grid_class": "lookup(a%10=9,b%10=9)",
+      "on_pair_frac_of_max": 0.903
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 14,
-     "feature": 67294,
-     "position": 9,
-     "act": 4.0,
-     "influence": 0.000745,
+     "layer": 23,
+     "feature": 154284,
+     "position": 10,
+     "act": 3.8125,
+     "influence": 0.000938,
      "evidence": {
-      "matched": "grid:region(~7,~7)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "铎",
-       "mino",
-       " aide",
-       "见识",
-       "nish"
+       "幽",
+       "边",
+       "ante",
+       "议",
+       "甚"
       ],
-      "example": " elaborate Rube Goldberg process to show that 2 + 2 equ⟦aled⟧ 4. I didn’t see the use of i",
-      "grid_class": "region(~7,~7)"
+      "example": " Ferdinando's son Giuseppe (1696–1⟦7⟧57), the most distinguished of the family, remained i",
+      "grid_class": "mod10-a(r9)",
+      "on_pair_frac_of_max": 0.587
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
     },
     {
-     "layer": 13,
-     "feature": 28313,
-     "position": 9,
-     "act": 3.5312,
-     "influence": 0.000645,
+     "layer": 21,
+     "feature": 133693,
+     "position": 10,
+     "act": 2.0312,
+     "influence": 0.000538,
      "evidence": {
-      "matched": "grid:region(~5,~5)",
+      "matched": "manual (explorer export)",
       "top_logits": [
-       "alous",
-       "олов",
-       "打击",
-       "包容",
-       "ongan"
+       " reflect",
+       "丛林",
+       "栽",
+       " reflects",
+       "灰色"
       ],
-      "example": " is it just a thought, because after all, two and two is⟦ four⟧, whether you know it or no",
-      "grid_class": "region(~5,~5)"
+      "example": "0.1108/S1479-36⟦3⟧620140000003",
+      "grid_class": "mod10-b(r9)",
+      "on_pair_frac_of_max": 0.451
      },
-     "review": "approved"
+     "review": "approved",
+     "source": "explorer-export"
+    },
+    {
+     "layer": 23,
+     "feature": 74931,
+     "position": 10,
+     "act": 1.1875,
+     "influence": 0.000463,
+     "evidence": {
+      "matched": "manual (explorer export)",
+      "top_logits": [
+       "inces",
+       " castle",
+       "-anchor",
+       " cref",
+       "[assembly"
+      ],
+      "example": ",595 sq km, water: 116,⟦6⟧00 sq km. This sovereign state is almost 2.5",
+      "grid_class": "mod10-b(r9)",
+      "on_pair_frac_of_max": 0.576
+     },
+     "review": "approved",
+     "source": "explorer-export"
     }
-   ],
-   "overflow": [
-    {
-     "layer": 11,
-     "feature": 131368,
-     "position": 9,
-     "act": 2.7656,
-     "influence": 0.000578,
-     "evidence": {
-      "matched": "grid:region(~6,~5)",
-      "top_logits": [
-       " impunity",
-       " amph",
-       "SED",
-       " Annex",
-       "inci"
-      ],
-      "example": " answer to the question \"why is 1+1 equal to ⟦2⟧?\", which plays a special role in the stor",
-      "grid_class": "region(~6,~5)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 25,
-     "feature": 30914,
-     "position": 9,
-     "act": 2.1875,
-     "influence": 0.000493,
-     "evidence": {
-      "matched": "grid:region(~48,~48)",
-      "top_logits": [
-       " verk",
-       "infra",
-       "avel",
-       "_OC",
-       "arez"
-      ],
-      "example": " Cuckoo. The Greater Ani is about 48 cm⟦ (⟧19 in) long and weighs 170 g (6",
-      "grid_class": "region(~48,~48)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 31,
-     "feature": 4627,
-     "position": 9,
-     "act": 2.0469,
-     "influence": 0.000456,
-     "evidence": {
-      "matched": "grid:region(~49,~43)",
-      "top_logits": [
-       "ective",
-       "恃",
-       "berg",
-       "rium",
-       "醒"
-      ],
-      "example": ",$ and $y$ have an average (arithmetic mean) of⟦ $⟧20$. What is the average of $x$ and $y",
-      "grid_class": "region(~49,~43)"
-     },
-     "review": "proposed"
-    },
-    {
-     "layer": 29,
-     "feature": 10391,
-     "position": 9,
-     "act": 2.0156,
-     "influence": 0.000688,
-     "evidence": {
-      "matched": "grid:region(~62,~49)",
-      "top_logits": [
-       "七年",
-       "８",
-       " eighth",
-       "8",
-       "八年"
-      ],
-      "example": " of an increase in average annual temperatures of 1.5-1⟦.⟧7°C and a drop in rainfall of be",
-      "grid_class": "region(~62,~49)"
-     },
-     "review": "proposed"
-    }
-   ],
-   "note": "2-D localized non-repeating blobs — the paper's wide/narrow magnitude-lookup class; descriptive — no experiment steers it"
+   ]
   },
   {
-   "name": "polymer-active lookups",
-   "paper_name": "_6+_9 (reuse)",
-   "role": "source",
-   "graph": "polymer-ones-moment",
+   "name": "reuse lookups (_6+_9)",
+   "paper_name": "reuse lookups (_6+_9)",
+   "role": "annotation",
+   "graph": "reuse",
    "position": "final",
-   "members": [
-    {
-     "layer": 24,
-     "feature": 163113,
-     "position": 10,
-     "act": 12.375,
-     "influence": 0.011672,
-     "evidence": {
-      "matched": "grid:lookup(a%10=3,b%10=9); active at polymer ones moment",
-      "top_logits": [
-       "二十五",
-       "5",
-       "五个",
-       " five",
-       "五大"
-      ],
-      "example": " 30-year period (1860s through 1⟦8⟧90s) as a part of the US Geological Survey’s explor",
-      "grid_class": "lookup(a%10=3,b%10=9)",
-      "on_pair_frac_of_max": 0.933
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 90687,
-     "position": 10,
-     "act": 18.5,
-     "influence": 0.008432,
-     "evidence": {
-      "matched": "grid:lookup(a%10=5,b%10=9); active at polymer ones moment",
-      "top_logits": [
-       "五一",
-       "6",
-       "五四",
-       "5",
-       "4"
-      ],
-      "example": "affney⏎Edwin Cannan (1861-1⟦9⟧35) is best known for his 1904 edition",
-      "grid_class": "lookup(a%10=5,b%10=9)",
-      "on_pair_frac_of_max": 0.552
-     },
-     "review": "approved"
-    },
-    {
-     "layer": 25,
-     "feature": 31548,
-     "position": 10,
-     "act": 18.25,
-     "influence": 0.005024,
-     "evidence": {
-      "matched": "grid:lookup(a%10=6,b%10=6); active at polymer ones moment",
-      "top_logits": [
-       "笞",
-       "五十",
-       "第五届",
-       "5",
-       "二十五"
-      ],
-      "example": " Dmitri Mendeleev, making 2019 its ⟦1⟧50th anniversary. To celebrate, the United Nations (",
-      "grid_class": "lookup(a%10=6,b%10=6)",
-      "on_pair_frac_of_max": 0.547
-     },
-     "review": "approved"
-    }
-   ],
-   "note": "members = lookup (6,9-class) ∩ active at 'K. Whang…, 199' predicting 5; acts are the polymer-moment activations"
+   "members": [],
+   "note": "absent after hand review (no group exported)"
   }
  ],
  "approved": true,
- "review_log": "2026-07-11: grid-principled selection reviewed by delegation (user waived the manual gate); rejections in REJECTED_MEMBERS; all other members approved"
+ "review_log": "grid-scan seeds accepted as-is by user instruction (2026-07-15): operand-plot labels judged all-pass; first-claim-wins de-overlap in build_addition_seed; ingested by build_supernodes.py --accept-seeds"
 }

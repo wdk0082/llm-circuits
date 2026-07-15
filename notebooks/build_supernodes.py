@@ -764,10 +764,20 @@ def build_addition_seed(size: str, root: Path, manifest: dict, graphs: dict, ctx
         return pred
 
     sns: list[dict] = []
+    claimed: dict[str, set[tuple[int, int]]] = defaultdict(set)
 
     def add_sn(name, cands, note=""):
         spec = names[name]
+        # First-claim-wins de-overlap: supernodes are disjoint, and a feature can match
+        # several grid predicates (e.g. a cross(36) operand feature is both "residue 6"
+        # and "exactly 36"). Group ORDER is the priority — required source groups
+        # (input _6/_9) precede the exact-value annotations, so they keep the shared
+        # operand features; later groups get only what's still unclaimed on their graph.
+        g = spec["graph"]
+        cands = [c for c in cands if (c["layer"], c["feature"]) not in claimed[g]]
         members, overflow = cap_members(cands, key=early_first)
+        for m in members:
+            claimed[g].add((m["layer"], m["feature"]))
         sns.append(
             supernode(
                 name,
@@ -1402,6 +1412,43 @@ def ingest_exports(size, files, root, manifest, graphs, review_log: str | None =
             )
 
 
+def materialize_addition_seed(seed: dict, graphs: dict) -> list[Path]:
+    """Write ``exports/groups_<graph>.json`` for every addition page FROM the seed
+    proposal — the "accept the grid-scan seeds as-is" flow, explicit and reproducible.
+
+    Addition seed members carry a single ``position`` and each supernode a single
+    ``graph``; a page's export lists that graph's non-empty seed groups with their
+    members (the schema the explorer's "Export groups" button produces). The seed is
+    already disjoint per graph (first-claim-wins in :func:`build_addition_seed`).
+    Returns the written paths (ingest with :func:`ingest_addition_exports`).
+    """
+    export_dir = SUPERNODE_DIR / "exports"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    pages: dict[str, list[dict]] = defaultdict(list)
+    for sn in seed["supernodes"]:
+        gname = sn["graph"]
+        if gname not in graphs or not sn["members"]:
+            continue
+        pages[gname].append(
+            {
+                "name": sn["name"],
+                "nodes": [
+                    {"layer": m["layer"], "feature_idx": m["feature"], "position": m["position"]}
+                    for m in sn["members"]
+                ],
+            }
+        )
+    written = []
+    for gname in sorted(pages):
+        out = export_dir / f"groups_{gname}.json"
+        out.write_text(
+            json.dumps({"example": gname, "groups": pages[gname]}, indent=1, ensure_ascii=False)
+        )
+        written.append(out)
+        print(f"  {out.name}: {len(pages[gname])} seeded groups materialized")
+    return written
+
+
 def materialize_seed_exports(seed: dict, graphs: dict) -> list[Path]:
     """Write ``exports/groups_<graph>.json`` for every multilingual page FROM the seed
     proposal — the "accept the seeds as-is" flow, made explicit and reproducible.
@@ -1452,8 +1499,14 @@ def main() -> None:
     ap.add_argument(
         "--materialize-seeds",
         action="store_true",
-        help="write exports/groups_<graph>.json FROM the seed proposal and ingest them"
-        " (the accept-seeds-as-is flow, recorded as such in the review_log)",
+        help="MULTILINGUAL: write exports/groups_<graph>.json FROM the seed proposal and"
+        " ingest them (the accept-seeds-as-is flow, recorded as such in the review_log)",
+    )
+    ap.add_argument(
+        "--accept-seeds",
+        action="store_true",
+        help="ADDITION: accept the grid-scan seeds as-is — materialize them to"
+        " exports/groups_<graph>.json and ingest into the approved addition file",
     )
     args = ap.parse_args()
 
@@ -1494,6 +1547,24 @@ def main() -> None:
             ingest_addition_exports(args.size, add_files, root, manifest, graphs, ctx)
         if ml_files:
             ingest_exports(args.size, ml_files, root, manifest, graphs)
+        return
+
+    if args.accept_seeds:
+        if ctx is None:
+            raise SystemExit("grids.npz missing — run build_supernode_inputs.py first")
+        seed = build_addition_seed(args.size, root, manifest, graphs, ctx)
+        files = materialize_addition_seed(seed, graphs)
+        ingest_addition_exports(
+            args.size,
+            [str(f) for f in files],
+            root,
+            manifest,
+            graphs,
+            ctx,
+            review_log="grid-scan seeds accepted as-is by user instruction (2026-07-15):"
+            " operand-plot labels judged all-pass; first-claim-wins de-overlap in"
+            " build_addition_seed; ingested by build_supernodes.py --accept-seeds",
+        )
         return
 
     if args.materialize_seeds:

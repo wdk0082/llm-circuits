@@ -273,6 +273,111 @@ class TestSeedBuilder:
         assert by_name["input 46 (exact)"]["members"] == []  # no cross grid in the fixture
 
 
+class TestAcceptSeeds:
+    def test_materialize_and_ingest_seed(self, world, tmp_path, monkeypatch):
+        root, manifest, graphs, ctx = world
+        monkeypatch.setattr(BS, "SUPERNODE_DIR", tmp_path / "sn")
+        seed = BS.build_addition_seed("testsz", root, manifest, graphs, ctx)
+        files = BS.materialize_addition_seed(seed, graphs)
+        assert files and all(f.exists() for f in files)
+        # exports carry each seed group's members at their node positions
+        ones = json.loads(next(f for f in files if f.name == "groups_ones.json").read_text())
+        assert ones["example"] == "ones"
+        names = {g["name"] for g in ones["groups"]}
+        assert "input _6" in names and "lookup (_6+_9)" in names
+        BS.ingest_addition_exports(
+            "testsz", [str(f) for f in files], root, manifest, graphs, ctx, review_log="accepted"
+        )
+        doc = json.loads((BS.SUPERNODE_DIR / "addition_testsz.json").read_text())
+        assert doc["approved"] is True and doc["review_log"] == "accepted"
+        assert A.load_supernodes(BS.SUPERNODE_DIR / "addition_testsz.json")  # loader gate
+
+    def test_seed_is_disjoint_after_overlap(self, tmp_path, monkeypatch):
+        # two groups whose predicates both match one feature -> first (by group order)
+        # keeps it; the seed a reviewer accepts must be a valid disjoint selection
+        root = tmp_path / "si"
+        root.mkdir()
+        monkeypatch.setattr(BS, "SUPERNODE_DIR", tmp_path / "sn")
+        # a cross(36) feature: matches both "input _6" (36%10=6) and "input 36 (exact)"
+        cross36 = np.zeros((100, 100), np.float32)
+        cross36[36, :] = 3.0
+        union = [(3, 111)]
+        (root / "graph_ones.json").write_text(
+            json.dumps(
+                {
+                    "prompt": "calc: 36+49=8",
+                    "tokens": list("x" * 11),
+                    "nodes": [_feature(3, 111, 4, 5.0)],
+                    "edges": [],
+                }
+            )
+        )
+        for g in ("first", "donor", "reuse"):
+            (root / f"graph_{g}.json").write_text(
+                json.dumps({"prompt": "p", "tokens": list("x" * 11), "nodes": [], "edges": []})
+            )
+        dp = {"a_digits": [4, 5], "b_digits": [7, 8], "plus": 6, "eq": 9}
+        manifest = {
+            "size": "s",
+            "addition": {"pair": [36, 49], "donor_pair": [39, 49], "pair_note": "x"},
+            "graphs": {
+                "ones": {
+                    "task": "addition",
+                    "target": "ones",
+                    "pair": [36, 49],
+                    "final_position": 10,
+                    "digit_positions": dp,
+                },
+                "first": {
+                    "task": "addition",
+                    "target": "first",
+                    "pair": [36, 49],
+                    "final_position": 9,
+                    "digit_positions": dp,
+                },
+                "donor": {
+                    "task": "addition",
+                    "target": "ones",
+                    "pair": [39, 49],
+                    "final_position": 10,
+                    "digit_positions": dp,
+                },
+                "reuse": {
+                    "task": "addition",
+                    "target": "reuse-ones",
+                    "pair": [36, 49],
+                    "final_position": 12,
+                },
+            },
+        }
+        (root / "manifest.json").write_text(json.dumps(manifest))
+        np.savez_compressed(
+            root / "grids.npz",
+            a_vals=np.arange(100),
+            b_vals=np.arange(100),
+            **{f"{p}_grids": np.stack([cross36]) for p in ("final", "ones", "peak")},
+            **{f"{p}_features": np.array(union, dtype=np.int64) for p in ("final", "ones", "peak")},
+        )
+        ctx = BS.load_grid_ctx(root)
+        graphs = {
+            g: json.loads((root / f"graph_{g}.json").read_text())
+            for g in ("ones", "first", "donor", "reuse")
+        }
+        seed = BS.build_addition_seed("s", root, manifest, graphs, ctx)
+        owner = {}
+        for sn in seed["supernodes"]:
+            for m in sn["members"]:
+                key = (sn["graph"], m["layer"], m["feature"])
+                assert key not in owner, f"{key} in {owner.get(key)} and {sn['name']}"
+                owner[key] = sn["name"]
+        # input _6 (earlier in order) keeps the shared cross(36) feature
+        byname = {sn["name"]: sn for sn in seed["supernodes"]}
+        assert (3, 111) in {(m["layer"], m["feature"]) for m in byname["input _6"]["members"]}
+        assert (3, 111) not in {
+            (m["layer"], m["feature"]) for m in byname["input 36 (exact)"]["members"]
+        }
+
+
 class TestAttachOperandGrids:
     def test_refs_store_and_non_mutation(self, world):
         _, manifest, graphs, ctx = world

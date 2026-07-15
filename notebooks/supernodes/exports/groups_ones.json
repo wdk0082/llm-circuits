@@ -1,0 +1,190 @@
+{
+ "example": "ones",
+ "groups": [
+  {
+   "name": "input _6",
+   "nodes": [
+    {
+     "layer": 1,
+     "feature_idx": 85984,
+     "position": 5
+    },
+    {
+     "layer": 2,
+     "feature_idx": 145875,
+     "position": 5
+    },
+    {
+     "layer": 6,
+     "feature_idx": 110119,
+     "position": 5
+    },
+    {
+     "layer": 6,
+     "feature_idx": 63117,
+     "position": 5
+    },
+    {
+     "layer": 7,
+     "feature_idx": 75406,
+     "position": 5
+    },
+    {
+     "layer": 7,
+     "feature_idx": 34162,
+     "position": 5
+    }
+   ]
+  },
+  {
+   "name": "input _9",
+   "nodes": [
+    {
+     "layer": 0,
+     "feature_idx": 21485,
+     "position": 8
+    },
+    {
+     "layer": 5,
+     "feature_idx": 130519,
+     "position": 8
+    },
+    {
+     "layer": 5,
+     "feature_idx": 80730,
+     "position": 8
+    },
+    {
+     "layer": 6,
+     "feature_idx": 115861,
+     "position": 8
+    },
+    {
+     "layer": 6,
+     "feature_idx": 42244,
+     "position": 8
+    },
+    {
+     "layer": 6,
+     "feature_idx": 145952,
+     "position": 8
+    }
+   ]
+  },
+  {
+   "name": "input 36 (exact)",
+   "nodes": [
+    {
+     "layer": 6,
+     "feature_idx": 72298,
+     "position": 5
+    },
+    {
+     "layer": 8,
+     "feature_idx": 16502,
+     "position": 5
+    },
+    {
+     "layer": 8,
+     "feature_idx": 15328,
+     "position": 5
+    },
+    {
+     "layer": 9,
+     "feature_idx": 148246,
+     "position": 5
+    },
+    {
+     "layer": 9,
+     "feature_idx": 143938,
+     "position": 5
+    },
+    {
+     "layer": 10,
+     "feature_idx": 16471,
+     "position": 5
+    }
+   ]
+  },
+  {
+   "name": "input 49 (exact)",
+   "nodes": [
+    {
+     "layer": 6,
+     "feature_idx": 42667,
+     "position": 8
+    },
+    {
+     "layer": 7,
+     "feature_idx": 31501,
+     "position": 8
+    },
+    {
+     "layer": 7,
+     "feature_idx": 114780,
+     "position": 8
+    },
+    {
+     "layer": 8,
+     "feature_idx": 15033,
+     "position": 8
+    },
+    {
+     "layer": 9,
+     "feature_idx": 50661,
+     "position": 8
+    },
+    {
+     "layer": 9,
+     "feature_idx": 48307,
+     "position": 8
+    }
+   ]
+  },
+  {
+   "name": "lookup (_6+_9)",
+   "nodes": [
+    {
+     "layer": 34,
+     "feature_idx": 5477,
+     "position": 10
+    }
+   ]
+  },
+  {
+   "name": "sum = _5",
+   "nodes": [
+    {
+     "layer": 26,
+     "feature_idx": 138203,
+     "position": 10
+    },
+    {
+     "layer": 27,
+     "feature_idx": 77434,
+     "position": 10
+    },
+    {
+     "layer": 27,
+     "feature_idx": 72987,
+     "position": 10
+    },
+    {
+     "layer": 28,
+     "feature_idx": 5743,
+     "position": 10
+    },
+    {
+     "layer": 28,
+     "feature_idx": 154805,
+     "position": 10
+    },
+    {
+     "layer": 29,
+     "feature_idx": 80619,
+     "position": 10
+    }
+   ]
+  }
+ ]
+}

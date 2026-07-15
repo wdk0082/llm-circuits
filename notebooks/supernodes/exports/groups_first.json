@@ -1,0 +1,90 @@
+{
+ "example": "first",
+ "groups": [
+  {
+   "name": "magnitude ~36",
+   "nodes": [
+    {
+     "layer": 2,
+     "feature_idx": 142369,
+     "position": 4
+    },
+    {
+     "layer": 3,
+     "feature_idx": 30998,
+     "position": 5
+    },
+    {
+     "layer": 4,
+     "feature_idx": 155339,
+     "position": 5
+    },
+    {
+     "layer": 5,
+     "feature_idx": 104820,
+     "position": 5
+    },
+    {
+     "layer": 5,
+     "feature_idx": 16764,
+     "position": 5
+    },
+    {
+     "layer": 7,
+     "feature_idx": 159625,
+     "position": 5
+    }
+   ]
+  },
+  {
+   "name": "add ~49 (function)",
+   "nodes": [
+    {
+     "layer": 25,
+     "feature_idx": 153940,
+     "position": 9
+    },
+    {
+     "layer": 27,
+     "feature_idx": 2412,
+     "position": 9
+    }
+   ]
+  },
+  {
+   "name": "sum ~85 (low precision)",
+   "nodes": [
+    {
+     "layer": 25,
+     "feature_idx": 33199,
+     "position": 9
+    },
+    {
+     "layer": 26,
+     "feature_idx": 84235,
+     "position": 9
+    },
+    {
+     "layer": 26,
+     "feature_idx": 28445,
+     "position": 9
+    },
+    {
+     "layer": 27,
+     "feature_idx": 132398,
+     "position": 9
+    },
+    {
+     "layer": 29,
+     "feature_idx": 5939,
+     "position": 9
+    },
+    {
+     "layer": 29,
+     "feature_idx": 128200,
+     "position": 9
+    }
+   ]
+  }
+ ]
+}

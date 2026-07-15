@@ -1,0 +1,40 @@
+{
+ "example": "donor",
+ "groups": [
+  {
+   "name": "lookup (_9+_9) donors",
+   "nodes": [
+    {
+     "layer": 21,
+     "feature_idx": 133693,
+     "position": 10
+    },
+    {
+     "layer": 23,
+     "feature_idx": 71826,
+     "position": 10
+    },
+    {
+     "layer": 23,
+     "feature_idx": 52459,
+     "position": 10
+    },
+    {
+     "layer": 23,
+     "feature_idx": 35041,
+     "position": 10
+    },
+    {
+     "layer": 23,
+     "feature_idx": 154284,
+     "position": 10
+    },
+    {
+     "layer": 23,
+     "feature_idx": 74931,
+     "position": 10
+    }
+   ]
+  }
+ ]
+}

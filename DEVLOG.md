@@ -1,6 +1,51 @@
 # DEVLOG
 
-> **⏩ CURRENT STATE** (2026-07-11, after the FIFTH session, branch
+> **⏩ CURRENT STATE** (2026-07-16, after the ADDITION v3 clean-room rebuild, branch
+> `repro/addition-v3`): **addition is rebuilt from scratch through the multilingual
+> export-review workflow**, with a new **grid-enabled explorer** so the supernodes can
+> be reviewed by their operand plots. New package feature: `circuits/grid_codec.py`
+> (uint8+zlib+base64 2-D-heatmap codec) + a per-feature operand-grid panel in
+> `graph_explorer.py` (magma canvas, probe tabs, hover a,b→act, studied-pair ring,
+> mod-10 guide; rides in `label.operand_grids` + a graph-level `operand_grid_store`, so
+> the serve UI shows it for free and grid-less graphs are unchanged). Clean-room
+> rewrite of `addition_helper.py` (paper = spec, no v2 code): accuracy grid + studied-
+> pair selection, first/ones/donor/reuse graph builders, one-pass 3-probe `operand_grids`,
+> a fresh `classify_grid` taxonomy (lookup/cross/mod10/band/sum-band/region/point),
+> approval-gated loader, suppress/inject + constrained-`patch_end_layer` drivers.
+> Pipeline: `build_supernode_inputs.py` derives the pair from behavior and dumps the four
+> graphs + union 3-probe `grids.npz` (manifest entries carry `task:"addition"`);
+> `build_supernodes.py` gains `GridCtx`, `attach_operand_grids`, grid-enabled review
+> pages with `(overflow)` groups, `ingest_addition_exports` (canonical pair-parametric
+> names, per-graph disjointness, required-group hard checks), and `--accept-seeds`
+> (first-claim-wins de-overlap). New `hpc/run_supernode_inputs.sbatch`; both sbatch
+> scripts at `--time=01:00:00` (short jobs backfill sooner).
+>
+> **Studied pair 36+49=85** (Qwen3-4B answers 36+59 wrong; nearest correct `_6+_9`-class
+> pair), donor 39+49, greedy accuracy 77.7%. **Probe policy (user, 2026-07-15):**
+> analysis uses only `final` (the paper's `=` token) and `ones` (its digit-by-digit
+> analog); `peak` stays display-only on the review pages. Seeds accepted as-is (user
+> judged the operand-plot labels all-pass); `supernodes/addition_4b.json` = 13
+> supernodes, approved via `--accept-seeds`.
+>
+> **Verdicts vs the paper (6 reproduced / 3 honest negatives; notebook Summary):**
+> behavior (adapted pair); feature families present with the paper's operand-plot
+> geometry; **sum features write the answer digit** (direct decoder weights peak on 5,
+> 4/6 members); **magnitude→sum pathway is causal** (suppress `magnitude ~36` → p(first
+> digit) 0.76→0.35, downstream `sum ~85` readout 44%); **sum features fire in the wild**
+> (56 hits on `$95`/`1995`/`page 155`); **metacognitive gap** ("I added 36 and 49 = 85",
+> names no mechanism). NOT reproduced, with clear reasons: the **input→lookup→sum
+> modular pathway is inert at the ones step** (digit-by-digit tokenization means the
+> teacher-forced first digit fixes the answer, so the ones step is a readout — genuine
+> downstream `lookup`/`sum` readouts stay ~99% under input/lookup suppression) and
+> Qwen3 has **no distinct upstream lookup** (the one crisp `_6+_9` lattice feature is at
+> L34, downstream of the L26–28 sums, so the donor substitution has nothing to swap and
+> never lands, max p(8)=0.003); the **citation-prose reuse fails** (Qwen3 doesn't do the
+> prose arithmetic). The real computation lives in the first-digit magnitude pathway —
+> same flavor of honest model differences the multilingual reproduction found. Notebook
+> executes clean (0 cell errors, ~7 min/A100); 167 tests + ruff + sphinx `-W` green.
+> Not merged; v2 (code + `addition_4b.json`) lives in git history.
+>
+> Previous state (2026-07-11, after the FIFTH session, branch
 > `repro/constrained-supernodes`): **reproduction v2 is live for ADDITION** —
 > constrained patching only, supernodes loaded from a reviewed artifact
 > (`notebooks/supernodes/addition_4b.json`; grid-evidenced full-graph scan, membership
